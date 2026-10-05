@@ -207,7 +207,7 @@ describe("the isolated Kids site", () => {
     const buildOne = (
       apply: typeof profile.applyKidsActivityAction,
       create: typeof profile.createKidsActivityState,
-      requests: readonly unknown[],
+      requests: readonly Parameters<typeof profile.applyKidsActivityAction>[1][],
     ) => {
       let state = create();
       for (const request of requests) {

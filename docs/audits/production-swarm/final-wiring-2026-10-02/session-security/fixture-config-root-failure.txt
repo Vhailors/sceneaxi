@@ -1,0 +1,52 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi
+
+·························x················································································
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/site-kit/test/catalog-server-fetch.test.ts > configured-origin catalog own-session transport > reads through the real own-session handler seam without a provider or socket
+AssertionError: expected { ok: false, …(2) } to deeply equal { ok: true, value: { …(3) } }
+
+- Expected
++ Received
+
+  {
+-   "ok": true,
+-   "value": {
+-     "role": "user",
+-     "session": {
+-       "expiresAt": "2026-10-02T13:00:00.000Z",
+-       "issuedAt": "2026-10-02T11:00:00.000Z",
+-       "sessionId": "own-session",
+-       "surface": "site",
+-       "userId": "own-user",
+-     },
+-     "user": {
+-       "disabled": false,
+-       "email": "own@example.test",
+-       "emailVerified": true,
+-       "userId": "own-user",
+-     },
+-   },
++   "message": "The submission did not come from this deployment's own pages, so no action was performed.",
++   "ok": false,
++   "reason": "SITE_REQUEST_CROSS_ORIGIN",
+  }
+
+ ❯ packages/site-kit/test/catalog-server-fetch.test.ts:60:101
+     58|     const transport: typeof fetch = vi.fn((url, init) => handler(new R…
+     59|     const { adapter } = setup(transport);
+     60|     expect(await adapter.resolvePrincipal({ surface: "site", sessionTo…
+       |                                                                                                     ^
+     61|     expect(await adapter.resolvePrincipal({ surface: "site", sessionTo…
+     62|     expect(verification).toHaveBeenCalledTimes(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 105 passed (106)
+   Start at  16:52:42
+   Duration  8.17s (transform 16.90s, setup 0ms, import 16.08s, tests 5.68s, environment 1ms)
+

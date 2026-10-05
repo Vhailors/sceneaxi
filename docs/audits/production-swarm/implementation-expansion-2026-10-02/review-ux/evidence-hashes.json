@@ -1,0 +1,14 @@
+{
+  "additional-existing-oracles.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "additional-fingerprint-before.json": "3237bf58abe62fe06e28ee14d112b10d728ffa15a3cf38534ee921db50ed7096",
+  "existing-oracles.diff": "de13a7895aba14b224700b92db8428225b1493aea2f66896bd622e8780c8c32e",
+  "fingerprint-after.json": "64d58da7d54551fbc40493444ce8fe40c5fd6861c460517666ce57c9a1428cce",
+  "fingerprint-before.json": "ce2645c754d11017724c08b7e66c213d3e7c9417623690a331cd5c124841b7ae",
+  "focused-tests.log": "a2b77fda7057cbf3880fdc4a1ceeae934740b8a07401a0af9ab3f01e05d564ca",
+  "focused-tests.txt": "67dd9f9d04341a51e7efea6f57b92e75aa85c5644686fedc2b53da1d446e9756",
+  "literal-aria-disabled-oracle.json": "57fe130b300ba5cb9bdf94d8e13e770403d19f2a903a992607b08d4569789911",
+  "negative-tests.log": "5ba5f7aa5d951d42fb3e45ff8c6130267f1c326d7a4b71db6254600996a0bdaf",
+  "negative-tests.txt": "56d4ab8dc8ef3b6f6201a4fd59f716ffc03b03da93b16a67402aa6fa6a62f033",
+  "report.json": "6eeec997fea1551969d3c682f900004d153def2317edc8fb21bff7edc01560fe",
+  "report.md": "e0f32ccb8c7b7df8297e1b4db5cfa2dd19ce8f9561137d9e6ffb090f12e1dd78"
+}

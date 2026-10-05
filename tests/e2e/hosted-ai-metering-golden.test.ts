@@ -38,6 +38,7 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
+  createHostedAiPricingPolicy,
   appendCreditEntry,
   createInMemoryCreditStore,
   createLedgerState,
@@ -49,10 +50,13 @@ import type { CreditAccount } from "@sceneaxi/schemas";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
 });
+
 if (!adminResolution.ok) throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: guards check the identity's runtime provenance,
 // so a structurally identical `{ email, source }` literal is refused.
 const admin = adminResolution.value;
@@ -72,6 +76,7 @@ const EVAL = Object.freeze({
 });
 
 /** The recorded OpenRouter completion the provider package already ships. */
+// SAFETY: this widening keeps recorded JSON untrusted; the real OpenRouter adapter parses the fixture before returning provider evidence.
 const COMPLETE_FIXTURE = JSON.parse(
   readFileSync(
     new URL(
@@ -82,6 +87,7 @@ const COMPLETE_FIXTURE = JSON.parse(
   ),
 ) as unknown;
 
+// SAFETY: this frozen literal supplies the credit-account schema/discriminator and the same account/user IDs as the issued fixture principal.
 const ACCOUNT = Object.freeze({
   schemaVersion: 1,
   kind: "sceneaxi.credit-account",
@@ -122,6 +128,7 @@ const PRINCIPAL = issuePrincipalForTest({
 
 const funded = (credits: number): LedgerState => {
   if (credits === 0) return createLedgerState(ACCOUNT);
+
   const appended = appendCreditEntry(createLedgerState(ACCOUNT), {
     entryId: "ent_grant",
     movement: "grant",
@@ -130,7 +137,9 @@ const funded = (credits: number): LedgerState => {
     idempotencyKey: "fixture:grant",
     now: NOW,
   });
+
   if (!appended.ok) throw new Error("fixture funding failed");
+
   return appended.value.state;
 };
 
@@ -141,16 +150,19 @@ const funded = (credits: number): LedgerState => {
  */
 const providerStack = () => {
   const transportRequests: OpenRouterTransportRequest[] = [];
+
   const fixtureTransport = createFixtureTransport({
     model: MODEL,
     responses: { complete: COMPLETE_FIXTURE },
   });
+
   const port = createModelProviderPort({
     adapter: createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
       transport(request) {
         transportRequests.push(request);
+
         return fixtureTransport(request);
       },
     }),
@@ -159,6 +171,7 @@ const providerStack = () => {
       "@sceneaxi/profile-game": () => ({ ok: true }),
     },
   });
+
   const call = async () => {
     const result = await port.complete({
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -167,15 +180,20 @@ const providerStack = () => {
       model: MODEL,
       prompt: "fixture prompt",
     });
+
     // The documented integration obligation (docs/auth-credits.md, "Only a throw
     // is a provider failure"): the port refuses by value, and a value the thunk
     // returns is a completed call billing pays for, so the refusal is translated
     // here — in the provider integration — rather than inside the credit plane.
     if (!result.ok) throw new Error(result.reason);
+
     return result;
   };
+
   return { transportRequests, call };
 };
+
+type MeteredCallOverrides = Partial<Pick<Parameters<typeof runMeteredModelCall>[0], "hostedAi" | "surface" | "call">>;
 
 const hostedRequest = (
   state: LedgerState,
@@ -184,14 +202,16 @@ const hostedRequest = (
     accounts: [state.account],
     entries: state.entries,
   }),
-  overrides: Record<string, unknown> = {},
+  overrides: MeteredCallOverrides = {},
 ) => ({
   request: {
     route: "hosted" as const,
     capability: "metered-model-port" as const,
     call: stack.call,
     now: NOW,
-    hostedAi: { enabled: true },
+    hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "metered-model-port", credits: 4 }]) },
+    model: MODEL.model,
+    operation: "complete",
     admin,
     principal: PRINCIPAL,
     state,
@@ -211,11 +231,14 @@ describe("hosted AI metering golden path", () => {
     const stack = providerStack();
     const { request, store } = hostedRequest(state, stack);
 
+    // SAFETY: the helper supplies a resolved admin, issued principal, funded ledger and real fixture port; the billing gate validates the request before spending.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.replayed).toBe(false);
+
     if (result.value.replayed) return;
 
     // Provider evidence: the deterministic adapter ran, pinned and no-fallback.
@@ -265,17 +288,21 @@ describe("hosted AI metering golden path", () => {
     const stack = providerStack();
     const { request, store } = hostedRequest(state, stack);
 
+    // SAFETY: this first call uses the funded helper fixture; successful billing and its persisted state are checked before constructing the retry.
     const first = await runMeteredModelCall(request as never);
     expect(first.ok).toBe(true);
+
     if (!first.ok || first.value.state === undefined) return;
     expect(first.value.balance).toBe(6);
 
+    // SAFETY: the success/state guard above supplies the first call persisted ledger while preserving the original account-scoped replay key.
     const retry = await runMeteredModelCall({
       ...request,
       state: first.value.state,
     } as never);
 
     expect(retry.ok).toBe(true);
+
     if (!retry.ok) return;
     expect(retry.value.replayed).toBe(true);
     expect(retry.value.balance).toBe(6);
@@ -284,6 +311,7 @@ describe("hosted AI metering golden path", () => {
     // real upstream spend with no ledger row to show for it.
     expect(stack.transportRequests).toHaveLength(1);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+
     if (!retry.value.replayed) return;
     expect(retry.value.entry.idempotencyKey).toBe(
       meteringIdempotencyKey(ACCOUNT.accountId, "turn_01"),
@@ -293,13 +321,16 @@ describe("hosted AI metering golden path", () => {
   it("is default-off: the wired adapter alone does not enable hosted AI", async () => {
     const state = funded(10);
     const stack = providerStack();
+
     const { request, store } = hostedRequest(state, stack, undefined, {
       hostedAi: HOSTED_AI_DEFAULT_CONFIG,
     });
 
+    // SAFETY: the only override is the exported default-off config; the test requires rejection before transport entry or a debit.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
     expect(stack.transportRequests).toHaveLength(0);
@@ -311,9 +342,11 @@ describe("hosted AI metering golden path", () => {
     const stack = providerStack();
     const { request, store } = hostedRequest(state, stack);
 
+    // SAFETY: the helper ledger has zero balance; the runtime entitlement gate must refuse it before provider execution, as asserted below.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
     expect(stack.transportRequests).toHaveLength(0);
@@ -325,9 +358,11 @@ describe("hosted AI metering golden path", () => {
     const stack = providerStack();
     const { request, store } = hostedRequest(state, stack);
 
+    // SAFETY: the helper ledger has three credits against the four-credit quote; this fixture is checked for insufficient-balance refusal and no transport call.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
     expect(stack.transportRequests).toHaveLength(0);
@@ -338,6 +373,7 @@ describe("hosted AI metering golden path", () => {
   it("keeps the same wired provider free on the BYO route", async () => {
     const state = funded(10);
     const stack = providerStack();
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
@@ -356,6 +392,7 @@ describe("hosted AI metering golden path", () => {
     });
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     // Same provider, same adapter, same transport — and no charge, because the
     // user brought their own key and is already paying their own provider.
@@ -369,13 +406,16 @@ describe("hosted AI metering golden path", () => {
   it("denies Kids before the port, the ledger, or the transport", async () => {
     const state = funded(10);
     const stack = providerStack();
+
     const { request, store } = hostedRequest(state, stack, undefined, {
       surface: "kids",
     });
 
+    // SAFETY: this fixture intentionally changes only the surface to Kids; the runtime gate must refuse before touching the port or ledger.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
     expect(stack.transportRequests).toHaveLength(0);
@@ -385,6 +425,7 @@ describe("hosted AI metering golden path", () => {
   it("turns a port refusal into a named provider failure with no debit", async () => {
     const state = funded(10);
     const stack = providerStack();
+
     // A profile with no registered policy: the port refuses, so the adapter is
     // never dispatched and the gate must not treat the outcome as a success.
     const call = async () => {
@@ -399,6 +440,7 @@ describe("hosted AI metering golden path", () => {
         }),
         profilePolicies: {},
       });
+
       const result = await port.complete({
         schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
         operation: "complete",
@@ -406,14 +448,19 @@ describe("hosted AI metering golden path", () => {
         model: MODEL,
         prompt: "fixture prompt",
       });
+
       if (!result.ok) throw new Error(result.reason);
+
       return result;
     };
+
     const { request, store } = hostedRequest(state, stack, undefined, { call });
 
+    // SAFETY: the injected call translates the real port refusal into a throw; billing failure and unchanged ledger balance are asserted below.
     const result = await runMeteredModelCall(request as never);
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
@@ -425,6 +472,7 @@ describe("hosted AI metering golden path", () => {
       model: MODEL,
       responses: { complete: COMPLETE_FIXTURE },
     });
+
     const replayed = transport({
       schemaVersion: 1,
       operation: "complete",
@@ -435,6 +483,7 @@ describe("hosted AI metering golden path", () => {
       temperature: 0,
       seed: EVAL.seed,
     });
+
     expect(replayed).toEqual({
       response: COMPLETE_FIXTURE,
       executedModel: MODEL,

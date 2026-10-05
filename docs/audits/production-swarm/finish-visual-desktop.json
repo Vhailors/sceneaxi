@@ -1,0 +1,2563 @@
+{
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "VISUAL_LOOP_IMPLEMENTED",
+  "verificationStatus": "OWNING_TESTS_PASS_LINUX_TYPECHECK_BLOCKED",
+  "productionReady": false,
+  "sourceFiles": [
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "sha256": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178"
+    },
+    {
+      "path": "apps/desktop-shell/src/visual-tokens.ts",
+      "sha256": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7"
+    },
+    {
+      "path": "desktop/linux/src/renderer/byo-configuration.ts",
+      "sha256": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb"
+    },
+    {
+      "path": "apps/desktop-shell/test/visual-refinement.test.ts",
+      "sha256": "4e0d264de75b65b2600aee6ffc5f2c9a6b173b63ec8622a83e34f66ffaaeee6e"
+    }
+  ],
+  "readAuthority": [
+    "docs/design-foundations.md",
+    "docs/engine-desktop-surface.md",
+    "apps/desktop-shell/src/visual-tokens.ts",
+    "docs/audits/production-swarm/FINAL.md",
+    "docs/audits/production-swarm/finish-cli-desktop.md",
+    "docs/audits/production-swarm/finish-integration.md",
+    "docs/audits/production-swarm/finish-authoring.md",
+    "docs/audits/production-swarm/finish-engine.md",
+    "docs/audits/production-swarm/finish-assets-kids.md",
+    "tools/oxlint/anti-slop/rules/require-safety-comment-for-type-assertion.ts"
+  ],
+  "changes": [
+    "Internal SPACING export defines4/8/12/16/24px content rhythm; archive structural metrics and palette unchanged.",
+    "Panel headings9→11px, hierarchy IDs8→10px, assistant body11→13px/results10→12px; full evidence wraps rather than truncates.",
+    "Neutral hierarchy borders until selection; inset-safe focus for clipped tabs/rows/palette, double ring for filled controls.",
+    "Tall assistant composer scrolls internally at65% column height; existing responsive drawers/minimum refusal unchanged.",
+    "BYOK grouped buttons27→32px/input29→36px; labels9→11px; disabled opacity.52 replaced with AA inert paint.",
+    "Busy header/canvas/card/dot loops removed; one existing3-bar decorative group remains; reduced-motion respected.",
+    "Generic inlineJson parameter and inferred controlsByProfile return repair2 pre-existing anti-slop errors without changing execution.",
+    "6 new visual invariants; existing goldens/inventory assertions unmodified."
+  ],
+  "invariants": {
+    "newDependencies": 0,
+    "behaviorChanges": false,
+    "commandInventoryChanged": false,
+    "paletteChanged": false,
+    "minimumWindowChanged": false,
+    "commit": false,
+    "push": false
+  },
+  "browser": {
+    "tool": "Installed Playwright via shell; no browser tool exposed in agent tool list.",
+    "executable": "/home/devuser/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome",
+    "surface": "Real emitted desktop chrome HTML. Browser rasterizes chrome; viewport framing only, not Three/GPU/native proof.",
+    "beforeMethod": "First six before images used actual chrome verb. Final10-case before set re-rendered pre-visual staged chrome.ts via esbuild, same accepted model/tokens; renderer CSS from pre-visual staged BYOK source. Staged baseline CSS matches initial source read. Actual seed bridge runs against current native source; not a claim of native IPC.",
+    "selectedMethod": "Real seedDesktopProject in temporary directory, createDesktopBridge and request shim matching existing owning test bootstrap; actual3-entity hierarchy clicked and displayed. Fixture directory deleted after each browser run.",
+    "byokMethod": "Actual browser-bundled installDesktopByoConfigurationSurface with no privileged configureByo port: genuine named unavailable/disabled state, no key/provider call. Narrow drawer opened using existing Assistant toggle.",
+    "busyMethod": "Explicit visual-only loading fixture sets existing busy attribute/status text; no provider operation. Normal motion,350ms after entry;10 active steady animations before,3 after. Other scenarios reduced motion.",
+    "controlCounts": "178 before/after per emitted document;182 before/after with existing runtime BYOK controls.",
+    "assertions": 51,
+    "assertionsPassed": 51,
+    "screenshotCount": 20,
+    "pageErrors": 0,
+    "documentHorizontalOverflow": false,
+    "harness": "import {createRequire, registerHooks} from 'node:module';\nimport {execFileSync} from 'node:child_process';\nimport {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nconst root='/home/devuser/Documents/Projects/sceneaxi';\nconst {resolve}=await import(root+'/scripts/workspace-dist-resolver.mjs');\nregisterHooks({resolve});\nconst require=createRequire(root+'/sites/umbrella/package.json');\nconst {chromium}=require('@playwright/test');\nconst esbuild=createRequire(root+'/desktop/linux/package.json')('esbuild');\nconst hostBundle=await esbuild.build({stdin:{contents:`export {createDesktopBridge} from '${root}/desktop/linux/src/lib/bridge.ts'; export {seedDesktopProject} from '${root}/desktop/linux/src/lib/project-seed.ts';`,resolveDir:root},bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst {createDesktopBridge,seedDesktopProject}=await import('data:text/javascript;base64,'+Buffer.from(hostBundle.outputFiles[0].text).toString('base64'));\nconst stage=process.argv[2];\nconst beforeBundle=await esbuild.build({stdin:{contents:execFileSync('git',['show',':apps/desktop-shell/src/chrome.ts'],{cwd:root,encoding:'utf8'}),resolveDir:root+'/apps/desktop-shell/src',loader:'ts'},bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst beforeModule=await import('data:text/javascript;base64,'+Buffer.from(beforeBundle.outputFiles[0].text).toString('base64'));\nconst {createDesktopVisualState,desktopVisualView}=await import('@sceneaxi/desktop-shell');\nconst byoSource=stage==='before'?execFileSync('git',['show',':desktop/linux/src/renderer/byo-configuration.ts'],{cwd:root,encoding:'utf8'}):null;\nconst byo=await esbuild.build({...byoSource?{stdin:{contents:byoSource,loader:'ts',resolveDir:root+'/desktop/linux/src/renderer'}}:{entryPoints:[root+'/desktop/linux/src/renderer/byo-configuration.ts']},bundle:true,platform:'browser',format:'iife',globalName:'Byo',write:false});\nconst directory=root+'/docs/audits/production-swarm/screenshots';\nmkdirSync(directory,{recursive:true});\nconst browser=await chromium.launch({headless:true,executablePath:'/home/devuser/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome'});\nconst receipts=[];\nconst fixtureRoot=mkdtempSync(join(tmpdir(),'sceneaxi-visual-'));\n\nif(!seedDesktopProject(fixtureRoot).ok) throw new Error('seed failed');\nconst host=createDesktopBridge({cwd:fixtureRoot,commandCapabilities:['scene.compose','authoring.change-review','authoring.undo','authoring.redo']});\ntry {\nfor(const scenario of [\n{id:'empty',width:1680,height:1000},\n{id:'selected',width:1680,height:1000,host:true,details:true},\n{id:'byok',width:1680,height:1000,byo:true,details:true},\n{id:'narrow',width:900,height:640,host:true,drawer:true},\n{id:'byok-narrow',width:900,height:640,byo:true,details:true,assistantDrawer:true},\n{id:'palette',width:1280,height:900,palette:true},\n{id:'mobile-refusal',width:375,height:812},\n{id:'busy',width:1680,height:1000,busy:true},\n{id:'web',width:1680,height:1000,profile:'web'},\n{id:'kids',width:900,height:640,profile:'kids'},\n]) {\nconst context=await browser.newContext({viewport:{width:scenario.width,height:scenario.height},reducedMotion:scenario.busy?'no-preference':'reduce'});\nconst page=await context.newPage();\nconst errors=[]; page.on('pageerror',e=>errors.push(e.message));\nif(scenario.host){\nawait page.exposeFunction('visualHostRequest',request=>host.handle(request));\nawait page.addInitScript(({fixtureRoot})=>{globalThis.sceneaxiDesktopLinux={request:request=>globalThis.visualHostRequest(request),project:async()=>({ok:true,data:{status:{active:{name:'Visual proof project',root:fixtureRoot,documentPath:'scene.json',source:'opened'},recents:[],recovery:null}}})};},{fixtureRoot});\n}\nconst args=['apps/desktop-shell/bin/sceneaxi-desktop.mjs','chrome','--width',String(scenario.width),'--height',String(scenario.height),'--json'];\nif(scenario.palette) args.push('--overlay','palette');\nif(scenario.profile) args.push('--profile',scenario.profile);\n// Below minimum is rendered at the admitted tier, then the browser checks the real CSS refusal.\nif(scenario.width<900){args[3]='900';args[5]='640';}\nconst envelope=JSON.parse(execFileSync(process.execPath,args,{cwd:root,encoding:'utf8',maxBuffer:2000000}));\nif(!envelope.ok) throw new Error(JSON.stringify(envelope));\nif(stage==='before') envelope.result.html=beforeModule.renderDesktopChrome(desktopVisualView(createDesktopVisualState({window:{width:Math.max(900,scenario.width),height:scenario.height},profile:scenario.profile??'game',overlay:scenario.palette?'palette':'none'})));\nawait page.route('http://desktop.visual.test/',route=>route.fulfill({body:envelope.result.html,contentType:'text/html'}));\nawait page.goto('http://desktop.visual.test/');\nif(scenario.host) await page.waitForSelector('.scene-entity-identity',{state:'attached'});\nif(scenario.details) await page.evaluate(()=>{document.querySelector('.shell').dataset.detailsOpen='true';});\nif(scenario.drawer) await page.evaluate(()=>{document.querySelector('.shell').dataset.drawerLeft='open';});\nif(scenario.assistantDrawer) await page.click('.assistant-toggle');\nif(scenario.busy) await page.evaluate(()=>{document.querySelector('.shell').dataset.assistantBusy='true';document.querySelector('[data-assistant-thinking]').hidden=false;document.querySelector('[data-assistant-thinking]').lastChild.textContent='Loading-state visual fixture';document.querySelector('[data-assistant-status]').textContent='Visual loading fixture only; no provider request.';});\nif(scenario.byo){\nawait page.addScriptTag({content:byo.outputFiles[0].text});\nawait page.evaluate(()=>{Byo.installDesktopByoConfigurationSurface({});document.querySelector('.desktop-byo-config').hidden=false;});\nawait page.locator('.desktop-byo-config').scrollIntoViewIfNeeded();\n}\nif(scenario.id==='selected'){await page.locator('.scene-entity-identity').first().click();await page.locator('.scene-entity-identity').first().focus();}\nif(scenario.id==='palette') await page.locator('.palette-item').first().focus();\nif(scenario.busy) await page.waitForTimeout(350);\nconst screenshot=`docs/audits/production-swarm/screenshots/finish-visual-desktop-${stage}-${scenario.id}.png`;\nawait page.screenshot({path:root+'/'+screenshot});\nconst metrics=await page.evaluate(()=>{\nconst report={};\nfor(const selector of ['.panel-head','.scene-entity-identity','.scene-entity-identity code','.assistant-empty','.assistant-result','.assistant-prompt','.assistant-composer','.assistant-body','.assistant','.desktop-byo-config button:disabled','.palette-item:focus-visible','.window-refusal']){\nconst element=document.querySelector(selector);if(!element) continue;const s=getComputedStyle(element);const r=element.getBoundingClientRect();report[selector]={font:s.fontSize,lineHeight:s.lineHeight,color:s.color,background:s.backgroundColor,opacity:s.opacity,outlineWidth:s.outlineWidth,outlineColor:s.outlineColor,width:r.width,height:r.height,visible:r.width>0&&r.height>0};}\nreport.activeAnimations=document.getAnimations().filter(animation=>animation.playState==='running').length;\nreport.documentOverflow=document.documentElement.scrollWidth>innerWidth;\nreport.controlCount=document.querySelectorAll('button,input,select,textarea').length;\nreturn report;\n});\nreceipts.push({scenario:scenario.id,screenshot,viewport:{width:scenario.width,height:scenario.height},errors,metrics});\nawait context.close();\n}\n}finally{await browser.close();rmSync(fixtureRoot,{recursive:true,force:true});}\nwriteFileSync(root+`/docs/audits/production-swarm/finish-visual-desktop-${stage}.json`,JSON.stringify(receipts,null,2)+'\\n');\nconsole.log(JSON.stringify(receipts,null,2));\n",
+    "baselineChromeSha256": "c3b9b80e811e4a85e4481648cc8338970bf723b9813491629375b4732a6fb08e",
+    "scenarios": [
+      {
+        "id": "empty",
+        "viewport": {
+          "width": 1680,
+          "height": 1000
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 34.09375,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 126.5,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 774.5,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 42.875,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 146.5625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 750.4375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-empty.png",
+            "bytes": 226848,
+            "sha256": "5e289ff3580090e54687e35e48075461c38d7b58d14b094084ab2c9e2a579687",
+            "width": 1680,
+            "height": 1000
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-empty.png",
+            "bytes": 231076,
+            "sha256": "da35923ea169bf55978df4b6821de41986a83bcbf8d9ad27284cbba6419df335",
+            "width": 1680,
+            "height": 1000
+          }
+        ]
+      },
+      {
+        "id": "selected",
+        "viewport": {
+          "width": 1680,
+          "height": 1000
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".scene-entity-identity": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(16, 36, 44)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 259,
+            "height": 88.78125,
+            "visible": true
+          },
+          ".scene-entity-identity code": {
+            "font": "8px",
+            "lineHeight": "11.6px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 191,
+            "height": 11.59375,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 34.09375,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 185.46875,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 715.53125,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".scene-entity-identity": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(16, 36, 44)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 257,
+            "height": 136,
+            "visible": true
+          },
+          ".scene-entity-identity code": {
+            "font": "10px",
+            "lineHeight": "16px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 183,
+            "height": 16,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 42.875,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 247.359375,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 649.640625,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-selected.png",
+            "bytes": 245081,
+            "sha256": "daf1f81cab4ed72a33aba8b3f5c65f21b0efc6aa63447c7f23a1cc9884ad6405",
+            "width": 1680,
+            "height": 1000
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-selected.png",
+            "bytes": 257866,
+            "sha256": "189dfd833b084b4331366ae246015c54a2ffaff18341a92b19ad04f112f8dd86",
+            "width": 1680,
+            "height": 1000
+          }
+        ]
+      },
+      {
+        "id": "byok",
+        "viewport": {
+          "width": 1680,
+          "height": 1000
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 34.09375,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 346.5625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 554.4375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".desktop-byo-config button:disabled": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(70, 216, 236)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "0.52",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(70, 216, 236)",
+            "width": 65.375,
+            "height": 27,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 182
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 42.875,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 458.140625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 438.859375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".desktop-byo-config button:disabled": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 142.5,
+            "height": 32,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 182
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-byok.png",
+            "bytes": 244586,
+            "sha256": "cefd32b4ad0f16b19c52298ee5d7d56ed5fbeffe3df73627770a19e3cf849582",
+            "width": 1680,
+            "height": 1000
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-byok.png",
+            "bytes": 254113,
+            "sha256": "6530d46e7839387f09f0097b0f8338dd756de21c174ee21f382c841e53ade698",
+            "width": 1680,
+            "height": 1000
+          }
+        ]
+      },
+      {
+        "id": "narrow",
+        "viewport": {
+          "width": 900,
+          "height": 640
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".scene-entity-identity": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 259,
+            "height": 46,
+            "visible": true
+          },
+          ".scene-entity-identity code": {
+            "font": "8px",
+            "lineHeight": "11.6px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".scene-entity-identity": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 257,
+            "height": 76,
+            "visible": true
+          },
+          ".scene-entity-identity code": {
+            "font": "10px",
+            "lineHeight": "16px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-narrow.png",
+            "bytes": 95412,
+            "sha256": "7e19df62850d8e94f5c65b363c0d8782b91c0a4e8686f2ceb1b698a410790843",
+            "width": 900,
+            "height": 640
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-narrow.png",
+            "bytes": 101656,
+            "sha256": "7b1aeb6b695431b555ffbd90318addc18beda310c59776f75b33f13e380b24d9",
+            "width": 900,
+            "height": 640
+          }
+        ]
+      },
+      {
+        "id": "byok-narrow",
+        "viewport": {
+          "width": 900,
+          "height": 640
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 34.09375,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 346.5625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 194.4375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 577,
+            "visible": true
+          },
+          ".desktop-byo-config button:disabled": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(70, 216, 236)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "0.52",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(70, 216, 236)",
+            "width": 65.375,
+            "height": 27,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 182
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 42.875,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 375.046875,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 161.953125,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 577,
+            "visible": true
+          },
+          ".desktop-byo-config button:disabled": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 142.5,
+            "height": 32,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 182
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-byok-narrow.png",
+            "bytes": 108434,
+            "sha256": "6e5fec8e794c1b699bb24df4ff86d121a2273ff06273eb4c49833532bd984944",
+            "width": 900,
+            "height": 640
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-byok-narrow.png",
+            "bytes": 111694,
+            "sha256": "5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784",
+            "width": 900,
+            "height": 640
+          }
+        ]
+      },
+      {
+        "id": "palette",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".palette-item:focus-visible": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "2px",
+            "outlineColor": "rgb(70, 216, 236)",
+            "width": 618,
+            "height": 31,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".palette-item:focus-visible": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "2px",
+            "outlineColor": "rgb(70, 216, 236)",
+            "width": 618,
+            "height": 31,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-palette.png",
+            "bytes": 145749,
+            "sha256": "c216e5428edb62c0f4ff50bd565261aa1561fe2e1e07b92890a7aaad1ff3501c",
+            "width": 1280,
+            "height": 900
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-palette.png",
+            "bytes": 149766,
+            "sha256": "54050f7fff6ca3643f2d5df22e1d1b84c9e7379547fa33fd7ae68a8fb115a87a",
+            "width": 1280,
+            "height": 900
+          }
+        ]
+      },
+      {
+        "id": "mobile-refusal",
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 375,
+            "height": 255.21875,
+            "visible": true
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 375,
+            "height": 255.21875,
+            "visible": true
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-mobile-refusal.png",
+            "bytes": 17367,
+            "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+            "width": 375,
+            "height": 812
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-mobile-refusal.png",
+            "bytes": 17367,
+            "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+            "width": 375,
+            "height": 812
+          }
+        ]
+      },
+      {
+        "id": "busy",
+        "viewport": {
+          "width": 1680,
+          "height": 1000
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 34.09375,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 126.5,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 774.5,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 10,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 319,
+            "height": 42.875,
+            "visible": true
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 146.5625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 750.4375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 3,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-busy.png",
+            "bytes": 296727,
+            "sha256": "7ec5445d01ca3e41631c2d51804b6a9875df824807757eb8c668fe62dae0a255",
+            "width": 1680,
+            "height": 1000
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-busy.png",
+            "bytes": 230872,
+            "sha256": "0cf82272b7565e134a9d206d774f89dcc8b968c14b222ab7ed28877d98a20b6b",
+            "width": 1680,
+            "height": 1000
+          }
+        ]
+      },
+      {
+        "id": "web",
+        "viewport": {
+          "width": 1680,
+          "height": 1000
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 29,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 321,
+            "height": 67.5,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 126.5,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 774.5,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 273,
+            "height": 32,
+            "visible": true
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 319,
+            "height": 83.5625,
+            "visible": true
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 146.5625,
+            "visible": true
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 343,
+            "height": 750.4375,
+            "visible": true
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 937,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-web.png",
+            "bytes": 192773,
+            "sha256": "02ed546400b9babed40d7549c6a76fd615902ae97b69d613685972d4abc87c16",
+            "width": 1680,
+            "height": 1000
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-web.png",
+            "bytes": 199460,
+            "sha256": "01d87acc68149d5570003757d118df10d6926a89f660fa9d6d3e422602b5e63f",
+            "width": 1680,
+            "height": 1000
+          }
+        ]
+      },
+      {
+        "id": "kids",
+        "viewport": {
+          "width": 900,
+          "height": 640
+        },
+        "beforeMetrics": {
+          ".panel-head": {
+            "font": "9px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "11px",
+            "lineHeight": "17.05px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "10px",
+            "lineHeight": "15.5px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "11px",
+            "lineHeight": "16.5px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 577,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "afterMetrics": {
+          ".panel-head": {
+            "font": "11px",
+            "lineHeight": "normal",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgb(24, 34, 54)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-empty": {
+            "font": "13px",
+            "lineHeight": "21.45px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-result": {
+            "font": "12px",
+            "lineHeight": "19.8px",
+            "color": "rgb(172, 184, 204)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(172, 184, 204)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-prompt": {
+            "font": "12px",
+            "lineHeight": "19.2px",
+            "color": "rgb(149, 162, 184)",
+            "background": "rgb(7, 11, 19)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(149, 162, 184)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-composer": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant-body": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          ".assistant": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgb(15, 22, 36)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 344,
+            "height": 577,
+            "visible": true
+          },
+          ".window-refusal": {
+            "font": "13px",
+            "lineHeight": "normal",
+            "color": "rgb(234, 240, 249)",
+            "background": "rgba(0, 0, 0, 0)",
+            "opacity": "1",
+            "outlineWidth": "3px",
+            "outlineColor": "rgb(234, 240, 249)",
+            "width": 0,
+            "height": 0,
+            "visible": false
+          },
+          "activeAnimations": 0,
+          "documentOverflow": false,
+          "controlCount": 178
+        },
+        "screenshots": [
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-kids.png",
+            "bytes": 111531,
+            "sha256": "b531e898e8b4365219f5c87ca2331a2408b942209fbc398400081e246f214635",
+            "width": 900,
+            "height": 640
+          },
+          {
+            "path": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-kids.png",
+            "bytes": 111306,
+            "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+            "width": 900,
+            "height": 640
+          }
+        ]
+      }
+    ]
+  },
+  "contrast": {
+    "method": "WCAG sRGB luminance; composite before disabled foreground and control background at.52 onto inherited well #070B13. After uses opacity1. Unchanged visual-token owning19 tests independently cover foreground/surface pairs.",
+    "beforeDisabledByokSave": 3.5998951000222736,
+    "afterDisabledByokOnPanel": 7.012347891480996,
+    "minimumFaintOnBrightestSurface": 6.161008217728161,
+    "secondaryOnBrightestSurface": 7.935586322327097,
+    "focusOnBrightestSurface": 9.307161096568993,
+    "floor": 4.5,
+    "decorativeBorders": "Structural low-contrast lines are not claimed as text or the sole selection/focus cue."
+  },
+  "tests": {
+    "command": "pnpm exec vitest run apps/desktop-shell/test desktop/linux/test tests/e2e/desktop-command-interactions-golden.test.ts tests/e2e/desktop-product-loop-golden.test.ts tests/e2e/desktop-hierarchy-golden.test.ts tests/e2e/desktop-scene-property-golden.test.ts --reporter=json --outputFile=docs/audits/production-swarm/finish-visual-desktop-tests.json",
+    "files": 19,
+    "total": 398,
+    "passed": 398,
+    "failed": 0,
+    "newVisualInvariants": 6,
+    "desktopShell": 219,
+    "linux": 28,
+    "goldens": 151,
+    "rawReport": "docs/audits/production-swarm/finish-visual-desktop-tests.json"
+  },
+  "checks": [
+    {
+      "command": "pnpm exec tsc --build apps/desktop-shell/tsconfig.json",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec oxlint --config .oxlintrc.json apps/desktop-shell/src/chrome.ts apps/desktop-shell/src/visual-tokens.ts desktop/linux/src/renderer/byo-configuration.ts apps/desktop-shell/test/visual-refinement.test.ts",
+      "exit": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "command": "pnpm exec eslint apps/desktop-shell/src/chrome.ts apps/desktop-shell/src/visual-tokens.ts desktop/linux/src/renderer/byo-configuration.ts apps/desktop-shell/test/visual-refinement.test.ts --max-warnings 0",
+      "exit": 0
+    },
+    {
+      "command": "pnpm --dir desktop/linux check:renderer",
+      "exit": 0,
+      "inputs": 94
+    },
+    {
+      "command": "git diff --check -- apps/desktop-shell/src/chrome.ts apps/desktop-shell/src/visual-tokens.ts desktop/linux/src/renderer/byo-configuration.ts apps/desktop-shell/test/visual-refinement.test.ts",
+      "exit": 0
+    },
+    {
+      "command": "pnpm --dir desktop/linux typecheck",
+      "exit": 2,
+      "latestErrors": [
+        "src/lib/desktop-scene.ts(297,57): TS2345 unknown is not assignable to JsonValue",
+        "packages/engine-orchestrator/src/open-path.ts(449,35): TS2345 unknown is not assignable to JsonValue | SculptArtifact",
+        "packages/engine-orchestrator/src/open-path.ts(465,34): TS2345 unknown is not assignable to JsonValue | ComposedScene"
+      ],
+      "scope": "Unrelated concurrent files; reported to owners, not repaired through visual/behavior scope."
+    }
+  ],
+  "recoveredFailures": [
+    "Playwright default headless1234 missing; used installed cached Chromium1223, no dependency install.",
+    "Host screenshot first attempt blocked by concurrent bridge.ts715 syntax; owning source repaired separately before final real seeded screenshots.",
+    "Browser harness initially passed undefined profile; explicit game default repaired harness. Narrow wait initially requested visible before opening drawer; changed to attached then existing drawer toggle/state.",
+    "First new-test run397pass/1fail: CSS helper matched grouped palette selector, not following focus-only selector. Anchored focus-only selector; final398pass, no production assertion weakened.",
+    "Receipt helper typo imported createHash from node:fs; corrected to node:crypto.",
+    "Linux typecheck attempted repeatedly: unrelated bridge/gameplay/orchestrator/desktop-scene/viewport concurrent errors; latest3 JSON errors remain."
+  ],
+  "limits": [
+    "Dedicated project test tool detected no test command; used actual pnpm owning suites.",
+    "Full repository gate/native package rebuild/live providers not run by this visual lane.",
+    "No manual screenshot-image viewer/browser tool was exposed; screenshots and DOM/computed-style/layout predicates are real Chromium evidence, not a claimed manual pixel review.",
+    "Historical FINAL production BLOCKED remains independent of this visual loop."
+  ]
+}

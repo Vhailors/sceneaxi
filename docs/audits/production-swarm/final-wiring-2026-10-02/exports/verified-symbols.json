@@ -1,0 +1,197 @@
+[
+  {
+    "name": "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "SCENE_MATRIX_CONVENTION_V2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "multiplySceneMatricesV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "sceneMatrixFromSculptTransformV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "validateSceneCompositionIntakeV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "resolveScenePlacementsV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "migrateSceneCompositionIntakeV1ToV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "digestScenePlacementsV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "digestComposedSceneV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "projectSceneInstanceHierarchyV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "validateComposedSceneV2",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "composedSceneV2FromDocumentData",
+    "kind": "value",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "SceneMatrixV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "SceneCompositionIntakeV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "ResolvedScenePlacementV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "SceneBoundsV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "ComposedSceneInstanceV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "ComposedSceneV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "PlacedSceneInstanceHierarchyV2",
+    "kind": "type",
+    "source": "packages/schemas/src/scene-composition.ts"
+  },
+  {
+    "name": "composeSceneV2",
+    "kind": "value",
+    "source": "packages/authoring-core/src/scene-composition.ts"
+  },
+  {
+    "name": "serializeComposedSceneV2",
+    "kind": "value",
+    "source": "packages/authoring-core/src/scene-composition.ts"
+  },
+  {
+    "name": "sceneDocumentFromComposedSceneV2",
+    "kind": "value",
+    "source": "packages/authoring-core/src/scene-composition.ts"
+  },
+  {
+    "name": "migrateComposedSceneV1ToV2",
+    "kind": "value",
+    "source": "packages/authoring-core/src/scene-composition.ts"
+  },
+  {
+    "name": "SceneCompositionResultV2",
+    "kind": "type",
+    "source": "packages/authoring-core/src/scene-composition.ts"
+  },
+  {
+    "name": "resolveScenePresentationV2",
+    "kind": "value",
+    "source": "packages/engine-presentation/src/scene-transforms.ts"
+  },
+  {
+    "name": "ScenePresentationSourceV2",
+    "kind": "type",
+    "source": "packages/engine-presentation/src/scene-transforms.ts"
+  },
+  {
+    "name": "evaluateLocalProjectBuild",
+    "kind": "value",
+    "source": "packages/schemas/src/desktop-project-build.ts"
+  },
+  {
+    "name": "LOCAL_PROJECT_BUILD_LIMITS",
+    "kind": "value",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LOCAL_PROJECT_BUILD_REFUSALS",
+    "kind": "value",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "buildLocalProject",
+    "kind": "value",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "verifyLocalProjectBuild",
+    "kind": "value",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "launchLocalProjectBuild",
+    "kind": "value",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectBuildRefusal",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectBuildReceipt",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectBuildSuccess",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectBuildResult",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectBuildInput",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectLaunchInput",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  },
+  {
+    "name": "LocalProjectLaunchSuccess",
+    "kind": "type",
+    "source": "packages/authoring-core/src/local-project-build.ts"
+  }
+]

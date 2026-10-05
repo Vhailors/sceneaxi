@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import {
   CATALOG_SITE_BRAND,
+  catalogCanonical,
   CATALOG_SITE_FOUNDATION_SURFACE,
   CATALOG_SITE_SURFACE,
   resolveUmbrellaOrigin,
@@ -16,7 +21,14 @@ import "./globals.css";
  * font, so the site loads them itself. `next/font` self-hosts both at build time, which
  * keeps the deployed storefront free of a third-party font request at runtime.
  */
-const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--site-font-ui" });
+const archivo = Archivo({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--site-font-ui",
+  // The width axis carries the display headings' `wdth` 104 (DIRECTION DV-F11).
+  axes: ["wdth"],
+});
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
@@ -34,17 +46,43 @@ const jetbrainsMono = JetBrains_Mono({
  */
 const foundations = foundationsStylesheet(CATALOG_SITE_FOUNDATION_SURFACE);
 
-export const metadata: Metadata = {
-  title: `${CATALOG_SITE_BRAND.name} — SceneAxi website assets`,
-  description: CATALOG_SITE_BRAND.tagline,
-};
+const metadataOrigin = catalogCanonical(process.env, "/");
 
-export default function RootLayout({ children }: { readonly children: React.ReactNode }) {
+export async function generateMetadata(): Promise<Metadata> {
+  const route = (await headers()).get("x-sceneaxi-route") ?? "/";
+  const path = route.startsWith("/") && !route.startsWith("//") && !/[?#\\]/.test(route) ? route : "/";
+  const canonical = catalogCanonical(process.env, path);
+
+  const metadata: Metadata = {
+    title: `${CATALOG_SITE_BRAND.name} — SceneAxi website assets`,
+    description: CATALOG_SITE_BRAND.tagline,
+  };
+
+  if (metadataOrigin !== null) metadata.metadataBase = new URL(metadataOrigin);
+
+  if (canonical !== null) metadata.alternates = { canonical };
+
+  return metadata;
+}
+
+/**
+ * Which primary nav entry names the page being served, for `aria-current`. Read from the
+ * middleware's own pathname header, the same one metadata uses; an unknown route marks
+ * nothing rather than guessing.
+ */
+function currentNav(route: string | null): "catalogue" | "publish" | null {
+  if (route === "/") return "catalogue";
+  if (route === "/publish") return "publish";
+  return null;
+}
+
+export default async function RootLayout({ children }: { readonly children: React.ReactNode }) {
   // Ordinary cross-links, carrying no identity, session, or telemetry across the surface
   // boundary — and never pointing at Kids.
   const umbrella = resolveUmbrellaOrigin(process.env);
   const family = resolveFamilyBar(process.env, CATALOG_SITE_SURFACE);
   const domain = resolveStoreDomain(process.env, CATALOG_SITE_SURFACE);
+  const current = currentNav((await headers()).get("x-sceneaxi-route"));
 
   return (
     <html lang="en" className={`${archivo.variable} ${jetbrainsMono.variable}`}>
@@ -77,8 +115,12 @@ export default function RootLayout({ children }: { readonly children: React.Reac
               </span>
             </a>
             <nav className="nav" aria-label="Primary">
-              <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
-              <a href="/publish">Submit a scene</a>
+              <a href="/" aria-current={current === "catalogue" ? "page" : undefined}>
+                {CATALOG_SITE_BRAND.catalogueWord}
+              </a>
+              <a href="/publish" aria-current={current === "publish" ? "page" : undefined}>
+                Submit a scene
+              </a>
               {umbrella.ok && <a href={umbrella.value}>SceneAxi engine</a>}
             </nav>
           </div>
@@ -100,7 +142,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
 
             <div className="footer-cols">
               <div className="footer-col">
-                <p className="micro">Browse</p>
+                <p className="footer-heading">Browse</p>
                 <ul>
                   <li>
                     <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
@@ -111,7 +153,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </ul>
               </div>
               <div className="footer-col">
-                <p className="micro">Submit</p>
+                <p className="footer-heading">Submit</p>
                 <ul>
                   <li>
                     <a href="/publish">Submit a scene</a>
@@ -122,7 +164,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </ul>
               </div>
               <div className="footer-col">
-                <p className="micro">SceneAxi</p>
+                <p className="footer-heading">SceneAxi</p>
                 <ul>
                   <li>
                     {umbrella.ok ? (

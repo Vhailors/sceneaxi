@@ -38,7 +38,7 @@ export function ListingCard({
       ];
 
   return (
-    <li className="card">
+    <li className={compact ? "card card-compact" : "card"}>
       <a className="card-link" href={`/item/${listing.itemId}`}>
         <DigestFigure
           digest={listing.recordDigest}
@@ -57,6 +57,9 @@ export function ListingCard({
           </span>
         </span>
         {!compact && share.ok && <span className="card-meta">{share.value.label}</span>}
+        {listing.availability.purchase === "refused" && (
+          <span className="card-meta card-refusal">View details · purchases unavailable</span>
+        )}
       </a>
     </li>
   );

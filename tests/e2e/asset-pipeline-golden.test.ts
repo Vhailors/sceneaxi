@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { parseDocumentText } from "../../packages/schemas/src/index.ts";
 import { apply } from "../../packages/authoring-core/src/index.ts";
 import {
   CONTAINED_GLTF_REFUSALS,
@@ -158,8 +159,10 @@ describe("first-class manifest-backed asset pipeline", () => {
       expect(copies.ok).toBe(true);
       expect(readFileSync(join(root, proposed.entry.relativePath))).toEqual(bytes);
     }
-    const document = JSON.parse(readFileSync(join(root, "scene.json"), "utf8")) as { data: unknown };
-    const manifest = projectAssetManifestFromDocumentData(document.data);
+    const parsed = parseDocumentText(readFileSync(join(root, "scene.json"), "utf8"));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.message);
+    const manifest = projectAssetManifestFromDocumentData(parsed.document.data);
     expect(manifest.ok).toBe(true);
     if (!manifest.ok) return;
     expect(new Set(manifest.value.assets.map((entry) => entry.family))).toEqual(new Set(["sceneaxi", "model", "image", "audio", "font", "animation"]));

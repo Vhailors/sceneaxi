@@ -1,0 +1,2779 @@
+{
+  "taskid": "workflow-ci",
+  "capturedAt": "2026-10-02T11:14:18.426724+00:00",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "baseline": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+  "published": "346933c105305224d575bf9319256301c1eeabfa",
+  "scope": "static source/Git closure plus read-only current CI, not a full build or full review",
+  "local": {
+    "subject": "working-tree-source-not-dist",
+    "entryCount": 1585,
+    "errors": [],
+    "publicExportTargets": [
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./src/profile-conformance-suite.ts"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./src/testing/scene-composition.ts"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/catalog-item.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/catalog-metadata-unavailable-tombstone.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/delivery-handoff.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/identity.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/credit-ledger.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/billing-checkout.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/credit-packs.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/credit-packs.fixtures.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/entitlement-matrix.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/entitlement-decision.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/entitlement-matrix.fixtures.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/catalog-listings.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/catalog-listings.fixtures.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/revenue-share.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/model-provider-port.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/rarity.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/rarity.fixtures.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/sculpt-intake.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/object-sculpt-spec.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/sculpt-artifact.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/scene-composition.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/plugin-manifest.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/plugin-manifest.inert.example.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/plugin-capability-registry.schema.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/plugin-capability-registry.1.0.0.json"
+      },
+      {
+        "package": "@sceneaxi/schemas",
+        "target": "./contracts/input-action-map.schema.json"
+      },
+      {
+        "package": "@sceneaxi/physics-rapier",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/engine-kernel",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/engine-presentation",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/engine-orchestrator",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/authoring-core",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/authoring-core",
+        "target": "./src/rarity-evidence.ts"
+      },
+      {
+        "package": "@sceneaxi/profile-game",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/profile-web",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/profile-kids",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/cli",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/importers",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/provider-openrouter",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/plugin-host",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/auth",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/auth",
+        "target": "./src/testing/principal-issuance.ts"
+      },
+      {
+        "package": "@sceneaxi/billing",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/web-shell",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-shell",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/catalog-game",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/catalog-web",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/catalog-identity.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/commerce-notice.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/profile-contracts.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/site-session.ts"
+      },
+      {
+        "package": "@sceneaxi/site-kit",
+        "target": "./src/state-panel.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-linux",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-linux",
+        "target": "./src/electron/provider-runtime.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-windows",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-macos",
+        "target": "./src/index.ts"
+      }
+    ],
+    "workflowInventory": [
+      {
+        "path": ".github/workflows/desktop-artifact-expiry.yml",
+        "sha256": "e519fc00ddc735747411a69f32ee9fee852186b39e01e6fecd444bfeb0a236b4",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/desktop-linux.yml",
+        "sha256": "72e15b6c6ec5463123282d802fff704bfbcb980bcaed85023abbb6b7542092d2",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/desktop-macos.yml",
+        "sha256": "2d276e33630781e8e6a3bd93019b8ec379400d8c361d9629cafaebec5d5902e3",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": [
+          {
+            "line": 15,
+            "text": "default: false"
+          },
+          {
+            "line": 68,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          },
+          {
+            "line": 80,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          },
+          {
+            "line": 87,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          }
+        ]
+      },
+      {
+        "path": ".github/workflows/desktop-windows.yml",
+        "sha256": "25d22a0394af3126ecea3dc2371840252edeed21e7b5131781020ab3d9c3593e",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": [
+          {
+            "line": 10,
+            "text": "default: false"
+          },
+          {
+            "line": 14,
+            "text": "default: false"
+          },
+          {
+            "line": 46,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.native_runtime == true"
+          },
+          {
+            "line": 75,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.native_candidate == true"
+          }
+        ]
+      },
+      {
+        "path": ".github/workflows/engine-sdk.yml",
+        "sha256": "c819e676fce9efe74c3d09d85c96e85c4fce6308e79309b504e76263c372fff1",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/gate.yml",
+        "sha256": "264b8bf0d8a7cdf9bc5a64cf8277d991063195a5decd0173145795ee9b989516",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": []
+      }
+    ],
+    "references": [
+      {
+        "owner": "baseline",
+        "path": "docs/dependency-matrix.json",
+        "kind": "matrix-file"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/schemas/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/src/profile-conformance-suite.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/src/testing/scene-composition.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/catalog-item.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/catalog-metadata-unavailable-tombstone.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/delivery-handoff.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/identity.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/credit-ledger.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/billing-checkout.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/credit-packs.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/credit-packs.fixtures.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/entitlement-matrix.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/entitlement-decision.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/entitlement-matrix.fixtures.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/catalog-listings.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/catalog-listings.fixtures.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/revenue-share.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/model-provider-port.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/rarity.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/rarity.fixtures.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/sculpt-intake.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/object-sculpt-spec.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/sculpt-artifact.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/scene-composition.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/plugin-manifest.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/plugin-manifest.inert.example.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/plugin-capability-registry.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/plugin-capability-registry.1.0.0.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/schemas/package.json",
+        "path": "packages/schemas/contracts/input-action-map.schema.json",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/physics-rapier/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/physics-rapier/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/physics-rapier/package.json",
+        "path": "packages/physics-rapier/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-kernel/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/engine-kernel/package.json",
+        "path": "packages/engine-kernel/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-presentation/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-presentation/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/engine-presentation/package.json",
+        "path": "packages/engine-presentation/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-orchestrator/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-orchestrator/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/engine-orchestrator/package.json",
+        "path": "packages/engine-orchestrator/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/authoring-core/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/authoring-core/package.json",
+        "path": "packages/authoring-core/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/authoring-core/package.json",
+        "path": "packages/authoring-core/src/rarity-evidence.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/profile-game/package.json",
+        "path": "packages/profile-game/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/profile-web/package.json",
+        "path": "packages/profile-web/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-kids/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-kids/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/profile-kids/package.json",
+        "path": "packages/profile-kids/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/cli/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/cli/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/cli/package.json",
+        "path": "packages/cli/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/importers/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/importers/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/importers/package.json",
+        "path": "packages/importers/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/provider-openrouter/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/provider-openrouter/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/provider-openrouter/package.json",
+        "path": "packages/provider-openrouter/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/plugin-host/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/plugin-host/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/plugin-host/package.json",
+        "path": "packages/plugin-host/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/auth/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/auth/package.json",
+        "path": "packages/auth/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/auth/package.json",
+        "path": "packages/auth/src/testing/principal-issuance.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/billing/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/billing/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/billing/package.json",
+        "path": "packages/billing/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/web-shell/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/web-shell/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "apps/web-shell/package.json",
+        "path": "apps/web-shell/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/desktop-shell/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/desktop-shell/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "apps/desktop-shell/package.json",
+        "path": "apps/desktop-shell/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "apps/catalog-game/package.json",
+        "path": "apps/catalog-game/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "apps/catalog-web/package.json",
+        "path": "apps/catalog-web/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/site-kit/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/site-kit/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/catalog-identity.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/commerce-notice.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/profile-contracts.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/site-session.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "packages/site-kit/package.json",
+        "path": "packages/site-kit/src/state-panel.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/umbrella/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/umbrella/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/kids/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/kids/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/linux/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/linux/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/linux/package.json",
+        "path": "desktop/linux/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "desktop/linux/package.json",
+        "path": "desktop/linux/src/electron/provider-runtime.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/windows/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/windows/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/windows/package.json",
+        "path": "desktop/windows/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/macos/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/macos/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/macos/package.json",
+        "path": "desktop/macos/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": ".github/workflows/desktop-artifact-expiry.yml",
+        "path": "scripts/check-desktop-artifact-expiry.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/desktop-windows.yml",
+        "path": "desktop/windows/scripts/native-runtime-smoke.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/check-publish-ready.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": "scripts/build-engine-sdk.mjs",
+        "path": "scripts/lib/zip.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/check-publish-ready.mjs",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/check-publish-ready.mjs",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/check-traceability.mjs",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/delivery-local-oracle.test.mjs",
+        "path": "scripts/local-sbom.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/docs-api.mjs",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/security-delivery.test.mjs",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/security-delivery.test.mjs",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "scripts/workspace-dist-resolver.mjs",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/check-publish-ready.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/docs-api.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/workspace-dist-resolver.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "sites/umbrella/src/app/api/checkout/checkout-handler.ts",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "apps/catalog-game/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/catalog-web/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/desktop-shell/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/desktop-shell/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/web-shell/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/web-shell/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/web-shell/tsconfig.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "apps/web-shell/tsconfig.json",
+        "path": "packages/billing/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/auth/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/authoring-core/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/billing/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/billing/tsconfig.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/cli/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/cli/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/cli/tsconfig.json",
+        "path": "packages/importers/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/engine-kernel/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/engine-orchestrator/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/engine-orchestrator/tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/engine-presentation/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/engine-presentation/tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/importers/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/importers/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/physics-rapier/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/plugin-host/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-game/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-game/tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-game/tsconfig.json",
+        "path": "packages/engine-orchestrator/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-game/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-kids/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-web/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-web/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-web/tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/profile-web/tsconfig.json",
+        "path": "packages/engine-presentation/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/provider-openrouter/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/provider-openrouter/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/site-kit/tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "packages/site-kit/tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/physics-rapier/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-presentation/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-orchestrator/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-game/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-web/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-kids/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/cli/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/importers/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/provider-openrouter/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/plugin-host/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/site-kit/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/billing/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/web-shell/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/desktop-shell/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/catalog-game/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/catalog-web/tsconfig.json",
+        "kind": "typescript-project-reference"
+      }
+    ],
+    "sourceSha256": {
+      ".github/workflows/desktop-artifact-expiry.yml": "e519fc00ddc735747411a69f32ee9fee852186b39e01e6fecd444bfeb0a236b4",
+      ".github/workflows/desktop-linux.yml": "72e15b6c6ec5463123282d802fff704bfbcb980bcaed85023abbb6b7542092d2",
+      ".github/workflows/desktop-macos.yml": "2d276e33630781e8e6a3bd93019b8ec379400d8c361d9629cafaebec5d5902e3",
+      ".github/workflows/desktop-windows.yml": "25d22a0394af3126ecea3dc2371840252edeed21e7b5131781020ab3d9c3593e",
+      ".github/workflows/engine-sdk.yml": "c819e676fce9efe74c3d09d85c96e85c4fce6308e79309b504e76263c372fff1",
+      ".github/workflows/gate.yml": "264b8bf0d8a7cdf9bc5a64cf8277d991063195a5decd0173145795ee9b989516",
+      "apps/catalog-game/package.json": "413e9bd807a7d092b1a9168c455ee231e47c2cbe7ddc0e157bb6049fbae73530",
+      "apps/catalog-game/tsconfig.json": "5b419c147950a3f3f390d8cb5f1b33e1da0a82787548d986dc96b0d11f9c8f55",
+      "apps/catalog-web/package.json": "0db4f90766b9488e51b46db75e87ecc11c2280545aef1976245bd78a73f4bc6f",
+      "apps/catalog-web/tsconfig.json": "5b419c147950a3f3f390d8cb5f1b33e1da0a82787548d986dc96b0d11f9c8f55",
+      "apps/desktop-shell/package.json": "4d64e7635957562b8ee6628e554f22b1d597f6e909b284fb92f3333a864898d6",
+      "apps/desktop-shell/tsconfig.json": "f4c8705c3b51ef96f2752dfef9f8285fbdc411fb3baf009a3374809f9fd02f81",
+      "apps/web-shell/package.json": "6212e5a0c38da92c732d10b47b8931740f957963efb8c059b888c24d04626747",
+      "apps/web-shell/tsconfig.json": "cece8bc746f4e517a825b164a22ed3a1c8cadb01e5feb88b597d0369dfac70ac",
+      "desktop/linux/package.json": "6e47e99f2bca589766cf2e47d1c20c1b0ce69cc4ad921d00dd701201ef32a18e",
+      "desktop/linux/tsconfig.json": "eaefc0561d01f18992f956f9e4cf4e948386dc1660e0c29adf6cc6905492797c",
+      "desktop/macos/package.json": "4eb63adac54418012087edadf3f8840de05476299a475b57fb8936288a8f6a88",
+      "desktop/macos/tsconfig.json": "1e4ec3e024c9a33186d1b98325f6d7c8cc50680a976e25ea380eaee361cf37b0",
+      "desktop/windows/package.json": "76abc457e7c1000b5acf744bd071c090a37bac155ddd085677f6e57627164c16",
+      "desktop/windows/tsconfig.json": "6268a0cc6fc5e850f9806073ddac7190908cf3f0b81b55b20feb4c3790de8b90",
+      "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+      "packages/auth/package.json": "e8d41629346c79b499e48198d29e0de1a3127e463156b2e2ff686dc5a3b36543",
+      "packages/auth/tsconfig.json": "2271aa3aed21c846998a79f4e5803a9e264fe0d381206af74c191adbdc7fded6",
+      "packages/authoring-core/package.json": "82f1aa97e35e72e89d4e26cc048f4c038f0c493095fb016d8746eaf1fb73dccf",
+      "packages/authoring-core/tsconfig.json": "3a46768f8dabb50449a25a2f4c034ed711a8e7c177fbcd123c1bb7fd22aad369",
+      "packages/billing/package.json": "a843c5f04ef7583b8615c5706e8865e78da656378bd218a375668f721cd2a39a",
+      "packages/billing/tsconfig.json": "41a5e00e6828920fb1e69b70aa9eb8cb990f6671d30387d165d8ea047a4e2eeb",
+      "packages/cli/package.json": "88304350b2e7622a16a35c4de2bf00fbc0811cd4b2497543edf8984d4cc7c803",
+      "packages/cli/tsconfig.json": "930f0ce7355add1b93a7470f61eee0a8c3cfe83d8d0313b952d2292e287d8058",
+      "packages/engine-kernel/package.json": "606e06439f626a9828966fecb0b568122d92a51064bdea88b0a973e7e25495cf",
+      "packages/engine-kernel/tsconfig.json": "2271aa3aed21c846998a79f4e5803a9e264fe0d381206af74c191adbdc7fded6",
+      "packages/engine-orchestrator/package.json": "91b81a7cf6cf53488d9899ce688720c82c8991a4293ae108c86971a176985484",
+      "packages/engine-orchestrator/tsconfig.json": "1cc70f590444269567e315124f7c9cb583143c3b30f4f58ce2b3c6ebcd66d534",
+      "packages/engine-presentation/package.json": "a221d80a22bbd1fdfc90c85cf297bd1fd79a367925527cc4aa85a564b17f0cb0",
+      "packages/engine-presentation/tsconfig.json": "b969b313be6be28f89bd507b548968c52b85f79e0cd55ef2572f0181b7291ce4",
+      "packages/importers/package.json": "db2092552387fe9a038a69c4fa662689d17c24271e78dbf57c6c1cd777a758ea",
+      "packages/importers/tsconfig.json": "bf707b5d7b78d1458d13e3fb86dc59b8b91179c03ff8b33f758993868de3c8e4",
+      "packages/physics-rapier/package.json": "7000c2ae3c62c883c403e666ac4c66b5021421eb5b1fbbce83bbeea9f4b11139",
+      "packages/physics-rapier/tsconfig.json": "2271aa3aed21c846998a79f4e5803a9e264fe0d381206af74c191adbdc7fded6",
+      "packages/plugin-host/package.json": "48014b41d55098550d84abe5d2217e2e07da5ff1260e97a21b158dfb85b11c4d",
+      "packages/plugin-host/tsconfig.json": "2271aa3aed21c846998a79f4e5803a9e264fe0d381206af74c191adbdc7fded6",
+      "packages/profile-game/package.json": "b5b3c3fdf75438fa8e3f4c4cc0d3c8bc2ac5ccf1d21234e3a1abb4e45805125e",
+      "packages/profile-game/tsconfig.json": "c68be0d047437bcf8bd44e20efd1046898e298e8f69ee9687a1349e7daa5e4b1",
+      "packages/profile-kids/package.json": "fd4462b9f3e21a36b9768213ebf295ba4cea1037d4f75b50aa2e2362a234fab1",
+      "packages/profile-kids/tsconfig.json": "2271aa3aed21c846998a79f4e5803a9e264fe0d381206af74c191adbdc7fded6",
+      "packages/profile-web/package.json": "8046b7ba241c615c0f5f4a5f626896440e12eac5e07c8f0dda5856d232d56034",
+      "packages/profile-web/tsconfig.json": "45d3ac19a0af80e067fd262e00a6c926e20e3123845715c1937fb442721f9a78",
+      "packages/provider-openrouter/package.json": "9e2767f7143c28d4946806e1feea1d0adfc838f18b181b67b80e820f4a06e315",
+      "packages/provider-openrouter/tsconfig.json": "bf707b5d7b78d1458d13e3fb86dc59b8b91179c03ff8b33f758993868de3c8e4",
+      "packages/schemas/package.json": "0ea197e49baf0f9b4facfcadf818ec44ebfbf33fb6ffcc1f47c2f41e2c035e8d",
+      "packages/schemas/tsconfig.json": "0a3883a2dcc7bcea3f8bfbc25d867cfd81e484aca33a36d85c4c3789a29637f3",
+      "packages/site-kit/package.json": "938e00f032e50b139d5e47c18a4716d6a436e8cebc572697c2e51b669fd16aeb",
+      "packages/site-kit/tsconfig.json": "bf707b5d7b78d1458d13e3fb86dc59b8b91179c03ff8b33f758993868de3c8e4",
+      "scripts/build-engine-sdk.d.mts": "b2ce3bdd1f88737d169da78052e60f2daeaa370cf3c8fed37b9e00f8045697f0",
+      "scripts/build-engine-sdk.mjs": "552deefe54469ec2e08bbda2b31be8bffa168f278871fc94e2e83b887f509463",
+      "scripts/check-boundaries.mjs": "7b93e32fbfdf7daa0b62723c3943ef46f586f9ee7cec9b8917601282977a2d37",
+      "scripts/check-contracts.mjs": "c019a524a0e92a62df9bdd123e214c69da8a7ab1b39f3ac70026a3bbac7b6943",
+      "scripts/check-contracts.test.mjs": "d34e1512be895254444d4705e58e0de05c907e7a972c53d7cd72177506cfe1d3",
+      "scripts/check-desktop-artifact-expiry.d.mts": "a4c02546ec1167f6825bb2c4b3b1a1069546e2b78366d1c4be9801aef65e286f",
+      "scripts/check-desktop-artifact-expiry.mjs": "11fe696b361049e6f99c076e00bb2d5e8a098ebc0ece9878f345f2f3a58cf15d",
+      "scripts/check-desktop.mjs": "9161e28b32a422ddc7f63b13773ddd20ac90e4a32709560e0341939d4d44198f",
+      "scripts/check-publish-ready.d.mts": "58f957f1d4178275cb3c839aefa1f3cf55a396b76a02fe33fc1f855432199c90",
+      "scripts/check-publish-ready.mjs": "01f37ee2a79569cc567350229b41faad987eafc1f86565b02baaefe6d54eb1cd",
+      "scripts/check-sites.mjs": "5245726d294a9f380daa9b8295df41a9123c6225540688bb2f51af549d561620",
+      "scripts/check-syntax.mjs": "f0ef209f91f91031a5953d45e5facee59a52bdd2bcb4001c500b6854770febb6",
+      "scripts/check-traceability.d.mts": "043457b181d22d2d0d15ff144ed0e530611fd77b18634781488d2724112d9ee1",
+      "scripts/check-traceability.mjs": "0f48e9d23c34d9a03d14d503f16f880592262c5fffb75f8765bb3776ad3d1e18",
+      "scripts/check-vercel-package.d.mts": "cb8647214f0e857af2c6feda9c330584c35b5c7716a1a7a46ee75704c01893b3",
+      "scripts/check-vercel-package.mjs": "452ae9900816f7d5fe9dfca1ad3a44196f9a0feaf9c06ada46742cbf8b71cc0f",
+      "scripts/db-migrate.mjs": "693b46a7fe8601d4b87a2229a660b234d9cbf4158e195f20804f8ebe1d614801",
+      "scripts/delivery-local-oracle.test.mjs": "814a1c090e528573a2bdcff30a3ddeaeded9b6c478fcacf063664f7ed507f901",
+      "scripts/docs-api.mjs": "ff932e795a3652dcbc6472f01d6d9f0a64f5392f1d2db5d7419308524f316bc1",
+      "scripts/finish-catalog-browser-proof.mjs": "f320a3249e0bf18329a55c7a05d1a86ffa6998deea57a227623688e256f13615",
+      "scripts/lib/package-exports.mjs": "b502fb38dee7ccf2b36843403612f39fbb211b0ab33381b4997aa30ba9af5dc8",
+      "scripts/lib/zip.d.mts": "084a7e66c3bf4e89502c24b9ad73423b232541a689fa160423c49c4b335899fd",
+      "scripts/lib/zip.mjs": "42e936823b6e8473e4bd9e033dad044f54bc2bbc31f612b0752b755cb3ab52e1",
+      "scripts/local-sbom.mjs": "50d086de36dbbb180b58c9907dc07948fa34cfcaaeca0eefb8e985d8b3f50631",
+      "scripts/probe-surfaces.mjs": "59950a190ba6a66a85e1cf54a3db9a33ae3964896408c399f916c960f5fdc3aa",
+      "scripts/security-delivery.test.mjs": "51775b8abfe51544ea56d751fb648a5f1c3d8dadc4deef387228998746d5f925",
+      "scripts/surface-map.mjs": "978a8bea8f6bfdb909e2140325810d2939d8958ebde0e306684f2fb73a91059e",
+      "scripts/tutorial-local-oracle.test.mjs": "a63c28b06860c922345ec639ef0cd5dcbc90f0fed89fc89509acdd19da8f18ee",
+      "scripts/workspace-dist-resolver.mjs": "b306373e95cda236519209ffec64726f855d97aa2f66169b35dfeeaf568f7a4a",
+      "sites/catalog-game/package.json": "3a0ad5757a73310f8b5ff75f38c0e8184a8351ceda20d1a6ca137b934f8db9be",
+      "sites/catalog-game/tsconfig.json": "0de940d51ea37e4d37428cae32d50526974f4821551cc1b09e6b4aedc0416475",
+      "sites/catalog-web/package.json": "a54b0f3cdeebed2d63831b61fbb06e2af1a9d5c4d4974c3518f025d91f03efa3",
+      "sites/catalog-web/tsconfig.json": "0de940d51ea37e4d37428cae32d50526974f4821551cc1b09e6b4aedc0416475",
+      "sites/kids/package.json": "69e17388c1d89faea7d8aa406a6dd9d4e34601b7d81fbac612ced0b6d5a03979",
+      "sites/kids/tsconfig.json": "9528321fe13e6d2897b5a6ac6977e8f0d026be49fbe9e7ee206335bc7b1ee22f",
+      "sites/umbrella/package.json": "8e42267c87dc22cf8b35b490b9ca17aa04b3407e275f6f1cd5cabfe2773e613b",
+      "sites/umbrella/tsconfig.json": "0de940d51ea37e4d37428cae32d50526974f4821551cc1b09e6b4aedc0416475",
+      "tsconfig.json": "48b2207188fb7fdb7e32b1e180bf5cbbcd82fc4fdb0994ff2de0416106a9f2ef"
+    },
+    "fingerprintSha256": "cf3439546417205f631eb1cafdc7c0ea226d5b8d19bb0dcafb5145890c1e8e44"
+  },
+  "pr": {
+    "subject": "346933c105305224d575bf9319256301c1eeabfa",
+    "entryCount": 456,
+    "errors": [
+      {
+        "kind": "matrix-file",
+        "owner": "baseline",
+        "missing": "docs/dependency-matrix.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/schemas/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/schemas/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/physics-rapier/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/physics-rapier/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-kernel/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-kernel/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-presentation/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-presentation/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-orchestrator/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/engine-orchestrator/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/authoring-core/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/authoring-core/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-game/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-game/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-web/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-web/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-kids/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/profile-kids/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/cli/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/cli/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/importers/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/importers/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/provider-openrouter/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/provider-openrouter/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/plugin-host/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/plugin-host/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/auth/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/auth/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/billing/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/billing/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/web-shell/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/web-shell/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/desktop-shell/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/desktop-shell/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/catalog-game/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/catalog-game/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/catalog-web/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "apps/catalog-web/tsconfig.json"
+      },
+      {
+        "kind": "matrix-manifest",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/site-kit/package.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "packages/site-kit/tsconfig.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "sites/umbrella/tsconfig.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "sites/catalog-game/tsconfig.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "sites/catalog-web/tsconfig.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "sites/kids/tsconfig.json"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "desktop/linux/tsconfig.json"
+      },
+      {
+        "kind": "public-export",
+        "owner": "desktop/linux/package.json",
+        "missing": "desktop/linux/src/index.ts"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "desktop/windows/tsconfig.json"
+      },
+      {
+        "kind": "public-export",
+        "owner": "desktop/windows/package.json",
+        "missing": "desktop/windows/src/index.ts"
+      },
+      {
+        "kind": "matrix-tsconfig",
+        "owner": "docs/dependency-matrix.json",
+        "missing": "desktop/macos/tsconfig.json"
+      },
+      {
+        "kind": "public-export",
+        "owner": "desktop/macos/package.json",
+        "missing": "desktop/macos/src/index.ts"
+      },
+      {
+        "kind": "workflow-node-target",
+        "owner": ".github/workflows/desktop-artifact-expiry.yml",
+        "missing": "scripts/check-desktop-artifact-expiry.mjs"
+      },
+      {
+        "kind": "workflow-node-target",
+        "owner": ".github/workflows/engine-sdk.yml",
+        "missing": "scripts/check-publish-ready.mjs"
+      },
+      {
+        "kind": "workflow-node-target",
+        "owner": ".github/workflows/engine-sdk.yml",
+        "missing": "scripts/build-engine-sdk.mjs"
+      },
+      {
+        "kind": "workflow-node-target",
+        "owner": ".github/workflows/engine-sdk.yml",
+        "missing": "scripts/build-engine-sdk.mjs"
+      },
+      {
+        "kind": "baseline-executable-mode",
+        "path": ".bb/skills/verify-sceneaxi/check",
+        "expected": "100755",
+        "actual": null
+      },
+      {
+        "kind": "baseline-executable-mode",
+        "path": ".bb/skills/verify-sceneaxi/verify",
+        "expected": "100755",
+        "actual": null
+      },
+      {
+        "kind": "baseline-executable-mode",
+        "path": "apps/desktop-shell/bin/sceneaxi-desktop.mjs",
+        "expected": "100755",
+        "actual": null
+      },
+      {
+        "kind": "baseline-executable-mode",
+        "path": "scripts/check-traceability.mjs",
+        "expected": "100755",
+        "actual": null
+      },
+      {
+        "kind": "mandatory-target",
+        "owner": "acceptance-front-doors",
+        "missing": "scripts/check-publish-ready.mjs"
+      },
+      {
+        "kind": "mandatory-target",
+        "owner": "acceptance-front-doors",
+        "missing": "scripts/build-engine-sdk.mjs"
+      },
+      {
+        "kind": "mandatory-target",
+        "owner": "acceptance-front-doors",
+        "missing": "scripts/workspace-dist-resolver.mjs"
+      },
+      {
+        "kind": "mandatory-target",
+        "owner": "acceptance-front-doors",
+        "missing": "scripts/lib/package-exports.mjs"
+      },
+      {
+        "kind": "mandatory-target",
+        "owner": "acceptance-front-doors",
+        "missing": "sites/umbrella/src/app/api/checkout/checkout-handler.ts"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/schemas/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/physics-rapier/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/engine-kernel/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/engine-presentation/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/engine-orchestrator/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/authoring-core/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/profile-game/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/profile-web/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/profile-kids/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/cli/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/importers/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/provider-openrouter/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/plugin-host/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/site-kit/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/auth/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "packages/billing/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "apps/web-shell/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "apps/desktop-shell/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "apps/catalog-game/tsconfig.json"
+      },
+      {
+        "kind": "typescript-project-reference",
+        "owner": "tsconfig.json",
+        "missing": "apps/catalog-web/tsconfig.json"
+      }
+    ],
+    "publicExportTargets": [
+      {
+        "package": "@sceneaxi/desktop-linux",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-linux",
+        "target": "./src/electron/provider-runtime.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-windows",
+        "target": "./src/index.ts"
+      },
+      {
+        "package": "@sceneaxi/desktop-macos",
+        "target": "./src/index.ts"
+      }
+    ],
+    "workflowInventory": [
+      {
+        "path": ".github/workflows/desktop-artifact-expiry.yml",
+        "sha256": "e519fc00ddc735747411a69f32ee9fee852186b39e01e6fecd444bfeb0a236b4",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/desktop-linux.yml",
+        "sha256": "72e15b6c6ec5463123282d802fff704bfbcb980bcaed85023abbb6b7542092d2",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/desktop-macos.yml",
+        "sha256": "2d276e33630781e8e6a3bd93019b8ec379400d8c361d9629cafaebec5d5902e3",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": [
+          {
+            "line": 15,
+            "text": "default: false"
+          },
+          {
+            "line": 68,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          },
+          {
+            "line": 80,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          },
+          {
+            "line": 87,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true"
+          }
+        ]
+      },
+      {
+        "path": ".github/workflows/desktop-windows.yml",
+        "sha256": "25d22a0394af3126ecea3dc2371840252edeed21e7b5131781020ab3d9c3593e",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": [
+          {
+            "line": 10,
+            "text": "default: false"
+          },
+          {
+            "line": 14,
+            "text": "default: false"
+          },
+          {
+            "line": 46,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.native_runtime == true"
+          },
+          {
+            "line": 75,
+            "text": "if: github.event_name == 'workflow_dispatch' && inputs.native_candidate == true"
+          }
+        ]
+      },
+      {
+        "path": ".github/workflows/engine-sdk.yml",
+        "sha256": "c819e676fce9efe74c3d09d85c96e85c4fce6308e79309b504e76263c372fff1",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        ],
+        "conditionalLines": []
+      },
+      {
+        "path": ".github/workflows/gate.yml",
+        "sha256": "65d55433461e3c83ff2dc3e17dd0d6bac7ffb01968d851ca05333b5667375553",
+        "uses": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+          "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+        ],
+        "conditionalLines": []
+      }
+    ],
+    "references": [
+      {
+        "owner": "baseline",
+        "path": "docs/dependency-matrix.json",
+        "kind": "matrix-file"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/schemas/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/physics-rapier/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/physics-rapier/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-kernel/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-presentation/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-presentation/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-orchestrator/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/engine-orchestrator/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/authoring-core/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-kids/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/profile-kids/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/cli/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/cli/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/importers/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/importers/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/provider-openrouter/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/provider-openrouter/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/plugin-host/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/plugin-host/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/auth/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/billing/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/billing/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/web-shell/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/web-shell/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/desktop-shell/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/desktop-shell/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "apps/catalog-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/site-kit/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "packages/site-kit/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/umbrella/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/umbrella/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-game/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-game/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-web/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/catalog-web/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/kids/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "sites/kids/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/linux/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/linux/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/linux/package.json",
+        "path": "desktop/linux/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "desktop/linux/package.json",
+        "path": "desktop/linux/src/electron/provider-runtime.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/windows/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/windows/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/windows/package.json",
+        "path": "desktop/windows/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/macos/package.json",
+        "kind": "matrix-manifest"
+      },
+      {
+        "owner": "docs/dependency-matrix.json",
+        "path": "desktop/macos/tsconfig.json",
+        "kind": "matrix-tsconfig"
+      },
+      {
+        "owner": "desktop/macos/package.json",
+        "path": "desktop/macos/src/index.ts",
+        "kind": "public-export"
+      },
+      {
+        "owner": ".github/workflows/desktop-artifact-expiry.yml",
+        "path": "scripts/check-desktop-artifact-expiry.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/desktop-windows.yml",
+        "path": "desktop/windows/scripts/native-runtime-smoke.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/check-publish-ready.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": ".github/workflows/engine-sdk.yml",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "workflow-node-target"
+      },
+      {
+        "owner": "scripts/delivery-local-oracle.test.mjs",
+        "path": "scripts/local-sbom.mjs",
+        "kind": "script-import"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/check-publish-ready.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/build-engine-sdk.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/docs-api.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/workspace-dist-resolver.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "scripts/lib/package-exports.mjs",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "acceptance-front-doors",
+        "path": "sites/umbrella/src/app/api/checkout/checkout-handler.ts",
+        "kind": "mandatory-target"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/schemas/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/physics-rapier/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-kernel/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-presentation/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/engine-orchestrator/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/authoring-core/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-game/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-web/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/profile-kids/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/cli/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/importers/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/provider-openrouter/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/plugin-host/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/site-kit/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/auth/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "packages/billing/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/web-shell/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/desktop-shell/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/catalog-game/tsconfig.json",
+        "kind": "typescript-project-reference"
+      },
+      {
+        "owner": "tsconfig.json",
+        "path": "apps/catalog-web/tsconfig.json",
+        "kind": "typescript-project-reference"
+      }
+    ],
+    "sourceSha256": {
+      ".github/workflows/desktop-artifact-expiry.yml": "e519fc00ddc735747411a69f32ee9fee852186b39e01e6fecd444bfeb0a236b4",
+      ".github/workflows/desktop-linux.yml": "72e15b6c6ec5463123282d802fff704bfbcb980bcaed85023abbb6b7542092d2",
+      ".github/workflows/desktop-macos.yml": "2d276e33630781e8e6a3bd93019b8ec379400d8c361d9629cafaebec5d5902e3",
+      ".github/workflows/desktop-windows.yml": "25d22a0394af3126ecea3dc2371840252edeed21e7b5131781020ab3d9c3593e",
+      ".github/workflows/engine-sdk.yml": "c819e676fce9efe74c3d09d85c96e85c4fce6308e79309b504e76263c372fff1",
+      ".github/workflows/gate.yml": "65d55433461e3c83ff2dc3e17dd0d6bac7ffb01968d851ca05333b5667375553",
+      "desktop/linux/package.json": "6e47e99f2bca589766cf2e47d1c20c1b0ce69cc4ad921d00dd701201ef32a18e",
+      "desktop/macos/package.json": "4eb63adac54418012087edadf3f8840de05476299a475b57fb8936288a8f6a88",
+      "desktop/windows/package.json": "76abc457e7c1000b5acf744bd071c090a37bac155ddd085677f6e57627164c16",
+      "scripts/db-migrate.mjs": "693b46a7fe8601d4b87a2229a660b234d9cbf4158e195f20804f8ebe1d614801",
+      "scripts/delivery-local-oracle.test.mjs": "814a1c090e528573a2bdcff30a3ddeaeded9b6c478fcacf063664f7ed507f901",
+      "scripts/docs-api.mjs": "3a70b13fe3e7ad602e63ee26f285daf1fe692a7b16f006bfbd039d84f0bea6dc",
+      "scripts/finish-catalog-browser-proof.mjs": "f320a3249e0bf18329a55c7a05d1a86ffa6998deea57a227623688e256f13615",
+      "scripts/local-sbom.mjs": "50d086de36dbbb180b58c9907dc07948fa34cfcaaeca0eefb8e985d8b3f50631",
+      "scripts/surface-map.mjs": "978a8bea8f6bfdb909e2140325810d2939d8958ebde0e306684f2fb73a91059e",
+      "scripts/tutorial-local-oracle.test.mjs": "a63c28b06860c922345ec639ef0cd5dcbc90f0fed89fc89509acdd19da8f18ee",
+      "sites/catalog-game/package.json": "dd1f36292b532b34ecc94d27548f602d782b56b15d304e65244ba96cf694ccc8",
+      "sites/catalog-web/package.json": "600a9c7c515ce173bc809d20d11103a5347a268489df5649341d6c4e45eeac64",
+      "sites/kids/package.json": "4b27ae3e56a7cd3384a59e9c982858c755543cdbd649dc634eb2f2f86439980d",
+      "sites/umbrella/package.json": "a6390501817a2f50edd34378c36e30e2ee69e416e6eaea14f2d3e897992c0ecb",
+      "tsconfig.json": "48b2207188fb7fdb7e32b1e180bf5cbbcd82fc4fdb0994ff2de0416106a9f2ef"
+    },
+    "fingerprintSha256": "e4eb18e5ff9fb58d03a9bcdd59dbcf332a85943e29e2b081f41cc752473bf14f"
+  },
+  "negativeControl": {
+    "input": "in-memory removal of packages/schemas/package.json",
+    "observed": "matrix-manifest refusal",
+    "pass": true,
+    "diskWrites": false
+  },
+  "publicChecker": {
+    "command": [
+      "node",
+      "scripts/check-publish-ready.mjs"
+    ],
+    "exit": 0,
+    "stdout": "publish-ready check OK \u2014 17 checks over the documented consumer surface, the 0.0.0 version plan, and the pinned engine SDK archive (no registry publish authority)\n",
+    "stderr": ""
+  },
+  "ghReceipt": {
+    "command": [
+      "gh",
+      "pr",
+      "view",
+      "312",
+      "--repo",
+      "Vhailors/sceneaxi",
+      "--json",
+      "number,headRefOid,baseRefOid,url,mergeStateStatus,statusCheckRollup"
+    ],
+    "exit": 0,
+    "stdout": "{\"baseRefOid\":\"dd77cc9cb91d24091082e0c5bc20a130f0f51ffc\",\"headRefOid\":\"346933c105305224d575bf9319256301c1eeabfa\",\"mergeStateStatus\":\"BLOCKED\",\"number\":312,\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:56Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652103/job/110602098831\",\"name\":\"desktop-linux\",\"startedAt\":\"2026-10-01T21:53:43Z\",\"status\":\"COMPLETED\",\"workflowName\":\"desktop-linux\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:55Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652105/job/110602099911\",\"name\":\"desktop-macos\",\"startedAt\":\"2026-10-01T21:53:43Z\",\"status\":\"COMPLETED\",\"workflowName\":\"desktop-macos\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:54:17Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602098989\",\"name\":\"static-staging\",\"startedAt\":\"2026-10-01T21:53:45Z\",\"status\":\"COMPLETED\",\"workflowName\":\"desktop-windows\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:50Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652102/job/110602098929\",\"name\":\"engine-sdk\",\"startedAt\":\"2026-10-01T21:53:43Z\",\"status\":\"COMPLETED\",\"workflowName\":\"engine-sdk\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:55Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099368\",\"name\":\"gate\",\"startedAt\":\"2026-10-01T21:53:43Z\",\"status\":\"COMPLETED\",\"workflowName\":\"gate\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:54Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099454\",\"name\":\"sites-build (umbrella)\",\"startedAt\":\"2026-10-01T21:53:42Z\",\"status\":\"COMPLETED\",\"workflowName\":\"gate\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:40Z\",\"conclusion\":\"SKIPPED\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602157273\",\"name\":\"native-runtime\",\"startedAt\":\"2026-10-01T21:53:49Z\",\"status\":\"COMPLETED\",\"workflowName\":\"desktop-windows\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:53Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099406\",\"name\":\"sites-build (catalog-game)\",\"startedAt\":\"2026-10-01T21:53:42Z\",\"status\":\"COMPLETED\",\"workflowName\":\"gate\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:53Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099285\",\"name\":\"sites-build (catalog-web)\",\"startedAt\":\"2026-10-01T21:53:42Z\",\"status\":\"COMPLETED\",\"workflowName\":\"gate\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:55Z\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099217\",\"name\":\"kids-build\",\"startedAt\":\"2026-10-01T21:53:42Z\",\"status\":\"COMPLETED\",\"workflowName\":\"gate\"},{\"__typename\":\"CheckRun\",\"completedAt\":\"2026-10-01T21:53:40Z\",\"conclusion\":\"SKIPPED\",\"detailsUrl\":\"https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602100572\",\"name\":\"native-candidate\",\"startedAt\":\"2026-10-01T21:53:40Z\",\"status\":\"COMPLETED\",\"workflowName\":\"desktop-windows\"}],\"url\":\"https://github.com/Vhailors/sceneaxi/pull/312\"}\n",
+    "stderr": ""
+  },
+  "live": {
+    "baseRefOid": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+    "headRefOid": "346933c105305224d575bf9319256301c1eeabfa",
+    "mergeStateStatus": "BLOCKED",
+    "number": 312,
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:56Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652103/job/110602098831",
+        "name": "desktop-linux",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-linux"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652105/job/110602099911",
+        "name": "desktop-macos",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-macos"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:54:17Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602098989",
+        "name": "static-staging",
+        "startedAt": "2026-10-01T21:53:45Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:50Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652102/job/110602098929",
+        "name": "engine-sdk",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "engine-sdk"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099368",
+        "name": "gate",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:54Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099454",
+        "name": "sites-build (umbrella)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:40Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602157273",
+        "name": "native-runtime",
+        "startedAt": "2026-10-01T21:53:49Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:53Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099406",
+        "name": "sites-build (catalog-game)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:53Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099285",
+        "name": "sites-build (catalog-web)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099217",
+        "name": "kids-build",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:40Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602100572",
+        "name": "native-candidate",
+        "startedAt": "2026-10-01T21:53:40Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      }
+    ],
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312"
+  },
+  "publishedShaStillMatches": true,
+  "ciCounts": {
+    "SUCCESS": 0,
+    "FAILURE": 9,
+    "SKIPPED": 2
+  },
+  "ciAccepted": false,
+  "failureLogs": [
+    {
+      "run": "36931652102",
+      "exit": 0,
+      "path": "ci-run-36931652102.log",
+      "sha256": "9a06ac49b9086103ab397189530991e671a988ff058f28720ec72fbd62062a20",
+      "stderr": "",
+      "diagnostics": [
+        "engine-sdk\tUNKNOWN STEP\t2026-10-01T21:53:47.9312549Z Error: Cannot find module '/home/runner/work/sceneaxi/sceneaxi/scripts/check-publish-ready.mjs'",
+        "engine-sdk\tUNKNOWN STEP\t2026-10-01T21:53:47.9316311Z   code: 'MODULE_NOT_FOUND',",
+        "engine-sdk\tUNKNOWN STEP\t2026-10-01T21:53:47.9341841Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "run": "36931652103",
+      "exit": 0,
+      "path": "ci-run-36931652103.log",
+      "sha256": "8b70a4d582365674bc463bb267a1cb3f30f5b6e7e1789d08c7eb2506775e0934",
+      "stderr": "",
+      "diagnostics": [
+        "desktop-linux\tUNKNOWN STEP\t2026-10-01T21:53:54.1143594Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "run": "36931652104",
+      "exit": 0,
+      "path": "ci-run-36931652104.log",
+      "sha256": "572326ca4e94619434a65d7fddcb565c9c1dd05f8b1fa5320b445849123f47a0",
+      "stderr": "",
+      "diagnostics": [
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3035870Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/schemas/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3037033Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/physics-rapier/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3038033Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/engine-kernel/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3039247Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/engine-presentation/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3040477Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/engine-orchestrator/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3041918Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/authoring-core/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3042936Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/profile-game/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3043916Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/profile-web/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3044975Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/profile-kids/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3046012Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/cli/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3047052Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/importers/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3048208Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/provider-openrouter/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3050068Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/plugin-host/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3051182Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/site-kit/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3051870Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/auth/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3052451Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/packages/billing/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3053035Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/apps/web-shell/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3053683Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/apps/desktop-shell/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3054475Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/apps/catalog-game/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.3055073Z error TS5083: Cannot read file 'D:/a/sceneaxi/sceneaxi/apps/catalog-web/tsconfig.json'.",
+        "static-staging\tUNKNOWN STEP\t2026-10-01T21:54:13.4466691Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "run": "36931652105",
+      "exit": 0,
+      "path": "ci-run-36931652105.log",
+      "sha256": "1f460cfea9111b5ec1bb8cac2ba73ff9851aebee5aaecb482ee1f58af098e0c3",
+      "stderr": "",
+      "diagnostics": [
+        "desktop-macos\tUNKNOWN STEP\t2026-10-01T21:53:53.7278811Z ##[error]Process completed with exit code 1."
+      ]
+    },
+    {
+      "run": "36931652198",
+      "exit": 0,
+      "path": "ci-run-36931652198.log",
+      "sha256": "73b3288aabde1201dfb49cf1c0bc5b7596372ca20946e0d7dacf5aa17962fc6c",
+      "stderr": "",
+      "diagnostics": [
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7675454Z ##[error]../../tsconfig.json(4,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/schemas' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7684491Z ##[error]../../tsconfig.json(5,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/physics-rapier' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7686857Z ##[error]../../tsconfig.json(6,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-kernel' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7688890Z ##[error]../../tsconfig.json(7,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-presentation' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7690864Z ##[error]../../tsconfig.json(8,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-orchestrator' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7692769Z ##[error]../../tsconfig.json(9,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/authoring-core' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7694578Z ##[error]../../tsconfig.json(10,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-game' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7696631Z ##[error]../../tsconfig.json(11,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-web' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7698683Z ##[error]../../tsconfig.json(12,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-kids' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7700457Z ##[error]../../tsconfig.json(13,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/cli' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7702241Z ##[error]../../tsconfig.json(14,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/importers' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7704180Z ##[error]../../tsconfig.json(15,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/provider-openrouter' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7706029Z ##[error]../../tsconfig.json(16,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/plugin-host' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7707951Z ##[error]../../tsconfig.json(17,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/site-kit' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7709670Z ##[error]../../tsconfig.json(18,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/auth' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7711560Z ##[error]../../tsconfig.json(19,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/billing' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7713404Z ##[error]../../tsconfig.json(20,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/web-shell' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7715291Z ##[error]../../tsconfig.json(21,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/desktop-shell' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7717343Z ##[error]../../tsconfig.json(22,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-game' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7719275Z ##[error]../../tsconfig.json(23,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-web' not found.",
+        "kids-build\tUNKNOWN STEP\t2026-10-01T21:53:52.7923563Z ##[error]Process completed with exit code 2.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6470384Z ##[error]../../tsconfig.json(4,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/schemas' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6480972Z ##[error]../../tsconfig.json(5,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/physics-rapier' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6483218Z ##[error]../../tsconfig.json(6,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-kernel' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6486150Z ##[error]../../tsconfig.json(7,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-presentation' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6488749Z ##[error]../../tsconfig.json(8,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-orchestrator' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6491251Z ##[error]../../tsconfig.json(9,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/authoring-core' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6493831Z ##[error]../../tsconfig.json(10,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-game' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6496309Z ##[error]../../tsconfig.json(11,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-web' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6499018Z ##[error]../../tsconfig.json(12,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-kids' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6501705Z ##[error]../../tsconfig.json(13,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/cli' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6504190Z ##[error]../../tsconfig.json(14,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/importers' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6506762Z ##[error]../../tsconfig.json(15,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/provider-openrouter' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6509199Z ##[error]../../tsconfig.json(16,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/plugin-host' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6511589Z ##[error]../../tsconfig.json(17,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/site-kit' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6514135Z ##[error]../../tsconfig.json(18,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/auth' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6516576Z ##[error]../../tsconfig.json(19,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/billing' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6519051Z ##[error]../../tsconfig.json(20,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/web-shell' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6521496Z ##[error]../../tsconfig.json(21,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/desktop-shell' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6524231Z ##[error]../../tsconfig.json(22,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-game' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6526713Z ##[error]../../tsconfig.json(23,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-web' not found.",
+        "sites-build (catalog-web)\tUNKNOWN STEP\t2026-10-01T21:53:51.6762175Z ##[error]Process completed with exit code 2.",
+        "gate\tUNKNOWN STEP\t2026-10-01T21:53:53.2802211Z Error: ENOENT: no such file or directory, open '/home/runner/work/sceneaxi/sceneaxi/packages/schemas/package.json'",
+        "gate\tUNKNOWN STEP\t2026-10-01T21:53:53.2805050Z   code: 'ENOENT',",
+        "gate\tUNKNOWN STEP\t2026-10-01T21:53:53.3083621Z ##[error]Process completed with exit code 1.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0246417Z ##[error]../../tsconfig.json(4,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/schemas' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0259261Z ##[error]../../tsconfig.json(5,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/physics-rapier' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0262056Z ##[error]../../tsconfig.json(6,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-kernel' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0264842Z ##[error]../../tsconfig.json(7,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-presentation' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0267839Z ##[error]../../tsconfig.json(8,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-orchestrator' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0270507Z ##[error]../../tsconfig.json(9,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/authoring-core' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0273113Z ##[error]../../tsconfig.json(10,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-game' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0275803Z ##[error]../../tsconfig.json(11,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-web' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0278797Z ##[error]../../tsconfig.json(12,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-kids' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0281855Z ##[error]../../tsconfig.json(13,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/cli' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0284398Z ##[error]../../tsconfig.json(14,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/importers' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0287300Z ##[error]../../tsconfig.json(15,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/provider-openrouter' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0290037Z ##[error]../../tsconfig.json(16,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/plugin-host' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0292582Z ##[error]../../tsconfig.json(17,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/site-kit' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0295382Z ##[error]../../tsconfig.json(18,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/auth' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0298179Z ##[error]../../tsconfig.json(19,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/billing' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0301034Z ##[error]../../tsconfig.json(20,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/web-shell' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0303842Z ##[error]../../tsconfig.json(21,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/desktop-shell' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0306928Z ##[error]../../tsconfig.json(22,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-game' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0309678Z ##[error]../../tsconfig.json(23,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-web' not found.",
+        "sites-build (catalog-game)\tUNKNOWN STEP\t2026-10-01T21:53:52.0600259Z ##[error]Process completed with exit code 2.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3161897Z ##[error]../../tsconfig.json(4,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/schemas' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3171697Z ##[error]../../tsconfig.json(5,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/physics-rapier' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3173957Z ##[error]../../tsconfig.json(6,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-kernel' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3175878Z ##[error]../../tsconfig.json(7,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-presentation' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3177774Z ##[error]../../tsconfig.json(8,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/engine-orchestrator' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3179648Z ##[error]../../tsconfig.json(9,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/authoring-core' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3182071Z ##[error]../../tsconfig.json(10,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-game' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3184066Z ##[error]../../tsconfig.json(11,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-web' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3186022Z ##[error]../../tsconfig.json(12,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/profile-kids' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3188130Z ##[error]../../tsconfig.json(13,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/cli' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3190141Z ##[error]../../tsconfig.json(14,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/importers' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3192148Z ##[error]../../tsconfig.json(15,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/provider-openrouter' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3194368Z ##[error]../../tsconfig.json(16,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/plugin-host' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3196459Z ##[error]../../tsconfig.json(17,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/site-kit' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3198456Z ##[error]../../tsconfig.json(18,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/auth' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3200546Z ##[error]../../tsconfig.json(19,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/packages/billing' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3202116Z ##[error]../../tsconfig.json(20,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/web-shell' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3203977Z ##[error]../../tsconfig.json(21,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/desktop-shell' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3206081Z ##[error]../../tsconfig.json(22,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-game' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3208132Z ##[error]../../tsconfig.json(23,5): error TS6053: File '/home/runner/work/sceneaxi/sceneaxi/apps/catalog-web' not found.",
+        "sites-build (umbrella)\tUNKNOWN STEP\t2026-10-01T21:53:52.3382752Z ##[error]Process completed with exit code 2."
+      ]
+    }
+  ],
+  "deferred": [
+    "pnpm docs:api",
+    "pnpm gate",
+    "pnpm build:sdk",
+    "isolated four-site typecheck/build",
+    "native packaging/signing acceptance on authorized hosts",
+    "required checks on final immutable published candidate SHA"
+  ],
+  "resourcesCleaned": "No processes/services/fixtures/dependencies created; in-memory mutation discarded; only owned receipts written.",
+  "distUsed": false
+}

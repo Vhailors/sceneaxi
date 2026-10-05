@@ -1,0 +1,55 @@
+{
+  "prFiles": {
+    "tools/oxlint/anti-slop/index.ts": true,
+    "tools/oxlint/anti-slop/no-runtime-typeof.ts": false,
+    "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts": true,
+    "scripts/check-contracts.mjs": false,
+    "scripts/check-layout.mjs": false,
+    "scripts/check-contracts.test.mjs": false,
+    "scripts/check-css-ownership.mjs": false,
+    "tests/sites/umbrella-visual.test.ts": true,
+    "apps/desktop-shell/test/visual-refinement.test.ts": false,
+    "apps/web-shell/test/visual-postpr.test.ts": false
+  },
+  "scriptContracts": {
+    "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc": {
+      "build": "tsc --build && tsc -p tsconfig.tests.json",
+      "lint:anti-slop": "oxlint --config .oxlintrc.json .",
+      "check:syntax": "node scripts/check-syntax.mjs",
+      "check:boundaries": "node scripts/check-boundaries.mjs",
+      "check:contracts": "node scripts/check-contracts.mjs",
+      "check:traceability": "node scripts/check-traceability.mjs",
+      "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s check:traceability && pnpm -s check:sites && pnpm -s check:desktop && pnpm -s check:publish-ready && pnpm -s build && pnpm -s test && pnpm -s lint",
+      "check:sites": "node scripts/check-sites.mjs",
+      "check:desktop": "node scripts/check-desktop.mjs",
+      "check:publish-ready": "node scripts/check-publish-ready.mjs"
+    },
+    "346933c105305224d575bf9319256301c1eeabfa": {
+      "build": "tsc --build && tsc -p tsconfig.tests.json",
+      "lint:anti-slop": "oxlint --config .oxlintrc.json .",
+      "check:syntax": "node scripts/check-syntax.mjs",
+      "check:boundaries": "node scripts/check-boundaries.mjs",
+      "check:contracts": "node scripts/check-contracts.mjs",
+      "check:traceability": "node scripts/check-traceability.mjs",
+      "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s check:traceability && pnpm -s check:sites && pnpm -s check:desktop && pnpm -s check:publish-ready && pnpm -s build && pnpm -s test && pnpm -s lint",
+      "check:sites": "node scripts/check-sites.mjs",
+      "check:desktop": "node scripts/check-desktop.mjs",
+      "check:publish-ready": "node scripts/check-publish-ready.mjs"
+    }
+  },
+  "antislopSummary": [
+    "   `----",
+    "",
+    "Found 21 warnings and 16564 errors.",
+    "Finished in 3.2s on 772 files with 115 rules using 12 threads."
+  ],
+  "gateExecutedSteps": [
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:45.6001450Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:47.3807593Z ##[group]Run pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:48.6228559Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:49.7345298Z ##[group]Run pnpm install --frozen-lockfile",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:51.9318084Z ##[group]Run pnpm install --frozen-lockfile",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:52.8150986Z ##[group]Run pnpm docs:api",
+    "gate\tUNKNOWN STEP\t2026-10-01T21:53:53.3083621Z ##[error]Process completed with exit code 1."
+  ]
+}

@@ -49,6 +49,11 @@ export {
   createInMemoryCreditStore,
   isSaleEntryKey,
   saleEntryKeys,
+  validateReconciliationQuery,
+  type ReconciliationQuery,
+  type HostedCallOperation,
+  type HostedCallReservation,
+  type HostedCallStore,
   type CommittedEntry,
   type CommittedReconciliation,
   type CreditStore,
@@ -62,6 +67,9 @@ export {
 export {
   adjustSupportLedger,
   readSupportLedger,
+  readPurchaseHistory,
+  type PurchaseHistoryItem,
+  type PurchaseHistoryPage,
   requireLedgerSupportAdmin,
   type LedgerAdjustmentFields,
   type LedgerSupportAccess,
@@ -97,6 +105,10 @@ export {
   HOSTED_AI_ROUTES,
   HOSTED_AI_ROUTE_CAPABILITIES,
   runMeteredModelCall,
+  createHostedAiPricingPolicy,
+  HostedAiProviderUncertainError,
+  type HostedAiPrice,
+  type HostedAiPricingPolicy,
   type HostedAiConfig,
   type HostedAiProviderCall,
   type HostedAiRoute,
@@ -242,6 +254,7 @@ export {
   validateConnectStatusRecord,
   validateMoneySplitRecord,
 } from "@sceneaxi/schemas";
+
 export type {
   ConnectAccountRecord,
   ConnectOnboardingIntent,
@@ -250,3 +263,5 @@ export type {
   ConnectStatusRecord,
   MoneySplitRecord,
 } from "@sceneaxi/schemas";
+
+export { snapshotHostedResponse, HOSTED_RESPONSE_MAX_BYTES, type HostedResponseSnapshot } from "./hosted-response.js";

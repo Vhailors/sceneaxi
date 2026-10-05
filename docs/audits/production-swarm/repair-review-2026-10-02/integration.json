@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "NEEDS_LOCAL_FIX",
+  "stage": "SERIAL_PASS_3_PARTIAL_CHECKPOINT_EXPANSION_PENDING",
+  "integrationPassCount": 3,
+  "maximumIntegrationPasses": 3,
+  "publishedStatus": "NOT_FRESHLY_VERIFIED",
+  "fullProductionStatus": "BLOCKED",
+  "independentAstraVerdict": "FAIL_PASS_2_AWAITING_PASS_3",
+  "currentOwner": "bg-109",
+  "recovery": {
+    "allEightReportPairsPresent": true,
+    "staleInProgressReports": [
+      "fix-engine-physics.md",
+      "fix-security-delivery.md"
+    ],
+    "orchestratorBarrierRequest": "Timed out after 20000ms; no approval inferred",
+    "reachablePeerNodes": 0,
+    "heavyChecksRequireProcessQuiescence": true
+  },
+  "readReports": [
+    "fix-authoring-assets.md",
+    "fix-engine-physics.md",
+    "fix-billing.md",
+    "fix-identity-provider.md",
+    "fix-desktop-cli.md",
+    "fix-sites-accessibility.md",
+    "fix-security-delivery.md",
+    "fix-missing-capabilities.md"
+  ],
+  "inProgressReports": [
+    "fix-engine-physics.md",
+    "fix-security-delivery.md"
+  ],
+  "checksExecuted": [
+    {
+      "command": "git status --short",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "assertions": [
+        "Read-only current dirty-work inventory; no stage or worktree mutation"
+      ],
+      "acceptance": false
+    }
+  ],
+  "testsExecuted": [
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/physics-world-host.test.ts --reporter=verbose --maxWorkers=1",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "beforeExit": 1,
+      "beforeFailure": "ReferenceError: live is not defined",
+      "afterExit": 0,
+      "passed": 1,
+      "failed": 0,
+      "sourceSha256": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+      "assertions": [
+        "Identical stepping of two toy worlds from one public catalog"
+      ],
+      "limitations": [
+        "Not full physics or native acceptance"
+      ],
+      "retainedToolFailure": "Refactor format corrupted comment/declaration; parse failure was repaired before final green"
+    }
+  ],
+  "candidateTree": null,
+  "ownedTemporaryResources": [],
+  "publicationPerformed": false,
+  "pass3": {
+    "updatedAt": "2026-10-02T12:43:09.205619+00:00",
+    "status": "PARTIAL",
+    "checks": [
+      {
+        "command": "pnpm build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-build.log",
+        "logSha256": "476c0bb5db19e4582b03408e521c9480623018803c7af51a6630568e1efbed71",
+        "assertions": [
+          "Strict referenced source and root tests compile."
+        ],
+        "limitation": "",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm gate",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 1,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-gate.log",
+        "logSha256": "0dceca059497d5f3a0f1f4849c45e7d669defb566af1992770fdda28dcca2bae",
+        "assertions": [
+          "Unchanged mandatory gate executed; failure retained."
+        ],
+        "limitation": "Stopped at test stage; lint was executed separately, not inferred.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "filesPassed": 296,
+          "filesFailed": 6,
+          "testsPassed": 4623,
+          "testsFailed": 44
+        }
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/umbrella typecheck",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-umbrella-typecheck.log",
+        "logSha256": "0790937694589aa364e324b7e442964dff3626ca72792762208f221d14985a60",
+        "assertions": [
+          "Isolated umbrella typecheck executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/umbrella build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-umbrella-build.log",
+        "logSha256": "02bc421f7371098b92d88343a1d4724d983cf376b2fa0153596b1a66a223e61b",
+        "assertions": [
+          "Isolated umbrella build executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/catalog-game typecheck",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-catalog-game-typecheck.log",
+        "logSha256": "005337383f61036d30f70f2eb5f8bba713634a86cb4d8a476eecbd19e9d99b06",
+        "assertions": [
+          "Isolated catalog-game typecheck executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/catalog-game build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-catalog-game-build.log",
+        "logSha256": "cb2ff195d07071c65fa8550ec01a86ed3f77f6175e012fac3bdb656f70848366",
+        "assertions": [
+          "Isolated catalog-game build executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/catalog-web typecheck",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-catalog-web-typecheck.log",
+        "logSha256": "566dcc471544fb1e6b42654a1ef9c782bd765906057d7c7e0179cab8004df6f8",
+        "assertions": [
+          "Isolated catalog-web typecheck executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/catalog-web build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-catalog-web-build.log",
+        "logSha256": "d47fb31fe9539691c477feaa3bed44815f4601c3ac29452af696f07988f16d08",
+        "assertions": [
+          "Isolated catalog-web build executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/kids typecheck",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-kids-typecheck.log",
+        "logSha256": "567b4ea9cd708382827491340dfa806f5e48a1c9a5164d186689d7dfb14be63c",
+        "assertions": [
+          "Isolated kids typecheck executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 pnpm --dir sites/kids build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-kids-build.log",
+        "logSha256": "cf526619e22e9fbd539b21908f40435411257b00493bbb1be2b2515012359c99",
+        "assertions": [
+          "Isolated kids build executes unchanged owning script."
+        ],
+        "limitation": "Fresh successful build predates active source expansion; no green transfers to changed children.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm build:sdk",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-build:sdk.log",
+        "logSha256": "882fb8f19f12c22b1fc2f4ad367d811fbe1d203a7938a739411bbbb9d1d86fbf",
+        "assertions": [
+          "163-entry source-backed SDK generated; zip SHA256 906539c5138a52433f51150e18ae0861e403c09ea72fb07d7e8882dab9ba4e51."
+        ],
+        "limitation": "",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm docs:api",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 4,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-docs:api.log",
+        "logSha256": "d6691fc6627e01a297466e23d961d4d068a11606e31e3be1e9a601c9c104198c",
+        "assertions": [
+          "TypeDoc warnings remain fatal; no skipErrorChecking or validation weakening."
+        ],
+        "limitation": "AudioConnectionTarget referenced by AudioContextPort.destination is not included; previous docs remain transactional.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm test:golden",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 1,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-test:golden.log",
+        "logSha256": "395c97b0ccbc5bd8b9ae9c6ab052505b054f43672a2b94f83aedea51530ca735",
+        "assertions": [
+          "Unchanged golden script executed; VM-global failure reproduced."
+        ],
+        "limitation": "The owning bridge suite was subsequently repaired; complete golden script not rerun while children write.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "filesPassed": 56,
+          "filesFailed": 1,
+          "testsPassed": 522,
+          "testsFailed": 22
+        }
+      },
+      {
+        "command": "pnpm lint",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 1,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-lint.log",
+        "logSha256": "0e2d779330d288e311e4e33e441e3fe739adc0703ef6c40f0195efd06d6ab727",
+        "assertions": [
+          "Complete ESLint command executed; every diagnostic retained."
+        ],
+        "limitation": "224 errors including capture scripts and retained probe files; no ignores or blanket globals added.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "errors": 224
+        }
+      },
+      {
+        "command": "pnpm lint:anti-slop",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 1,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-lint:anti-slop.log",
+        "logSha256": "ef5c2f37a2f83b68d45fc22fcc32a03217806db4cb2a28e3db4864d01d383177",
+        "assertions": [
+          "Existing oxlint policy executed unchanged; source-policy debt remains local."
+        ],
+        "limitation": "No rules disabled or allow-lists widened.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "errors": 17930,
+          "warnings": 28,
+          "files": 802
+        }
+      },
+      {
+        "command": "pnpm exec vitest run packages/billing/test/hosted-response.test.ts tests/sites/provider-adapters.test.ts tests/sites/billing-final-acceptance.test.ts --reporter=verbose --maxWorkers=1",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-codec-provider.log",
+        "logSha256": "95e8e08ba4edf5e8e8d04847661235e62ae2cdf18e16cd9e7312acb3ebb360e2",
+        "assertions": [
+          "Current owned JSON codec/refusal/restart/provider/checkout named assertions pass."
+        ],
+        "limitation": "Not real paid-provider or production DB acceptance.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "testsPassed": 87,
+          "filesPassed": 3
+        }
+      },
+      {
+        "command": "node sites/catalog-game/test/repair-accessibility-proof.mjs",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": null,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-browser.log",
+        "logSha256": "f4206cfbdd16fa90f0a6d09ceeb3ccc3026d0e566657993c5db3ca1cfce719a5",
+        "assertions": [
+          "Actual production browser attempted; bounded command timed out at 300 seconds; no exit-zero asserted."
+        ],
+        "limitation": "Partial receipt records 299 failures, not successful rendered acceptance.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm --dir desktop/linux typecheck",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-linux-typecheck.log",
+        "logSha256": "0696f734712cc4ecda5439060836f907da8a17c7c0e5cc410745b83c0535bcb7",
+        "assertions": [
+          "Strict desktop install-root typecheck."
+        ],
+        "limitation": "",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm --dir desktop/linux build",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-linux-build.log",
+        "logSha256": "3165cf4e44b632f49a2743fafcb373fd389746d1439ed9940563849eba018011",
+        "assertions": [
+          "Fresh runtime and no-replace publisher built."
+        ],
+        "limitation": "",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "CSC_IDENTITY_AUTO_DISCOVERY=false pnpm --dir desktop/linux exec electron-builder --dir --linux --publish never --config.directories.output=dist-build/repair-pass3",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-linux-package.log",
+        "logSha256": "871dbe4691c531ad2ef2a6e901fe4d62362b741cf2b3524a3eda5aa7512797d1",
+        "assertions": [
+          "Fresh local unpacked Linux artifact staged without signing or publication."
+        ],
+        "limitation": "Builder selected Electron43.2.0 despite source manifest ^43.5.0; dependency/install reconciliation required.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "SCENEAXI_SMOKE_PACKAGED_ROOT=dist-build/repair-pass3/linux-unpacked pnpm --dir desktop/linux smoke --packaged",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 1,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-linux-smoke-1.log",
+        "logSha256": "4f2c61a8be792560ffc0e8c3d1836ce19f36e6b7d7e1683147bc8fb82559502c",
+        "assertions": [
+          "Fresh packaged front door actually launched; absent proof line remains failure."
+        ],
+        "limitation": "Second/third consecutive smoke runs not executed after first failure; no capacity/teardown PASS inferred.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE"
+      },
+      {
+        "command": "pnpm exec vitest run packages/cli/test/capabilities.test.ts packages/cli/test/desktop-bridge.test.ts tests/e2e/desktop-cli-local-bridge-golden.test.ts --reporter=verbose --maxWorkers=1",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-cli-socket.log",
+        "logSha256": "9a260dbc689a061d3943ab52e4c39e26140b3bc3a44594b5a77eee996c614524",
+        "assertions": [
+          "Real rebuilt CLI command enumeration and Unix-socket authoring/permissions tests."
+        ],
+        "limitation": "Refutes permanent CLI capability failure; full-gate60s timeout remains in original evidence.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "testsPassed": 19,
+          "filesPassed": 3
+        }
+      },
+      {
+        "command": "pnpm --dir sites/umbrella exec vitest run --config vitest.config.ts test/better-auth-provider.test.ts test/account-lifecycle.test.ts --reporter=verbose --maxWorkers=1",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-identity-lifecycle.log",
+        "logSha256": "0641cb0edaf90f16ae3340c9141d51eba6525c5ab401ffe7f66e97a229fcdf4f",
+        "assertions": [
+          "Fresh owning auth/lifecycle suite with disposable PostgreSQL, loopback HTTP/HTTPS and Chromium cookies."
+        ],
+        "limitation": "Fixture-local mail/target; not production or real mail delivery.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "testsPassed": 35,
+          "filesPassed": 2
+        }
+      },
+      {
+        "command": "pnpm exec vitest run tests/e2e/desktop-linux-bridge-golden.test.ts --reporter=dot --maxWorkers=1",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "exit": 0,
+        "log": "docs/audits/production-swarm/repair-review-2026-10-02/integration-pass-3-vm-final.log",
+        "logSha256": "126b5253b6c4e6f3121bb9ad0ce9c470b22ed5a8d4d346bf28146a7c0e5d81b0",
+        "assertions": [
+          "Unchanged existing bridge/rarity/authoring assertions pass with functional VM DOM observer.",
+          "New observer filter/dataset/attribute/disconnect oracle passes."
+        ],
+        "limitation": "Focused owning green; full candidate gates must rerun after child handbacks.",
+        "artifact": "PRE_EXPANSION_LOCAL_CHECKPOINT_NOT_CURRENT_CHILD_SOURCE",
+        "counts": {
+          "testsPassed": 70,
+          "filesPassed": 1
+        }
+      }
+    ],
+    "browser": {
+      "capturedAt": "2026-10-02T11:50:43.500Z",
+      "finishedAt": "2026-10-02T11:52:48.954Z",
+      "sourceFingerprint": "b32e06df1fbaeae7b3b077d080af3e5eb234aa8e7a4056fbfd17a2257f85452b",
+      "providerBrowserBranch": "NOT_EXECUTED_PREVIEW_IS_NOT_AUTHENTICATED_PROVIDER",
+      "cleanup": [
+        {
+          "site": "catalog-game",
+          "terminatedProcessGroup": 2840735
+        },
+        {
+          "abortedProcessGroup": 2847383
+        }
+      ],
+      "builds": 2,
+      "routes": 28,
+      "focus": 716,
+      "contrasts": 928,
+      "screenshots": 27,
+      "checkpoints": 0,
+      "liveOpen": 0,
+      "failures": 299,
+      "failureKinds": {
+        "focus-occluded": 298,
+        "page.screenshot: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n": 1
+      },
+      "receipt": "sites/catalog-game/test/visual-evidence/repair/receipt.json",
+      "receiptSha256": "7e2e26f65847996aae6a4955cc0aa5f04873417ca2d9be0cf84f3adbe1e6ef7e"
+    },
+    "pendingExpansion": [
+      {
+        "node": "bg-110",
+        "task": "own-session endpoint",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-111",
+        "task": "catalog own-session server adapter",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-112",
+        "task": "checkout abort/deadline/bounded cancellation",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-113",
+        "task": "desktop keyboard geometry",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-114",
+        "task": "web inspector keyboard/modal UX",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-115",
+        "task": "versioned compatible scene transforms",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-116",
+        "task": "unsigned contained user-project build",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-117",
+        "task": "importer preparation/capacity",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-118",
+        "task": "catalog-game visible UI",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      },
+      {
+        "node": "bg-119",
+        "task": "catalog-web visible UI",
+        "status": "NEEDS_LOCAL_FIX",
+        "acceptance": "Await exact source handback and independent named oracles; then fresh serial candidate checks. New authorization does not change historical failed evidence."
+      }
+    ],
+    "sourceMutable": true,
+    "candidateTree": null,
+    "noHistoricalGreenTransferred": true
+  },
+  "notes": [
+    "Earlier integration pass counts and historical green results are not transferred",
+    "Sidecar/controller lm_191 explicitly released ready integration and one-heavy-process token; stale report predicates remain open, not PASS",
+    "Every unresolved local implementation and assurance predicate remains open; no percentage or production guarantee"
+  ]
+}

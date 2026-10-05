@@ -1,0 +1,1186 @@
+[
+  {
+    "scenario": "empty",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-empty.png",
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 319,
+        "height": 42.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "selected",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-selected.png",
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".scene-entity-identity": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(16, 36, 44)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 257,
+        "height": 136,
+        "visible": true
+      },
+      ".scene-entity-identity code": {
+        "font": "10px",
+        "lineHeight": "16px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 183,
+        "height": 16,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 319,
+        "height": 42.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 247.359375,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 649.640625,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "byok",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-byok.png",
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 319,
+        "height": 42.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 458.140625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 438.859375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".desktop-byo-config button:disabled": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 142.5,
+        "height": 32,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 182
+    }
+  },
+  {
+    "scenario": "narrow",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-narrow.png",
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".scene-entity-identity": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 257,
+        "height": 76,
+        "visible": true
+      },
+      ".scene-entity-identity code": {
+        "font": "10px",
+        "lineHeight": "16px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "byok-narrow",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-byok-narrow.png",
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 319,
+        "height": 42.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 375.046875,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 161.953125,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 577,
+        "visible": true
+      },
+      ".desktop-byo-config button:disabled": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 142.5,
+        "height": 32,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 182
+    }
+  },
+  {
+    "scenario": "palette",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-palette.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".palette-item:focus-visible": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(70, 216, 236)",
+        "width": 618,
+        "height": 31,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "mobile-refusal",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-mobile-refusal.png",
+    "viewport": {
+      "width": 375,
+      "height": 812
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 375,
+        "height": 255.21875,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "busy",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-busy.png",
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 319,
+        "height": 42.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 3,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "web",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-web.png",
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 273,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 319,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "kids",
+    "screenshot": "docs/audits/production-swarm/screenshots/finish-visual-desktop-after-kids.png",
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 577,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  }
+]

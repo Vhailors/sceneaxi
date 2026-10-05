@@ -8,6 +8,7 @@
  */
 import {
   resolveEditorLinkFromEnv,
+  resolveFamilyLinks,
   resolveUmbrellaEditorOrigin,
   type CatalogSurface,
   type SiteResult,
@@ -69,3 +70,13 @@ export const editorLinkFor = (
   env: Readonly<Record<string, string | undefined>>,
   itemId: string,
 ): SiteResult<string> => resolveEditorLinkFromEnv(env, CATALOG_SITE_SURFACE, itemId);
+
+/** Absolute SEO links use only the configured, shared validated surface origin. */
+export const catalogCanonical = (
+  env: Readonly<Record<string, string | undefined>>,
+  path: string,
+): string | null => {
+  const origin = resolveFamilyLinks(env).gameCatalog;
+
+  return origin === null ? null : new URL(path, `${origin}/`).href;
+};

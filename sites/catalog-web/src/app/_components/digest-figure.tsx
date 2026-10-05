@@ -9,6 +9,10 @@ import { digestSigil } from "../../lib/digest-sigil.js";
  * payload and this storefront has never rendered one — so the figure is labelled as a
  * mark of the record digest rather than left to read as a preview, and a digest the
  * sigil cannot parse draws no mark at all.
+ *
+ * The large figure carries one decorative read line: on first paint it passes over the
+ * frame once while the mark is drawn in from the digest, then rests out of sight. The
+ * chips and stats are text and stay visible throughout.
  */
 export function DigestFigure({
   digest,
@@ -26,12 +30,12 @@ export function DigestFigure({
   const sigil = digestSigil(digest);
 
   return (
-    <div className={large ? "sigil sigil-lg" : "sigil"}>
+    <div className={large ? "sigil sigil-lg" : "sigil"} data-sigil={sigil === null ? "unreadable" : "drawn"}>
       {sigil === null ? (
         <span className="sigil-empty">digest unreadable — no mark drawn</span>
       ) : (
         <>
-          {large && <span className="sigil-grid" aria-hidden="true" />}
+          {large && <span className="sigil-scan" aria-hidden="true" />}
           <span
             className="sigil-chip"
             aria-hidden="true"

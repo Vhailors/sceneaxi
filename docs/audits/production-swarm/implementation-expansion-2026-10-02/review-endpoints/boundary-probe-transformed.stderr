@@ -1,0 +1,10 @@
+/home/devuser/Documents/Projects/sceneaxi/packages/authoring-core/src/scene-composition.ts:33
+  SCENE_COMPOSITION_SCHEMA_VERSION_V2,
+  ^
+SyntaxError: The requested module '@sceneaxi/schemas' does not provide an export named 'SCENE_COMPOSITION_SCHEMA_VERSION_V2'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:455:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:553:5)
+    at async node:internal/modules/esm/loader:647:26
+    at async file:///home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/implementation-expansion-2026-10-02/review-endpoints/boundary-probe.mjs:21:38
+
+Node.js v24.21.0

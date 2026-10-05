@@ -8,8 +8,11 @@ import {
 import { SITE_REFUSALS } from "@sceneaxi/site-kit";
 
 const locate = (path: string) => new URL(`../../${path}`, import.meta.url);
+
 const read = (path: string) => readFileSync(locate(path), "utf8");
+
 const list = (dir: string) => readdirSync(locate(dir)).sort();
+
 const readAll = (dir: string, extensions: readonly string[]) =>
   list(dir)
     .filter((entry) => extensions.some((extension) => entry.endsWith(extension)))
@@ -26,12 +29,15 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(start, `runbook is missing section "${heading}"`).toBeGreaterThan(-1);
     const body = runbook.slice(start + marker.length);
     const next = body.search(/\n#{2,3} /);
+
     return next === -1 ? body : body.slice(0, next);
   };
 
   const rowOf = (section: string, label: string) => {
     const row = section.split("\n").find((line) => line.startsWith(`| ${label} |`));
     expect(row, `section is missing the "${label}" row`).toBeTruthy();
+
+    // SAFETY: find returns string or undefined; the preceding truthiness assertion excludes undefined.
     return row as string;
   };
 
@@ -48,9 +54,12 @@ describe("SA-OPS-1 production activation runbook", () => {
     const match = source.match(
       new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
     );
+
     expect(match, `owner script no longer freezes a ${name} list`).toBeTruthy();
+    // SAFETY: the truthiness assertion excludes null, and the regexp has one mandatory capture for the frozen list body.
     const entries = quotedIn((match as RegExpMatchArray)[1] as string);
     expect(entries.length, `${name} parsed as empty`).toBeGreaterThan(0);
+
     return entries;
   };
 
@@ -58,11 +67,16 @@ describe("SA-OPS-1 production activation runbook", () => {
     const match = source.match(
       new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)`),
     );
+
     expect(match, `owner script no longer freezes a ${name} map`).toBeTruthy();
+
+    // SAFETY: the truthiness assertion excludes null, and the regexp always captures the frozen object body at index 1.
     const keys = [
       ...((match as RegExpMatchArray)[1] as string).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
     ].map((entry) => entry[1]);
+
     expect(keys.length, `${name} parsed as empty`).toBeGreaterThan(0);
+
     return keys;
   };
 
@@ -95,6 +109,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     "GITHUB_RUN_ID",
   ];
 
+  // SAFETY: matchAll yields only successful matches; the mandatory refusal-name capture at index 1 is a string.
   const desktopRefusalUniverse = () => [
     ...new Set(
       [
@@ -182,6 +197,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     const desktopRefusals = desktopRefusalUniverse();
     expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
 
+    // SAFETY: matchAll yields successful matches with the mandatory uppercase identifier captured at index 1.
     const tokens = [
       ...new Set(
         [...runbook.matchAll(/`([A-Z][A-Z0-9_]*)(?::<[a-z]+>)?`/g)].map(
@@ -189,6 +205,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         ),
       ),
     ];
+
     expect(tokens.length).toBeGreaterThanOrEqual(45);
 
     const cited = [
@@ -240,6 +257,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       `live-mode owner no longer refuses \`${citedAlias}\``,
     ).toContain(citedAlias);
 
+    // SAFETY: STRIPE_LIVE_MODE_ENV_VAR is an exported string literal; widening it to string does not claim any new value shape.
     const resolvable = new Set([
       ...EXACT_ENV_NAMES,
       ...siteRefusals,
@@ -249,6 +267,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       ...STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
       STRIPE_LIVE_MODE_ENV_VAR as string,
     ]);
+
     for (const token of tokens) {
       expect(
         resolvable.has(token),
@@ -274,6 +293,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         identifier,
       );
     }
+
     for (const identifier of windowsIdentifiers) {
       expect(windowsOwner, `Windows owner no longer defines \`${identifier}\``).toContain(
         identifier,
@@ -287,21 +307,25 @@ describe("SA-OPS-1 production activation runbook", () => {
       ...frozenList(macosDist, "requiredEnvironment"),
       ...frozenKeys(macosDist, "provenanceValidators"),
     ];
+
     const windowsRequired = [
       ...frozenList(windowsPreflight, "WINDOWS_SIGNING_ENV"),
       ...frozenList(windowsPreflight, "WINDOWS_RELEASE_ENV"),
     ];
+
     for (const name of macosRequired) {
       expect(macosRow, `runbook omits required macOS input \`${name}\``).toContain(
         `\`${name}\``,
       );
     }
+
     for (const name of windowsRequired) {
       expect(windowsRow, `runbook omits required Windows input \`${name}\``).toContain(
         `\`${name}\``,
       );
     }
 
+    // SAFETY: successful matchAll results always include the mandatory tool-list capture at index 1.
     const macosTools = [
       ...new Set([
         ...frozenList(macosDist, "requiredTools"),
@@ -310,6 +334,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         ),
       ]),
     ];
+
     const windowsTools = [
       ...new Set(
         [...windowsPreflight.matchAll(/commandAvailable\("([^"]+)"\)/g)].map(
@@ -317,13 +342,16 @@ describe("SA-OPS-1 production activation runbook", () => {
         ),
       ),
     ];
+
     expect(macosTools.length).toBeGreaterThanOrEqual(7);
     expect(windowsTools.length).toBeGreaterThanOrEqual(2);
+
     for (const tool of macosTools) {
       expect(desktop, `runbook omits required macOS tool ${tool}`).toContain(
         `\`${tool}\``,
       );
     }
+
     for (const tool of windowsTools) {
       expect(desktop, `runbook omits required Windows tool ${tool}`).toContain(
         `\`${tool}\``,
@@ -335,9 +363,11 @@ describe("SA-OPS-1 production activation runbook", () => {
     const deploy = read("docs/websites-deploy.md");
 
     const neonRow = rowOf(sectionOf("Web identity, Neon, and Stripe TEST"), "Neon project identifiers");
+
     const neonIdentifiers = [
       ...new Set([...neonRow.matchAll(/`([a-z0-9][a-z0-9-]*)`/g)].map((match) => match[1])),
     ];
+
     expect(neonIdentifiers).toEqual(
       expect.arrayContaining([
         "sceneaxi-prod",
@@ -346,6 +376,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         "neondb",
       ]),
     );
+
     for (const identifier of neonIdentifiers) {
       expect(deploy, `deployment owner no longer records \`${identifier}\``).toContain(
         identifier,
@@ -355,10 +386,13 @@ describe("SA-OPS-1 production activation runbook", () => {
     const projectRows = sectionOf("Vercel projects, aliases, and build-time origins")
       .split("\n")
       .filter((line) => line.startsWith("| `sceneaxi-"));
+
     expect(projectRows).toHaveLength(3);
+
     for (const row of projectRows) {
       const cells = [...row.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
       expect(cells).toHaveLength(3);
+
       for (const cell of cells) {
         expect(deploy, `deployment owner no longer records \`${cell}\``).toContain(cell);
       }
@@ -371,7 +405,9 @@ describe("SA-OPS-1 production activation runbook", () => {
         ),
       ),
     ];
+
     expect(aliases).toHaveLength(3);
+
     for (const alias of aliases) {
       expect(deploy, `deployment owner no longer records ${alias}`).toContain(alias);
     }
@@ -399,14 +435,17 @@ describe("SA-OPS-1 production activation runbook", () => {
     const stepCitations = [...prose.matchAll(/.*\bsteps? \d+.*/gi)].map(
       (match) => match[0].trim(),
     );
+
     expect(
       stepCitations,
       "the deployment owner cites an activation step number; the runbook owns the ordering, so link the mechanics anchor instead",
     ).toEqual([]);
 
+    // SAFETY: every matchAll result contains its complete matched string at index 0.
     const orderedListItems = [...prose.matchAll(/^ *\d+\. .*/gm)].map((match) =>
       (match[0] as string).trim(),
     );
+
     expect(
       orderedListItems,
       "the deployment owner numbers a list into an ordered procedure; only the runbook sequences actions, so state these as unordered mechanics",
@@ -418,6 +457,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         `runbook no longer owns "${runbookOwned}", which the deployment owner defers to`,
       ).toContain(runbookOwned);
     }
+
     expect(deploy).toContain("production-activation.md#activation-checklist");
   });
 
@@ -467,6 +507,7 @@ describe("SA-OPS-1 production activation runbook", () => {
 
   it("keeps default macOS recovery on the credential-free verification path", () => {
     const workflow = read(".github/workflows/desktop-macos.yml");
+
     const releaseOnly =
       "github.event_name == 'workflow_dispatch' && inputs.release_candidate == true";
 
@@ -495,7 +536,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       "a step still keys off the dispatch event alone, so ordinary recovery would run it",
     ).not.toMatch(/if: github\.event_name == 'workflow_dispatch'\s*$/m);
 
-    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@v4"]) {
+    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"]) {
       expect(workflow).toContain(step);
     }
   });
@@ -509,6 +550,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     );
     const readinessBody = deploy.slice(readinessStart + readinessMarker.length);
     const readinessEnd = readinessBody.search(/\n## /);
+
     const readiness = (
       readinessEnd === -1 ? readinessBody : readinessBody.slice(0, readinessEnd)
     ).replace(/\s+/g, " ");
@@ -519,18 +561,22 @@ describe("SA-OPS-1 production activation runbook", () => {
 
     const tableStart = inventory.indexOf("\n| Input or evidence");
     expect(tableStart, "runbook inventory no longer leads with its table").toBeGreaterThan(-1);
+
     const preambleParagraphs = inventory
       .slice(0, tableStart)
       .split(/\n\s*\n/)
       .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
       .filter((paragraph) => paragraph.length > 0);
+
     expect(
       preambleParagraphs,
       "runbook inventory no longer separates externally observed cells from locally asserted ones",
     ).toHaveLength(2);
+    // SAFETY: the preceding assertion establishes exactly two entries in this array of normalized strings.
     const [observedPreamble, localPreamble] = preambleParagraphs as [string, string];
     expect(observedPreamble).toContain("websites-deploy.md#verified-test-readiness");
     expect(localPreamble).not.toContain("websites-deploy.md#verified-test-readiness");
+
     for (const label of [
       "`BETTER_AUTH_SECRET`",
       "`SCENEAXI_ADMIN_EMAIL`",
@@ -550,6 +596,7 @@ describe("SA-OPS-1 production activation runbook", () => {
 
     const observedOn = readiness.match(/repeated on (\d{4}-\d{2}-\d{2})/);
     expect(observedOn, "readiness record no longer dates its observation").toBeTruthy();
+    // SAFETY: the preceding truthiness assertion excludes null from observedOn; the date capture is mandatory.
     expect(
       normalizedInventory,
       "runbook inventory no longer names the owner's observation date",
@@ -557,8 +604,10 @@ describe("SA-OPS-1 production activation runbook", () => {
 
     const listed = readiness.match(/Vercel lists ([^*]*?) as encrypted Production variable/);
     expect(listed, "readiness record no longer lists observed variable names").toBeTruthy();
+    // SAFETY: the truthiness assertion excludes null from listed; the regexp captures the observed variable list at index 1.
     const observedNames = identifiersIn((listed as RegExpMatchArray)[1] as string);
     expect(observedNames.length).toBeGreaterThanOrEqual(5);
+
     for (const name of observedNames) {
       const row = rowOf(inventory, `\`${name}\``);
       expect(row, `runbook does not record \`${name}\` as an observed name`).toMatch(
@@ -585,6 +634,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(endpointRow).toContain("`livemode: false`");
     const subscribed = readiness.match(/subscribed only to `([^`]+)`/);
     expect(subscribed, "readiness record no longer states the subscribed events").toBeTruthy();
+    // SAFETY: the preceding truthiness assertion excludes null from subscribed, whose event-name capture is mandatory.
     expect(endpointRow).toContain(
       `subscribed only to \`${(subscribed as RegExpMatchArray)[1]}\``,
     );

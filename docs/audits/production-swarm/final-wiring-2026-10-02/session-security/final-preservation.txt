@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi/sites/umbrella
+
+················································································
+
+ Test Files  2 passed (2)
+      Tests  80 passed (80)
+   Start at  16:58:31
+   Duration  3.84s (transform 5.89s, setup 0ms, import 7.09s, tests 183ms, environment 0ms)
+

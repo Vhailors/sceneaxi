@@ -1,0 +1,58 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi/sites/umbrella
+
+xxxxxxxxx·
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://umbrella.example.invalid/path before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://umbrella.example.invalid?query=x before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://umbrella.example.invalid#fragment before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://user:pass@umbrella.example.invalid before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw  https://umbrella.example.invalid  before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw  before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://127.0.0.1 before handles/principal
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > refuses raw https://umbrella.local before handles/principal
+AssertionError: expected 200 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 200
+
+ ❯ test/own-session-raw-origin.test.ts:22:29
+     20|     state.principal.mockResolvedValue(ok(principal));
+     21|     const response = await route.GET(request());
+     22|     expect(response.status).toBe(403);
+       |                             ^
+     23|     expect(await response.json()).toEqual({ version: 1, ok: false, rea…
+     24|     expect(response.headers.get("cache-control")).toBe("no-store");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  test/own-session-raw-origin.test.ts > actual own-session raw deployment origin before authority/key reads > missing private deployment configuration refuses instead of trusting request Host
+AssertionError: expected 200 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 200
+
+ ❯ test/own-session-raw-origin.test.ts:31:29
+     29|     vi.stubEnv("NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN", undefined);
+     30|     const response = await route.GET(request());
+     31|     expect(response.status).toBe(403);
+       |                             ^
+     32|     expect(state.handles).not.toHaveBeenCalled();
+     33|     expect(state.principal).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 1 passed (10)
+   Start at  16:40:50
+   Duration  6.88s (transform 5.58s, setup 0ms, import 6.48s, tests 154ms, environment 0ms)
+

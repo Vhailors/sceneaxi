@@ -1,0 +1,23 @@
+      const reader = request.body?.getReader();
+
+      if (reader === undefined) throw new Error("missing checkout form");
+      const chunks: Uint8Array[] = [];
+      let size = 0;
+
+      try {
+        while (true) {
+          const chunk = await reader.read();
+
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+
+          if (size > 8192) {
+            await reader.cancel();
+            throw new Error("oversized checkout form");
+          }
+
+          chunks.push(chunk.value);
+        }
+      } finally {
+        reader.releaseLock();
+      }

@@ -5,6 +5,7 @@
  * wired, and stops a reachable refusal from losing its covering case. Adding a key
  * to `SITE_REFUSALS` without a case here fails the gate.
  */
+import { verifySiteAdminReauthentication } from "@sceneaxi/site-kit";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,9 +45,6 @@ import {
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
 import type {
-  CatalogSurface,
-  ChangeReview,
-  Proposal,
   SceneDocument,
   SiteIdentityRequest,
   SitePrincipal,
@@ -54,57 +52,65 @@ import type {
 import { proposeMany, serializeDocument } from "@sceneaxi/authoring-core";
 
 const NOW = "2026-07-25T12:00:00.000Z";
+
 const now = () => NOW;
+
 const dirs: string[] = [];
 
 const workspace = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-refuse-"));
   dirs.push(dir);
+
   return dir;
 };
 
 afterEach(() => {
   while (dirs.length > 0) {
     const dir = dirs.pop();
+
     if (dir !== undefined) rmSync(dir, { recursive: true, force: true });
   }
 });
 
-const principal = (role: string, overrides: Record<string, unknown> = {}): unknown => ({
-  user: {
-    userId: "user-1",
-    email: "captain@example.com",
-    emailVerified: true,
-    disabled: false,
-    ...(overrides["user"] as Record<string, unknown> | undefined),
-  },
-  role,
-  session: {
-    sessionId: "session-1",
-    userId: "user-1",
-    surface: "site",
-    issuedAt: "2026-07-25T11:00:00.000Z",
-    expiresAt: "2026-07-25T13:00:00.000Z",
-    ...(overrides["session"] as Record<string, unknown> | undefined),
-  },
-});
+type FixtureOverrides = {
+  user?: Partial<SitePrincipal["user"]>;
+  session?: Partial<Omit<SitePrincipal["session"], "surface">> & { surface?: SitePrincipal["session"]["surface"] | "web-shell" };
+};
 
-const identityWith = (value: unknown) =>
+type FixturePrincipal = Omit<SitePrincipal, "role" | "session"> & {
+  role: string; session: Omit<SitePrincipal["session"], "surface"> & { surface: string };
+};
+
+function principal(role: "user"): SitePrincipal;
+function principal(role: string, overrides?: FixtureOverrides): FixturePrincipal;
+function principal(role: string, overrides: FixtureOverrides = {}): FixturePrincipal {
+  return {
+    user: { userId: "user-1", email: "captain@example.com", emailVerified: true, disabled: false, ...overrides.user },
+    role,
+    session: { sessionId: "session-1", userId: "user-1", surface: "site", issuedAt: "2026-07-25T11:00:00.000Z", expiresAt: "2026-07-25T13:00:00.000Z", ...overrides.session },
+  };
+}
+
+const identityWith = (value: FixturePrincipal | string | null) =>
   createIdentityPlane({
     now,
     adapter: {
+      // @ts-expect-error Intentionally malformed adapter fixtures exercise output validation without pretending to be valid principals.
       async resolvePrincipal() {
-        return ok(value as SitePrincipal | null);
+        return ok(value);
       },
     },
   });
 
+function hasReason<Result>(value: Result): value is Result & { reason: unknown } {
+  return typeof value === "object" && value !== null && "reason" in value;
+}
+
+const reasonOf = <Result>(value: Result): string | null => hasReason(value) ? String(value.reason) : null;
+
 const umbrella: SiteIdentityRequest = { surface: "site" };
 
-const reasonOf = (value: unknown): string | null =>
-  typeof value === "object" && value !== null && "reason" in value
-    ? String((value as { reason: unknown }).reason)
-    : null;
+
 
 /**
  * One case per named reason. Each returns the value that must carry that reason,
@@ -118,24 +124,25 @@ const REVIEW_DOCUMENT: SceneDocument = {
 };
 
 /** A real two-edit proposal from `proposeMany()`, so the Change Review cases refuse against genuine E1 output. */
-const reviewFixture = (): {
-  proposal: Proposal;
-  documentPath: string;
-  review: ChangeReview;
-} => {
+const reviewFixture = () => {
   const cwd = workspace();
   const documentPath = "scene.json";
   writeFileSync(join(cwd, documentPath), serializeDocument(REVIEW_DOCUMENT), "utf8");
+
   const proposed = proposeMany([
     { documentPath, jsonPointer: "/data/objects/drone/x", newValue: 1, cwd },
     { documentPath, jsonPointer: "/data/objects/drone/y", newValue: 2, cwd },
   ]);
+
   if (!proposed.ok) throw new Error("fixture proposal failed");
+
   const reviewed = reviewProposal({
     proposal: proposed.proposal,
     documents: new Map([[documentPath, REVIEW_DOCUMENT]]),
   });
+
   if (!reviewed.ok) throw new Error(`fixture review refused: ${reviewed.reason}`);
+
   return { proposal: proposed.proposal, documentPath, review: reviewed.value };
 };
 
@@ -153,7 +160,12 @@ const UMBRELLA_LEDGER_REASONS = [
 
 type SiteKitReason = Exclude<SiteRefusalReason, (typeof UMBRELLA_LEDGER_REASONS)[number]>;
 
-const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> = {
+const CASES = {
+  ADMIN_REAUTHENTICATION_REQUIRED: () => verifySiteAdminReauthentication({ credential: "fixture.token", password: "fixture" }),
+  BILLING_CHECKOUT_RATE_LIMITED: () => createBillingPlane({ adapter: {
+    listCreditPacks: async () => ok([]),
+    createCheckout: async () => refuse("BILLING_CHECKOUT_RATE_LIMITED"),
+  } }).createCheckout({ userId: "user-1", packId: "pack-100", idempotencyKey: "quota-case", successUrl: "https://example.vercel.app/ok", cancelUrl: "https://example.vercel.app/cancel" }),
   IDENTITY_PLANE_NOT_WIRED: () => createIdentityPlane({ now }).resolvePrincipal(umbrella),
   CREDITS_PLANE_NOT_WIRED: () => createCreditsPlane().readBalance({ userId: "user-1" }),
   BILLING_PLANE_NOT_WIRED: () =>
@@ -170,12 +182,14 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
       surface: "site",
       credentials: { isAdmin: true },
     }),
-  SITE_SURFACE_UNKNOWN: () =>
-    createIdentityPlane({ now }).resolvePrincipal({
-      surface: "storefront",
-    } as unknown as SiteIdentityRequest),
-  SITE_REQUEST_MALFORMED: () =>
-    createIdentityPlane({ now }).resolvePrincipal(null as unknown as SiteIdentityRequest),
+  SITE_SURFACE_UNKNOWN: () => {
+    // @ts-expect-error Deliberately unknown surface exercises the public request boundary.
+    return createIdentityPlane({ now }).resolvePrincipal({ surface: "storefront" });
+  },
+  SITE_REQUEST_MALFORMED: () => {
+    // @ts-expect-error Deliberately null request exercises the public request boundary.
+    return createIdentityPlane({ now }).resolvePrincipal(null);
+  },
   SITE_REQUEST_TARGET_TOO_LONG: () =>
     readWebExperienceEditorState({
       "web-html": "<>\"'".repeat(400),
@@ -242,8 +256,9 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   CREDIT_ADAPTER_OUTPUT_INVALID: () =>
     createCreditsPlane({
       adapter: {
+        // @ts-expect-error Incomplete adapter output exercises CREDIT_ADAPTER_OUTPUT_INVALID.
         async readBalance() {
-          return ok({ userId: "user-1" } as never);
+          return ok({ userId: "user-1" });
         },
       },
     }).readBalance({ userId: "user-1" }),
@@ -267,33 +282,33 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
       now,
       adapter: {
         async signIn() {
-          return ok({ principal: principal("user"), sessionCredential: "has space" } as never);
+          return ok({ principal: principal("user"), sessionCredential: "has space" });
         },
       },
     }).signIn({ surface: "site", email: "crew@example.com", password: "pw" }),
   EDITOR_ENTITLEMENT_ANONYMOUS: () => decideEditorEntitlement({ principal: null, credits: null }),
   EDITOR_ENTITLEMENT_NO_CREDITS: () =>
     decideEditorEntitlement({
-      principal: principal("user") as SitePrincipal,
+      principal: principal("user"),
       credits: ok({ userId: "user-1", balance: 0, starterGrantConsumed: true }),
     }),
   EDITOR_ENTITLEMENT_BALANCE_INVALID: () =>
     decideEditorEntitlement({
-      principal: principal("user") as SitePrincipal,
+      principal: principal("user"),
       credits: ok({ userId: "user-1", balance: 1.5, starterGrantConsumed: false }),
     }),
   EDITOR_ENTITLEMENT_UNAVAILABLE: () =>
-    decideEditorEntitlement({ principal: principal("user") as SitePrincipal, credits: null }),
+    decideEditorEntitlement({ principal: principal("user"), credits: null }),
   CAPABILITY_UNKNOWN: () => decideCapability({ capability: "teleport", access: null }),
   HOSTED_AI_REQUIRES_CREDITS: () =>
     decideCapability({
       capability: "hosted-ai",
       access: {
-        principal: principal("user") as SitePrincipal,
-        identity: ok(principal("user") as SitePrincipal),
+        principal: principal("user"),
+        identity: ok(principal("user")),
         credits: ok({ userId: "user-1", balance: 0, starterGrantConsumed: false }),
         entitlement: decideEditorEntitlement({
-          principal: principal("user") as SitePrincipal,
+          principal: principal("user"),
           credits: ok({ userId: "user-1", balance: 0, starterGrantConsumed: false }),
         }),
       },
@@ -382,7 +397,8 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   DEEP_LINK_SOURCE_UNKNOWN: () =>
     buildEditorDeepLink({
       umbrellaOrigin: "https://umbrella.vercel.app",
-      source: "kids" as unknown as CatalogSurface,
+      // @ts-expect-error Kids is deliberately not a catalog surface; the boundary must refuse it.
+      source: "kids",
       itemId: "x",
     }),
   DEEP_LINK_ORIGIN_INSECURE: () =>
@@ -406,6 +422,7 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     const siteRoot = workspace();
     mkdirSync(join(siteRoot, "public", "engine-sdk"), { recursive: true });
     writeFileSync(join(siteRoot, "public", "engine-sdk", "sdk-manifest.json"), "{ not json");
+
     return readEngineSdkOffer(siteRoot);
   },
   DESKTOP_APP_ARTIFACT_UNAVAILABLE: () => resolveDesktopAppOffer(null),
@@ -417,13 +434,16 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     }),
   EDITOR_SESSION_DISPOSED: () => {
     const created = createWebEditorSession({ workspaceRoot: workspace(), backend: "null" });
+
     if (!created.ok) return created;
     created.value.dispose();
+
     try {
       created.value.snapshot();
     } catch (error) {
       return error;
     }
+
     return null;
   },
   EDITOR_WORKSPACE_ESCAPE: () =>
@@ -438,9 +458,11 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   // refusal rather than an exception the calling route cannot draw.
   EDITOR_WORKSPACE_UNAVAILABLE: () => {
     const state = readEditorState({});
+
     if (!state.ok) return state;
     const previous = process.env["TMPDIR"];
     process.env["TMPDIR"] = join(workspace(), "absent-temporary-root");
+
     try {
       return renderEditorState(state.value);
     } finally {
@@ -455,6 +477,7 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     reviewProposal({ proposal: reviewFixture().proposal, documents: new Map() }),
   CHANGE_REVIEW_PROPOSAL_STALE: () => {
     const fixture = reviewFixture();
+
     return reviewProposal({
       proposal: fixture.proposal,
       documents: new Map([[fixture.documentPath, { ...REVIEW_DOCUMENT, title: "moved" }]]),
@@ -463,7 +486,9 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   CHANGE_REVIEW_PROJECTION_FAILED: () => {
     const fixture = reviewFixture();
     const first = fixture.proposal.edits[0];
+
     if (first === undefined) return null;
+
     return reviewProposal({
       proposal: { ...fixture.proposal, edits: [{ ...first, jsonPointer: "/data/absent/leaf" }] },
       documents: new Map([[fixture.documentPath, REVIEW_DOCUMENT]]),
@@ -479,7 +504,7 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
         [1, "rejected"],
       ]),
     ),
-};
+} satisfies Readonly<Record<SiteKitReason, () => void>>;
 
 describe("refuse matrix", () => {
   it("declares a case for exactly the reasons in the registry", () => {
@@ -497,6 +522,7 @@ describe("refuse matrix", () => {
     }
   });
 
+  // SAFETY: CASES is a complete own-property literal checked against SiteKitReason above.
   it.each(Object.keys(CASES) as SiteKitReason[])("reaches %s", async (reason) => {
     const produced = await CASES[reason]();
     expect(reasonOf(produced)).toBe(reason);
@@ -505,6 +531,7 @@ describe("refuse matrix", () => {
   it("keeps the registry frozen", () => {
     expect(Object.isFrozen(SITE_REFUSALS)).toBe(true);
     expect(() => {
+      // SAFETY: the registry contains string messages; this attempted write intentionally tests its runtime freeze.
       (SITE_REFUSALS as Record<string, string>)["NEW_REASON"] = "x";
     }).toThrow();
   });

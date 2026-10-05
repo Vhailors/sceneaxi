@@ -1,0 +1,133 @@
+{
+  "owner": "worker-integration",
+  "status": "PARTIAL_NOT_READY",
+  "sourceHandback": true,
+  "sourcePaths": [
+    "packages/importers/src/contained-gltf.ts",
+    "packages/importers/src/asset-preparation-worker.ts",
+    "packages/importers/src/index.ts",
+    "desktop/linux/src/electron/main.ts",
+    "packages/importers/test/asset-preparation-bounds.test.ts"
+  ],
+  "sourceBeforeHashes": "source-before.sha256",
+  "redBefore": {
+    "historical": "Review unchanged worker5fail5pass missing public schema exports",
+    "fresh": "Initial test launcher20s timed out; subsequent11test run10pass1deadline refusal unchanged4s; no five-fail fresh reproduction claimed",
+    "newRegression": "Publication-cancel test exposed uncaught AbortError despite12passing assertions; command exit1. Bounded descriptor-read repair removes stream AbortError race; subsequent actual worker-final.log exit0."
+  },
+  "greenAfter": {
+    "worker": {
+      "command": "pnpm exec vitest run packages/importers/test/asset-preparation-bounds.test.ts --reporter=dot",
+      "passed": 12,
+      "failed": 0,
+      "unhandled": 0,
+      "exit": 0,
+      "receipt": "worker-final.log"
+    },
+    "desktopSourceTypecheck": {
+      "command": "pnpm --dir desktop/linux exec tsc --noEmit",
+      "exit": 0,
+      "receipt": "desktop-typecheck.log"
+    },
+    "lint": {
+      "command": "pnpm exec eslint packages/importers/src/contained-gltf.ts packages/importers/src/asset-preparation-worker.ts packages/importers/src/index.ts packages/importers/test/asset-preparation-bounds.test.ts desktop/linux/src/electron/main.ts",
+      "exit": 0,
+      "receipt": "lint-final.log"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- <five owned source/test paths>",
+      "exit": 0
+    },
+    "importerReferenceTypecheck": {
+      "exit": 2,
+      "receipt": "typecheck-after.log",
+      "output": "TS2724/TS2305 referenced schemas v2 exports plus cascading engine errors; source-bound desktop typecheck is separately green. Serial owner must refresh referenced declarations/build."
+    }
+  },
+  "assertions": [
+    "True public importer worker exports; default Vitest config and real Node worker source loader, no API aliases",
+    "Descriptor-only malformed/accessor/proxy/lexical path refusal before Worker allocation",
+    "Exact max8MiB original digest/base64 and synchronous proposal equivalence retained",
+    "<=100ms main heartbeat for preparation; <=500ms terminal cancel; unchanged4s deadline",
+    "Stale document/source, source symlink, next byte, Kids, busy and startup cleanup refusals retained",
+    "Cancellation during publication closes bounded descriptor reads and waits both verifier and Worker before freeing slot",
+    "Publication opens read-only descriptors with O_NOFOLLOW and checks contained canonical paths/inode identity BEFORE bounded reads and again at completion"
+  ],
+  "cleanup": "Completed tests assert every Worker threadId=-1 and delete own fixtures. Four explicit own timeout fixture directories removed; cleanup.json. No own Vitest/Worker processes remain; no services/native/browser/container jobs created.",
+  "deferredChecks": [
+    "Serial source-bound build and full gate",
+    "Native 8MiB import/apply/reload heartbeat, RSS and cancellation using existing runtime harness",
+    "16x8MiB native capacity propagation"
+  ],
+  "semanticRemainingRisk": [
+    "Historical120s native propagation root cause unproven; pending serial native measurement",
+    "Main currently calls legacy bridge.handle after worker success; exact E1 install is blocked by exclusive scope: bridge.ts/session.ts expose no prepared staging hook",
+    "CJS sibling worker must be emitted by desktop/linux/scripts/build.mjs, outside current scope",
+    "Referenced type declarations need refreshed exports/build, no typecheck pass claimed"
+  ],
+  "sourceChanges": [
+    "Public worker barrel",
+    "64KiB async document/source verification preserving UTF-8 contentHash semantics, descriptor stat/path identity and cancellation fence",
+    "Main picker starts worker, fences native picker/project/bridge generation; reject/profile/project switch and shutdown retire pending work",
+    "Fixed CJS sibling entry selection; packaging emission requires serial script owner"
+  ],
+  "nativeProofPrepared": {
+    "command": "SCENEAXI_SMOKE_ASSET_CAPACITY=1 node desktop/linux/scripts/smoke.mjs",
+    "status": "NOT_RUN_SERIAL_OWNER_ONLY",
+    "implemented": "Existing Electron smoke harness: actual8MiB native picker/GUI review/accept/reload; changed original-source byte digest hot reload over actual trusted bridge IPC; three warmed canonical reloads; generation-bound asset status/cancel over actual trusted IPC; walltime per phase, main+renderer10ms heartbeat and sum of actual Electron resident working sets (main/Worker, renderer, GPU), preserving existing4s/100ms/500ms/256MiB/32MiB predicates. Logs phase/worker-versus-legacy admission/diff-byte metrics without source bodies.",
+    "limits": [
+      "NOT_RUN here: serial owner only after source-bound build",
+      "Legacy synchronous bridge E1 regeneration/huge canonical review/IPC still need outside-scope hook/compact display projection",
+      "CJS sibling must be emitted by outside-scope desktop build script",
+      "Dedicated GUI hot-reload/cancel-control geometry not certified; native IPC is not GUI-control proof",
+      "16x8MiB/count17 native resource proof remains deferred"
+    ]
+  },
+  "sourceHandbackDisposition": "Exclusive paths released; no further changes by bg-131. Worker source/default tests and main typecheck/lint verified; exact prepared E1/compact host admission plus packaging remain serial-owner source blockers, not external authority blockers.",
+  "sourceAfterHashes": [
+    {
+      "path": "packages/importers/src/contained-gltf.ts",
+      "sha256": "c2f3548203f4b85036da8bc97a097c86e177ab1461d8d40d75dccacc87c8843c"
+    },
+    {
+      "path": "packages/importers/src/asset-preparation-worker.ts",
+      "sha256": "a4f32435a1f123705a5a1c865c2d05a2733c798afce07e2fb4b0b5bfc4b37624"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "sha256": "74e641405aa8131a11284932dd845d3d87c1fd3e5e37ba3671e0273f8b7abad1"
+    },
+    {
+      "path": "desktop/linux/src/electron/main.ts",
+      "sha256": "8290bd12105865b8ecd474e280bdcaaf9f18bc0fc70c6da5b2812411e9fd2c07"
+    },
+    {
+      "path": "packages/importers/test/asset-preparation-bounds.test.ts",
+      "sha256": "6c57d8217bac3ce43bb91963bf58cb6965e994de4fc489c4236cdb133a9d9aa8"
+    }
+  ],
+  "serialSourceRequests": [
+    {
+      "path": "desktop/linux/src/lib/bridge.ts:1351",
+      "change": "Add host-only prepared importer admission that retains profile/path/lease and E1 review/copy tracking without invoking synchronous proposeProjectAssetImport/proposeEdit again. Install exact prepared.proposal/unifiedDiff."
+    },
+    {
+      "path": "apps/desktop-shell/src/session.ts:390",
+      "change": "Add prepared-E1 staging method with canonical cwd, durable recovery and single-review/stale base hash checks; no apply until explicit accept. Expose safe compact evidence projection at IPC without changing stored document, proposal identity, manifest bytes or raw public-v1 contracts."
+    },
+    {
+      "path": "desktop/linux/scripts/build.mjs:46",
+      "change": "Emit fixed source-bound asset-preparation-worker.cjs bundle beside main.cjs from packages/importers/src/asset-preparation-worker.ts using node/CJS target22 common config; inventory+test emitted sibling. Parent did not grant requested outside-scope permission."
+    }
+  ],
+  "receiptHashes": {
+    "source-before.sha256": "ed275c5a7d2a19eba2adf841329ab1c94056635871dcaef84f23586176761b38",
+    "source-after.sha256": "3fc5390d0da6f9d946f49234ad36b45dc314c2704e65132b534a10ab02137cf2",
+    "worker-final.log": "81a1105d8a76ea908f63641137aabae0742ba2398bd2747f355bd428088511c5",
+    "desktop-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lint-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup.json": "22bc4dab1870476cc9811202ef6f1fc0e9eb44944fbc33339c92f61eb3dd8a72",
+    "worker-current.json": "f26b3c5be5b47ed2232ed81fa324d683110331a4603511b5bd232e8ca6e54d2e",
+    "typecheck-after.log": "da5c433250c2d3a69a699cc0957ad0ad740ed459ee0abbd3ae8dae339d1fa958"
+  }
+}

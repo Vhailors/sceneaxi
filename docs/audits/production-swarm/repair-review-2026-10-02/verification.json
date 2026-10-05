@@ -1,0 +1,47 @@
+{
+  "status": "PASS_REPORT_INVARIANTS_AND_SNAPSHOT_PRESERVATION",
+  "exit": 0,
+  "commands": [
+    "python3 docs/audits/production-swarm/repair-review-2026-10-02/prepare-baseline.py",
+    "python3 docs/audits/production-swarm/repair-review-2026-10-02/complete-baseline.py"
+  ],
+  "assertions": [
+    "all113 original IDs retained",
+    "all53 missing IDs exclusively assigned",
+    "all355 rows have nonblank executable command and assertions, targets, artifact identity",
+    "no duplicate task IDs or lane/child file ownership",
+    "ALL manifests/locks/workflows remain security-owned",
+    "22 true external and13 intentional full-production gaps retained",
+    "base1101/head456/D825/M204/A180/R1 freshly reproduced",
+    "all pre-existing snapshot paths/bytes preserved; four unapproved missing base paths flagged"
+  ],
+  "statusCounts": {
+    "NEEDS_LOCAL_FIX": 320,
+    "INTENTIONAL_FULL_PRODUCTION_GAP": 13,
+    "EXTERNAL_BLOCKER": 22
+  },
+  "sourceInventorySha256": "fe52317041b984c2cfd11976efdddf9efdcd38631a1c52ab8e01c70c27cde936",
+  "sourceTestsExecuted": false,
+  "cleanup": "No temporary fixture/server/container created.",
+  "finalVerification": {
+    "at": "2026-10-02T09:11:33.369285+00:00",
+    "exit": 0,
+    "command": "python3 docs/audits/production-swarm/repair-review-2026-10-02/finalize-control.py",
+    "assertions": [
+      "all355 unique records and113/53 retained after aliasing",
+      "all baseline source bytes AND modes unchanged",
+      "three report-generation scripts parse as Python",
+      "every JSON report parses",
+      "scoped git diff --check exit0",
+      "HEAD unchanged",
+      "local PR correction authority distinguished from broader held publication gate",
+      "all current untracked paths enumerated, including late read-only sidecar reports"
+    ],
+    "applicationTestsExecuted": false
+  },
+  "priorFinalizationFailure": {
+    "exit": 1,
+    "output": "AssertionError: six newly created parallel-expansion sidecar reports were not in original immutable snapshot",
+    "recovery": "Read-only additive late-report inventory preserves their hashes/modes without altering initial source fingerprint or sidecar contents."
+  }
+}

@@ -196,6 +196,7 @@ class FakeElement {
   readonly classList = new FakeClassList();
   readonly dataset: Record<string, string>;
   readonly attributes = new Map<string, string>();
+  readonly attributeListeners = new Set<(name: string) => void>();
   hidden = false;
   tabIndex = 0;
   textContent: string | null = "";
@@ -205,15 +206,28 @@ class FakeElement {
     dataset: Record<string, string> = {},
     private readonly selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map(),
   ) {
-    this.dataset = { ...dataset };
+    this.dataset = new Proxy({ ...dataset }, {
+      set: (target, key: string, value: string) => {
+        const previous = target[key];
+        target[key] = value;
+        if (previous !== value) this.notifyAttribute(`data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+        return true;
+      },
+    });
   }
 
   setAttribute(name: string, value: string): void {
+    const previous = this.attributes.get(name);
     this.attributes.set(name, value);
+    if (previous !== value) this.notifyAttribute(name);
   }
 
   removeAttribute(name: string): void {
-    this.attributes.delete(name);
+    if (this.attributes.delete(name)) this.notifyAttribute(name);
+  }
+
+  private notifyAttribute(name: string): void {
+    for (const listener of this.attributeListeners) listener(name);
   }
 
   getAttribute(name: string): string | null {
@@ -245,6 +259,44 @@ class FakeElement {
 
   append(): void {}
 }
+
+/** Functional attribute observer for this transport-only fake DOM; pixel geometry stays a real-browser oracle. */
+class FakeMutationObserver {
+  private readonly detach = new Set<() => void>();
+  constructor(private readonly callback: () => void) {}
+  observe(target: FakeElement, options: { attributes: boolean; attributeFilter?: readonly string[] }): void {
+    if (!options.attributes) throw new Error("fixture observer supports attributes only");
+    const listener = (name: string) => {
+      if (options.attributeFilter === undefined || options.attributeFilter.includes(name)) this.callback();
+    };
+    target.attributeListeners.add(listener);
+    this.detach.add(() => target.attributeListeners.delete(listener));
+  }
+  disconnect(): void {
+    for (const remove of this.detach) remove();
+    this.detach.clear();
+  }
+}
+
+it("observes real fake-DOM attribute transitions and disconnects without callbacks", () => {
+  const target = new FakeElement("observer-oracle");
+  let calls = 0;
+  const observer = new FakeMutationObserver(() => { calls += 1; });
+  observer.observe(target, { attributes: true, attributeFilter: ["data-drawer-left", "data-assistant"] });
+  target.dataset.drawerLeft = "open";
+  expect(calls).toBe(1);
+  target.dataset.drawerLeft = "open";
+  target.dataset.unrelated = "unchanged-observer";
+  expect(calls).toBe(1);
+  target.setAttribute("data-assistant", "open");
+  expect(calls).toBe(2);
+  target.removeAttribute("data-assistant");
+  expect(calls).toBe(3);
+  observer.disconnect();
+  expect(target.attributeListeners.size).toBe(0);
+  target.dataset.drawerLeft = "closed";
+  expect(calls).toBe(3);
+});
 
 class FakeSelectElement extends FakeElement {
   value = "";
@@ -1375,6 +1427,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
     expect(script).toBeDefined();
     runInNewContext(script ?? "", {
+      MutationObserver: FakeMutationObserver,
       document: {
         activeElement: null,
         addEventListener: (
@@ -1386,8 +1439,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       Element: FakeElement,
       HTMLTextAreaElement: FakeTextAreaElement,
       window: {
+        addEventListener: (name: string, listener: (event: { readonly detail?: unknown }) => void) => documentListeners.set(name, listener),
         matchMedia: () => ({
-          addEventListener: () => undefined,
+          addEventListener: () => undefined, removeEventListener: () => undefined,
           matches: false,
         }),
       },
@@ -1550,6 +1604,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     };
     runInNewContext(script ?? "", {
+      MutationObserver: FakeMutationObserver,
       document: {
         activeElement: null,
         addEventListener: (
@@ -1578,7 +1633,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       Element: FakeElement,
       HTMLTextAreaElement: FakeTextAreaElement,
       window: {
-        matchMedia: () => ({ addEventListener: () => undefined, matches: false }),
+        addEventListener: (name: string, listener: (event: { readonly detail?: unknown }) => void) => documentListeners.set(name, listener),
+        matchMedia: () => ({ addEventListener: () => undefined, removeEventListener: () => undefined, matches: false }),
       },
       ...(adaptedPort === undefined ? {} : { sceneaxiDesktop: adaptedPort }),
     });

@@ -1,0 +1,116 @@
+--- PR-346933c/sites/catalog-web/src/app/globals.css
++++ post-PR/sites/catalog-web/src/app/globals.css
+@@ -566,7 +566,7 @@
+   border-radius: var(--radius-full);
+   background: var(--accent);
+   /* A fixture marker is not live activity: hold it still. */
+-    animation: none;
++  animation: none;
+   flex: none;
+ }
+ 
+@@ -1692,3 +1692,104 @@
+     gap: 2.75rem;
+   }
+ }
++
++/* SAFETY: post-PR presentation only; values, GET controls and refusal keys are intact. */
++html :focus-visible {
++  outline: 2px solid var(--accent);
++  outline-offset: 3px;
++}
++
++/* Sticky columns clip their contents; keep their own keyboard ring inside. */
++html :is(.rail, .detail-side):focus-visible {
++  outline-offset: -2px;
++}
++
++:is(.rail, .detail-side) {
++  scrollbar-color: var(--line-strong) var(--bg-panel);
++}
++
++.spec-row {
++  display: grid;
++  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
++  gap: 8px 12px;
++  padding: 8px 0;
++  border-bottom: 1px solid var(--line);
++}
++
++.spec-row:last-child {
++  border-bottom: 0;
++}
++
++.spec-row dd {
++  font-size: 0.75rem;
++  line-height: 1.5;
++  text-align: left;
++  font-variant-numeric: tabular-nums;
++}
++
++.included-row {
++  align-items: start;
++  gap: 4px 12px;
++  padding: 12px;
++}
++
++.included-check {
++  margin-top: 4px;
++  line-height: 1;
++}
++
++.included-value {
++  font-size: 0.75rem;
++  line-height: 1.5;
++  font-variant-numeric: tabular-nums;
++}
++
++.side-row {
++  padding: 8px 0;
++  border-bottom: 1px solid var(--line-soft);
++}
++
++.side-row:last-child {
++  border-bottom: 0;
++}
++
++.state {
++  min-width: 0;
++  gap: 12px;
++  overflow-wrap: anywhere;
++}
++
++.results > [role="status"] {
++  border-style: solid;
++  border-color: var(--line-strong);
++  border-left: 3px solid var(--accent);
++}
++
++.results > [role="status"] > p {
++  max-width: var(--measure);
++}
++
++.results form button:hover:not(:disabled) {
++  box-shadow: inset 0 0 0 2px var(--bg-base);
++}
++
++.results form :is(input, select):hover:not(:disabled) {
++  border-color: var(--fg);
++}
++
++.card:has(.card-link:hover),
++.card:focus-within {
++  border-color: var(--accent-line);
++}
++
++.card-link:active .sigil {
++  border-color: var(--accent);
++}
++
++html .button:hover:not([aria-disabled="true"]):not(:disabled) {
++  box-shadow: inset 0 0 0 2px var(--bg-base);
++}
++
++html .button-quiet:hover:not([aria-disabled="true"]):not(:disabled) {
++  box-shadow: none;
++}

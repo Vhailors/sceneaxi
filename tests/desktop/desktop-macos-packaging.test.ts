@@ -11,6 +11,7 @@ describe("desktop-macos packaging", () => {
       /^packages:\s*\n\s*-\s*["']?\.["']?\s*$/m,
     );
 
+    // SAFETY: the reviewed repository manifest has boolean private, string main, and string-valued script/dependency tables; no external payload is read.
     const manifest = JSON.parse(read("desktop/macos/package.json")) as {
       private: boolean;
       main: string;
@@ -18,6 +19,7 @@ describe("desktop-macos packaging", () => {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
     };
+
     expect(manifest.private).toBe(true);
     expect(manifest.main).toBe("dist/main.cjs");
     expect(manifest.dependencies["@sceneaxi/schemas"]).toBe(
@@ -25,6 +27,7 @@ describe("desktop-macos packaging", () => {
     );
     expect(manifest.devDependencies["electron"]).toBeDefined();
     expect(manifest.devDependencies["electron-builder"]).toBeDefined();
+
     for (const script of ["build", "dist", "smoke", "typecheck"]) {
       expect(manifest.scripts[script]).toBeDefined();
     }
@@ -74,6 +77,7 @@ describe("desktop-macos packaging", () => {
     // electron-builder templates every artifact name from the manifest version, so
     // the manifest is the only place the release identity may be stated: a version
     // restated in the release command aborts the release after sign + notarize.
+    // SAFETY: the reviewed repository manifest declares version as a JSON string; the next assertion checks its semver syntax.
     const { version } = JSON.parse(read("desktop/macos/package.json")) as { version: string };
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(dist).toContain('readFileSync(join(appRoot, "package.json")');
@@ -93,9 +97,11 @@ describe("desktop-macos packaging", () => {
   it("refuses a release record the download IA could not consume", () => {
     const dist = read("desktop/macos/scripts/dist.mjs");
     const provenance = read("desktop/macos/scripts/release-provenance.mjs");
+
     for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
       expect(dist).toContain(name);
     }
+
     expect(provenance).toContain('CANONICAL_REPOSITORY = "Vhailors/sceneaxi"');
     expect(provenance).toContain('ALLOWED_RELEASE_EVENTS = Object.freeze(["workflow_dispatch"])');
     expect(dist).toContain("resolveReleaseProvenance(process.env)");
@@ -105,6 +111,7 @@ describe("desktop-macos packaging", () => {
     expect(dist).toContain('recordKind: "local-build"');
     expect(dist).toContain("MACOS_PROVENANCE_REQUIRED");
     expect(dist).toContain("MACOS_PROVENANCE_INVALID");
+
     for (const field of [
       "repository",
       "sourceCommit",
@@ -114,6 +121,7 @@ describe("desktop-macos packaging", () => {
     ]) {
       expect(dist).toContain(field);
     }
+
     expect(dist).toContain("https://github.com/${repository}/actions/runs/${workflowRunId}");
 
     // The packaged smoke is the second reader of that record, so an incomplete one
@@ -129,6 +137,7 @@ describe("desktop-macos packaging", () => {
       "../../desktop/macos/scripts/release-provenance.mjs",
       import.meta.url,
     ).href;
+
     const resolve = (environment: Record<string, string>) => {
       const result = spawnSync(
         process.execPath,
@@ -140,9 +149,13 @@ describe("desktop-macos packaging", () => {
         ],
         { encoding: "utf8" },
       );
+
       expect(result.status, result.stderr).toBe(0);
+
+      // SAFETY: the child exited successfully and serializes only resolveReleaseProvenance, whose result always includes boolean iaLinkable.
       return JSON.parse(result.stdout) as { iaLinkable: boolean };
     };
+
     const canonical = {
       GITHUB_ACTIONS: "true",
       GITHUB_EVENT_NAME: "workflow_dispatch",
@@ -154,6 +167,7 @@ describe("desktop-macos packaging", () => {
     };
 
     expect(resolve(canonical).iaLinkable).toBe(true);
+
     for (const environment of [
       {},
       { ...canonical, GITHUB_REPOSITORY: "fork/sceneaxi" },
@@ -168,12 +182,14 @@ describe("desktop-macos packaging", () => {
     ]) {
       expect(resolve(environment).iaLinkable).toBe(false);
     }
+
     expect(read("docs/desktop-macos.md")).toContain("not cryptographic attestation");
     expect(read("docs/desktop-macos.md")).toContain("outside #194");
   });
 
   it("verifies the recorded commit against the checkout instead of trusting its shape", () => {
     const macosRoot = new URL("../../desktop/macos", import.meta.url);
+
     const releaseInputs = [
       "CSC_LINK",
       "CSC_KEY_PASSWORD",
@@ -182,6 +198,7 @@ describe("desktop-macos packaging", () => {
       "APPLE_TEAM_ID",
       "SCENEAXI_MACOS_RELEASE_BASE_URL",
     ];
+
     const preflight = (sha: string): string => {
       const result = spawnSync(process.execPath, ["scripts/dist.mjs", "--preflight-only"], {
         cwd: macosRoot,
@@ -204,8 +221,10 @@ describe("desktop-macos packaging", () => {
           GITHUB_SHA: sha,
         },
       });
+
       expect(result.status, result.stdout).toBe(1);
       expect(result.stderr).toContain("MACOS_ENV_REQUIRED:CSC_LINK");
+
       return result.stderr;
     };
 
@@ -213,9 +232,11 @@ describe("desktop-macos packaging", () => {
       cwd: new URL("../..", import.meta.url),
       encoding: "utf8",
     });
+
     if (head.status !== 0) {
       // No readable checkout: the release must refuse rather than record an unverifiable claim.
       expect(preflight("a".repeat(40))).toContain("MACOS_PROVENANCE_UNVERIFIABLE");
+
       return;
     }
 
@@ -234,10 +255,12 @@ describe("desktop-macos packaging", () => {
   it("proves pixels on a GPU-less host with a real software rasterizer", () => {
     const smoke = read("desktop/macos/scripts/smoke.mjs");
     const linux = read("desktop/linux/scripts/smoke.mjs");
+
     for (const flag of ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]) {
       expect(linux).toContain(flag);
       expect(smoke).toContain(flag);
     }
+
     expect(smoke).toContain("pixelsDrawn !== true");
     expect(read("docs/desktop-macos.md")).toContain("--use-angle=swiftshader");
   });
@@ -249,13 +272,16 @@ describe("desktop-macos packaging", () => {
     );
     expect(workflow).not.toMatch(/^\s*runs-on:\s*macos-latest\s*$/m);
     expect(workflow).toMatch(/^ {8}default: false$/m);
-    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@v4"]) {
+
+    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"]) {
       expect(workflow).toContain(step);
     }
+
     const releaseOnly =
       workflow.match(
         /if: github\.event_name == 'workflow_dispatch' && inputs\.release_candidate == true/g,
       ) ?? [];
+
     expect(releaseOnly).toHaveLength(3);
     expect(workflow).not.toMatch(/if: github\.event_name == 'workflow_dispatch'\s*$/m);
   });
@@ -265,6 +291,7 @@ describe("desktop-macos packaging", () => {
       cwd: new URL("../../desktop/macos", import.meta.url),
       encoding: "utf8",
     });
+
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("desktop-macos smoke OK");
     expect(result.stdout).toContain("missing signing/notarization/update inputs refused");
@@ -286,6 +313,7 @@ describe("desktop-macos packaging", () => {
 
   it("documents exact operator prerequisites, first run, and the absent public release", () => {
     const doc = read("docs/desktop-macos.md");
+
     for (const name of [
       "CSC_LINK",
       "CSC_KEY_PASSWORD",
@@ -299,9 +327,11 @@ describe("desktop-macos packaging", () => {
     ]) {
       expect(doc).toContain(`\`${name}\``);
     }
+
     for (const tool of ["codesign", "hdiutil", "security", "spctl", "xcrun", "notarytool", "stapler"]) {
       expect(doc).toContain(`\`${tool}\``);
     }
+
     expect(doc).toContain("No macOS artifact has been published");
     expect(doc).toContain("desktop-macos-release.json");
     expect(doc).toContain("latest-mac.yml");
@@ -311,10 +341,12 @@ describe("desktop-macos packaging", () => {
     const linuxOwner = read("docs/desktop-linux.md");
     const linuxReadme = read("desktop/linux/README.md");
     const linuxBuilder = read("desktop/linux/electron-builder.yml");
+
     for (const sibling of [linuxOwner, linuxReadme, linuxBuilder]) {
       expect(sibling).toContain("macOS");
       expect(sibling).toMatch(/no public macOS artifact/i);
     }
+
     expect(linuxOwner).not.toContain("Windows and macOS packaging");
     expect(linuxReadme).not.toContain("Windows and macOS packaging");
     expect(linuxBuilder).not.toContain("Windows and macOS are not packaged yet");
@@ -322,7 +354,7 @@ describe("desktop-macos packaging", () => {
     const workflow = read(".github/workflows/desktop-macos.yml");
     expect(workflow).toContain("workflow_dispatch:");
     expect(workflow).toContain("pnpm smoke --packaged");
-    expect(workflow).toContain("actions/upload-artifact@v4");
+    expect(workflow).toContain("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02");
     expect(workflow).not.toContain("gh release");
   });
 });

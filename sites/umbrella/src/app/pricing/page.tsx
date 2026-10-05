@@ -59,9 +59,8 @@ export default async function PricingPage({
     : [];
 
   return (
-    <div className="page">
+    <div className="page page-persuade">
       <div className="page-head page-head-center">
-        <p className="eyebrow">Pricing</p>
         <h1>The engine is free. You pay for hosted work.</h1>
         <p className="lede">
           The engine SDK, the CLI, and bringing your own AI provider cost nothing. Hosted
@@ -85,7 +84,7 @@ export default async function PricingPage({
         <h2>Credit packs</h2>
         {packs.ok ? (
           <>
-            <div className="grid grid-3">
+            <div className="grid grid-3 tier-list">
               {offers.map((offer) => {
                 const featured = offer.bestRate;
 
@@ -94,7 +93,11 @@ export default async function PricingPage({
                     className={featured ? "tier tier-featured" : "tier"}
                     key={offer.packId}
                   >
-                    {featured && <p className="tier-flag">BEST RATE PER CREDIT</p>}
+                    {featured && (
+                      <p className="tier-flag">
+                        <span className="chip chip-needs-review">Best rate per credit</span>
+                      </p>
+                    )}
                     <div className="tier-body">
                       <h3>
                         <code>{offer.packId}</code>
@@ -129,7 +132,7 @@ export default async function PricingPage({
                           Catalog asset purchase — not open
                         </li>
                       </ul>
-                      <p className="note">
+                      <p className="note tier-status">
                         <span
                           className={`chip chip-${offer.purchase.enabled ? "validated" : "dormant"}`}
                         >
@@ -137,7 +140,7 @@ export default async function PricingPage({
                         </span>
                       </p>
                       {offer.purchase.enabled ? (
-                        <form method="post" action="/api/checkout">
+                        <form method="post" action="/api/checkout" className="tier-purchase">
                           <input type="hidden" name="packId" value={offer.packId} />
                           <input
                             type="hidden"
@@ -151,7 +154,7 @@ export default async function PricingPage({
                         </form>
                       ) : (
                         <span
-                          className="button button-block"
+                          className="button button-block tier-purchase-blocked"
                           aria-disabled="true"
                           title={
                             offer.purchase.refusalReason === null
@@ -185,17 +188,13 @@ export default async function PricingPage({
       <div className="stack">
         <h2>What a credit is</h2>
         <p className="prose prose-wide">{CREDIT_LEDGER_COPY.model}</p>
-        <div className="grid grid-2">
+        <div className="prose-block" data-content="credit-ledger-facts">
           {CREDIT_LEDGER_FACTS.map((fact) => (
-            <article className="note-card" key={fact.title}>
-              <h3>
-                <span className="dot" aria-hidden="true" />
-                {fact.title}
-              </h3>
-              <p>{fact.body}</p>
-            </article>
-          ))}
-        </div>
+            <p key={fact.title}>
+              <strong>{fact.title}.</strong> {fact.body}
+              </p>
+            ))}
+          </div>
       </div>
 
       <div className="stack">

@@ -1,54 +1,48 @@
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-const rendererState = vi.hoisted(() => ({
-  disposals: 0,
-  draws: 0,
-  options: [] as unknown[],
-  renderers: [] as Array<{ outputColorSpace: string; toneMapping: number; toneMappingExposure: number }>,
-}));
+import type { WebGLRendererParameters } from "three";
+import { createWebGLCanvasSurfaceWithRenderer } from "../src/three-surface.js";
+import type { ThreeCanvasTarget, ThreePresentationRuntimeOptions } from "@sceneaxi/engine-presentation";
 
-vi.mock("three", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("three")>();
-  class TestWebGLRenderer {
-    outputColorSpace = "";
-    toneMapping = 0;
-    toneMappingExposure = 1;
-    readonly info = {
-      render: { calls: 0 },
-      reset: () => {
-        this.info.render.calls = 0;
-      },
-    };
+type RendererState = { disposals: number; draws: number; options: WebGLRendererParameters[]; renderers: TestWebGLRenderer[] };
 
-    constructor(options: unknown) {
-      rendererState.options.push(options);
-      rendererState.renderers.push(this);
-    }
+const rendererState: RendererState = { disposals: 0, draws: 0, options: [], renderers: [] };
 
-    setPixelRatio() {}
+class TestWebGLRenderer {
+  getContext() { return { isContextLost: () => false }; }
+  outputColorSpace = "";
+  toneMapping = 0;
+  toneMappingExposure = 1;
+  readonly info = {
+    render: { calls: 0 },
+    autoReset: true,
+    reset: () => { this.info.render.calls = 0; },
+  };
 
-    setSize() {}
-
-    render() {
-      rendererState.draws += 1;
-      this.info.render.calls = 1;
-    }
-
-    dispose() {
-      rendererState.disposals += 1;
-    }
+  constructor(options: WebGLRendererParameters) {
+    rendererState.options.push(options);
+    rendererState.renderers.push(this);
   }
 
-  return {
-    ...actual,
-    WebGLRenderer:
-      TestWebGLRenderer as unknown as typeof actual.WebGLRenderer,
-  };
-});
+  readonly renderLists = { dispose() {} };
+  forceContextLoss() {}
+  setPixelRatio() {}
+  setSize() {}
+  render() { rendererState.draws += 1; this.info.render.calls = 1; }
+  dispose() { rendererState.disposals += 1; }
+}
 
 import { open, type ProductManifest } from "@sceneaxi/engine-kernel";
-import { createThreePresentationRuntime } from "@sceneaxi/engine-presentation";
+import { createThreePresentationRuntime as createRuntime, releaseThreeCanvas } from "@sceneaxi/engine-presentation";
+
+type CanvasRuntimeOptions = ThreePresentationRuntimeOptions & { canvas: ThreeCanvasTarget };
+
+function createThreePresentationRuntime(options: CanvasRuntimeOptions) {
+  const surface = createWebGLCanvasSurfaceWithRenderer({ canvas: options.canvas, alpha: options.background === null }, (parameters) => new TestWebGLRenderer(parameters));
+
+  return createRuntime({ ...options, surface });
+}
 
 const manifest: ProductManifest = {
   productId: "three-surface-test",
@@ -58,6 +52,7 @@ const manifest: ProductManifest = {
 
 function eventCanvas() {
   const listeners = new Map<string, Set<() => void>>();
+
   return {
     canvas: {
       width: 320,
@@ -91,12 +86,16 @@ describe("Three canvas surface capture lifecycle", () => {
 
   it("forwards transparent clearing to the WebGL renderer alpha option", () => {
     const { canvas } = eventCanvas();
+
     const transparent = createThreePresentationRuntime({
       canvas,
       background: null,
     });
+
+    const coloredCanvas = eventCanvas().canvas;
+
     const colored = createThreePresentationRuntime({
-      canvas,
+      canvas: coloredCanvas,
       background: "#101318",
     });
 
@@ -110,14 +109,19 @@ describe("Three canvas surface capture lifecycle", () => {
 
     transparent.dispose();
     colored.dispose();
+    releaseThreeCanvas(canvas);
+    releaseThreeCanvas(coloredCanvas);
+    expect(rendererState.disposals).toBe(2);
   });
 
   it("invalidates the captured frame after a resize", () => {
     const { canvas } = eventCanvas();
     const runtime = createThreePresentationRuntime({ canvas });
+
     const snapshot = open(manifest, {
       nowMs: () => 1_753_420_800_000,
     }).observe();
+
     runtime.mount();
     runtime.present(snapshot, [], 1);
 
@@ -132,14 +136,18 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.resize(640, 480);
     expect(runtime.capture()).toBeNull();
     runtime.dispose();
+    releaseThreeCanvas(canvas);
+    expect(rendererState.disposals).toBe(1);
   });
 
   it("stops claiming pixels while its WebGL context is lost", () => {
     const target = eventCanvas();
     const runtime = createThreePresentationRuntime({ canvas: target.canvas });
+
     const snapshot = open(manifest, {
       nowMs: () => 1_753_420_800_000,
     }).observe();
+
     runtime.mount();
     runtime.present(snapshot, [], 1);
 
@@ -171,6 +179,8 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.dispose();
     expect(target.listenerCount("webglcontextlost")).toBe(0);
     expect(target.listenerCount("webglcontextrestored")).toBe(0);
+    expect(rendererState.disposals).toBe(0);
+    releaseThreeCanvas(target.canvas);
     expect(rendererState.disposals).toBe(1);
   });
 });

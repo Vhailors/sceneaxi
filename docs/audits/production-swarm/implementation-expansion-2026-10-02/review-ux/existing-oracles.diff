@@ -1,0 +1,404 @@
+diff --git a/apps/desktop-shell/test/chrome.test.ts b/apps/desktop-shell/test/chrome.test.ts
+index 59f67061..8458728b 100644
+--- a/apps/desktop-shell/test/chrome.test.ts
++++ b/apps/desktop-shell/test/chrome.test.ts
+@@ -15,7 +15,7 @@ import {
+   renderDesktopChrome,
+   type DesktopVisualState,
+ } from "@sceneaxi/desktop-shell";
+-import { EDITOR_COMMAND_REGISTRY, INPUT_ACTION_REGISTRY } from "@sceneaxi/schemas";
++import { EDITOR_COMMAND_REGISTRY, INPUT_ACTION_REGISTRY, type JsonValue } from "@sceneaxi/schemas";
+ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+@@ -23,6 +23,18 @@ import { Window as HappyWindow } from "happy-dom";
+ 
+ // Runtime-only acceptance peer: the shell project cannot compile another lane's
+ // native sources into its own dist or add a production dependency on that host.
++type NativeBridgeRequest = { action: string; payload: { commandId?: string } };
++
++type NativeBridgeOptions = {
++  cwd: string;
++  inputActions: NativeInputHost;
++  commandCapabilities: string[];
++};
++
++type NativeInputHost = { inspect(): JsonValue };
++
++type NativeBridge = { handle(request: NativeBridgeRequest): JsonValue };
++
+ const nativeEntry = "../../../desktop/linux/src/index.ts";
+ 
+ const nativeInputEntry = "../../../desktop/linux/src/lib/input-action-host.ts";
+@@ -62,13 +74,15 @@ const ALL_STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
+ 
+ describe("production command forms through the real host", () => {
+   async function mount(profile: "game" | "kids" = "game") {
++    // SAFETY: this repository-owned native entry exports the bridge and seeder used by these real-host regression tests; the local interface describes only operations invoked here.
+     const { createDesktopBridge, seedDesktopProject } = await import(nativeEntry) as {
+-      createDesktopBridge(options: Record<string, unknown>): { handle(request: unknown): unknown };
++      createDesktopBridge(options: NativeBridgeOptions): NativeBridge;
+       seedDesktopProject(root: string): { ok: boolean };
+     };
+ 
++    // SAFETY: the repository-owned input-action entry exports this factory and inspect method, exercised through the real bridge below.
+     const { createDesktopInputActionHost } = await import(nativeInputEntry) as {
+-      createDesktopInputActionHost(options: { projectRoot: string; workspaceDirectory: string }): { inspect(): unknown };
++      createDesktopInputActionHost(options: { projectRoot: string; workspaceDirectory: string }): NativeInputHost;
+     };
+ 
+     const root = mkdtempSync(join(tmpdir(), "sceneaxi-shell-controls-"));
+@@ -82,7 +96,12 @@ describe("production command forms through the real host", () => {
+ 
+     const window = new HappyWindow({ width: 1200, height: 800, settings: { enableJavaScriptEvaluation: true } });
+     const calls: string[] = [];
+-    const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
++
++    const clone = <T>(value: T): T => {
++      // SAFETY: these native JSON replies contain only serializable data; JSON serialization and realm evaluation preserve their fields and values.
++      return window.eval(`(${JSON.stringify(value)})`) as T;
++    };
++
+     Object.defineProperty(window, "structuredClone", { value: clone });
+     Object.defineProperty(window, "sceneaxiDesktopLinux", { value: {
+       project: async () => clone({ ok: true, data: { status: {
+@@ -90,10 +109,10 @@ describe("production command forms through the real host", () => {
+         recents: [], recovery: null,
+       } } }),
+       inputActions: async () => clone(inputActions.inspect()),
+-      request: async (request: unknown) => {
+-        const value = JSON.parse(JSON.stringify(request)) as { action: string; payload: unknown };
++      request: async (request: NativeBridgeRequest) => {
++        const value: NativeBridgeRequest = JSON.parse(JSON.stringify(request));
+ 
+-        if (value.action === "command") calls.push(String((value.payload as { commandId?: string }).commandId));
++        if (value.action === "command") calls.push(String(value.payload.commandId));
+ 
+         return clone(host.handle(value));
+       },
+@@ -111,7 +130,10 @@ describe("production command forms through the real host", () => {
+     const command = async (id: string) => {
+       const button = window.document.querySelector(`[data-command="${id}"]`);
+       expect(button, id).not.toBeNull();
+-      (button as unknown as { click(): void }).click();
++
++      if (!(button instanceof window.HTMLElement)) throw new TypeError("Command control is not an HTML element.");
++
++      button.click();
+       await settle();
+     };
+ 
+@@ -119,7 +141,11 @@ describe("production command forms through the real host", () => {
+       const input = window.document.querySelector(`[data-command-field="${name}"]`);
+       expect(input, name).not.toBeNull();
+ 
+-      return input as unknown as { value: string; checked: boolean; dispatchEvent(event: unknown): boolean };
++      if (!(input instanceof window.HTMLInputElement) && !(input instanceof window.HTMLTextAreaElement) && !(input instanceof window.HTMLSelectElement)) {
++        throw new TypeError("Command field is not a form control.");
++      }
++
++      return input;
+     };
+ 
+     const submit = async () => {
+@@ -141,6 +167,7 @@ describe("production command forms through the real host", () => {
+       await h.command("scene-prefab-define");
+       h.field("definitionId").value = "shell-pair";
+       h.field("instanceIds").value = '["desktop-crate-root","desktop-crate-beside"]';
++
+       await h.submit();
+       expect(h.calls).toContain("scene-prefab-define");
+       expect(readFileSync(path)).toEqual(before);
+@@ -152,13 +179,19 @@ describe("production command forms through the real host", () => {
+       h.field("definitionId").value = "shell-pair";
+       h.field("parentInstanceId").value = "desktop-crate-root";
+       h.field("instanceKey").value = "first";
++
+       await h.submit();
+       expect(readFileSync(path)).toEqual(after);
+-      (h.window.document.querySelector('[data-action="change-reject"]') as unknown as { click(): void }).click();
++      const reject = h.window.document.querySelector('[data-action="change-reject"]');
++
++      if (!(reject instanceof h.window.HTMLElement)) throw new TypeError("Change rejection control is missing.");
++
++      reject.click();
+       await h.settle();
+       expect(readFileSync(path)).toEqual(after);
+       await h.command("scene-prefab-refresh");
+       h.field("definitionId").value = "unknown-definition";
++
+       await h.submit();
+       expect(readFileSync(path)).toEqual(after);
+       expect(h.window.document.querySelector("[data-project-state]")?.getAttribute("data-project-state")).not.toBe("dirty");
+@@ -174,16 +207,24 @@ describe("production command forms through the real host", () => {
+       expect(action).toBeDefined();
+       h.field("actionId").value = action?.id ?? "";
+       h.field("binding").value = JSON.stringify({ device: "keyboard", code: "F12", modifiers: ["alt", "control", "shift"] });
++
+       await h.submit();
+       expect(existsSync(join(h.root, ".sceneaxi/input-actions.v1.json"))).toBe(false);
+       expect(h.window.document.querySelector("[data-command-evidence]")?.textContent).toContain('"status": "review"');
+-      h.field("approved").checked = true;
++      {
++        const approved = h.field("approved");
++
++        if (!(approved instanceof h.window.HTMLInputElement)) throw new TypeError("Approval field is not an input.");
++        approved.checked = true;
++      }
++
+       await h.submit();
+       expect(readFileSync(join(h.root, ".sceneaxi/input-actions.v1.json"), "utf8")).toContain("F12");
+       h.window.document.dispatchEvent(new h.window.KeyboardEvent("keydown", { key: "Escape" }));
+       await h.command("scene-prefab-define");
+       h.field("definitionId").value = "keyboard-save";
+       h.field("instanceIds").value = '["desktop-crate-root"]';
++
+       await h.submit();
+       expect(readFileSync(join(h.root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).not.toContain("keyboard-save");
+       const before = h.calls.filter((id) => id === "project-save").length;
+@@ -193,8 +234,15 @@ describe("production command forms through the real host", () => {
+       expect(h.calls.filter((id) => id === "project-save").length).toBe(before + 1);
+       expect(readFileSync(join(h.root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toContain("keyboard-save");
+       await h.command("input-actions-reset");
++
+       await h.submit();
+-      h.field("approved").checked = true;
++      {
++        const approved = h.field("approved");
++
++        if (!(approved instanceof h.window.HTMLInputElement)) throw new TypeError("Approval field is not an input.");
++        approved.checked = true;
++      }
++
+       await h.submit();
+       expect(readFileSync(join(h.root, ".sceneaxi/input-actions.v1.json"), "utf8")).not.toContain("F12");
+     } finally { h.cleanup(); }
+@@ -229,6 +277,7 @@ describe("engine desktop chrome — document shape", () => {
+   it("emits the shared versioned registry without a desktop-only command copy", () => {
+     const match = /const T = (\{.*\});\nconst shell =/s.exec(render());
+     expect(match?.[1]).toBeDefined();
++    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
+     const tables = JSON.parse(match?.[1] ?? "{}") as { editorCommands?: unknown };
+     expect(tables.editorCommands).toEqual(EDITOR_COMMAND_REGISTRY);
+   });
+@@ -313,8 +362,7 @@ describe("engine desktop chrome — regions and modes", () => {
+       const html = render(createDesktopVisualState({ mode }));
+ 
+       const visible = [...html.matchAll(/data-dock-panel="(\w+)"( hidden)?>/g)]
+-        .filter((match) => match[2] === undefined)
+-        .map((match) => match[1]);
++        .flatMap((match) => match[2] === undefined ? [match[1]] : []);
+ 
+       expect(visible, mode).toEqual([defaultDockTabFor(mode)]);
+       expect(html, mode).toContain(
+@@ -349,6 +397,7 @@ describe("engine desktop chrome — regions and modes", () => {
+     const match = /const T = (\{.*?\});\n/s.exec(html);
+     expect(match).not.toBeNull();
+ 
++    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
+     const tables = JSON.parse(match?.[1] ?? "{}") as {
+       dockTabsByMode: Record<string, string[]>;
+       dockHeightByMode: Record<string, number>;
+@@ -1013,6 +1062,7 @@ describe("engine desktop chrome — honesty", () => {
+     // The switch applies the model's own projection for the profile it lands on.
+     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+ 
++    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
+     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
+       assistantRuntimeRows: Record<
+         string,
+@@ -1068,6 +1118,7 @@ describe("engine desktop chrome — honesty", () => {
+       `<span class="status-pin" data-profile-pin>${view.profilePin}</span>`,
+     );
+ 
++    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
+     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(html)?.[1] ?? "{}") as {
+       pinByProfile: Record<string, string>;
+     };
+diff --git a/apps/web-shell/test/inspector-app.test.ts b/apps/web-shell/test/inspector-app.test.ts
+index e36559cb..2bfa1fca 100644
+--- a/apps/web-shell/test/inspector-app.test.ts
++++ b/apps/web-shell/test/inspector-app.test.ts
+@@ -15,6 +15,7 @@ import {
+   createDocument,
+   writeDocumentFile,
+   type JsonObject,
++  type JsonValue,
+ } from "@sceneaxi/authoring-core";
+ import {
+   INSPECTOR_ACTIONS,
+@@ -26,11 +27,21 @@ import {
+   inspectorPageHtml,
+   startInspectorDevServer,
+   type AssistantPanel,
++  type AssistantPanelSnapshot,
++  type AssistantTurn,
+   type InspectorApp,
+   type InspectorSession,
+   type InspectorSnapshot,
+ } from "@sceneaxi/web-shell";
+ 
++function isText(value: unknown): value is string {
++  return typeof value === "string";
++}
++
++function isSessionMethod(value: InspectorSession[keyof InspectorSession]): value is InspectorSession[keyof InspectorSession] {
++  return typeof value === "function";
++}
++
+ function fixtureDir(): string {
+   const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-app-")), "root");
+   mkdirSync(dir);
+@@ -51,7 +62,9 @@ function writeScene(dir: string, name: string, data: JsonObject): void {
+   expect(result.ok).toBe(true);
+ }
+ 
+-function project(): { dir: string; app: InspectorApp } {
++type ProjectFixture = { dir: string; app: InspectorApp };
++
++function project(): ProjectFixture {
+   const dir = fixtureDir();
+   writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1, y: 2 }] });
+ 
+@@ -73,7 +86,7 @@ const ADMIN_ENV_VARS = [
+ ] as const;
+ 
+ /** Build an app with the ambient identity environment removed, then restore it. */
+-function assistantProject(): { dir: string; app: InspectorApp } {
++function assistantProject(): ProjectFixture {
+   const saved = ADMIN_ENV_VARS.map((name) => [name, process.env[name]] as const);
+ 
+   for (const [name] of saved) Reflect.deleteProperty(process.env, name);
+@@ -97,12 +110,13 @@ type Payload = {
+   snapshot?: InspectorSnapshot & {
+     mode?: string;
+     metered?: boolean;
+-    turns?: ReadonlyArray<Record<string, unknown>>;
++    turns?: ReadonlyArray<AssistantTurn>;
+   };
+-  [key: string]: unknown;
++  [key: string]: JsonValue | InspectorSnapshot | AssistantPanelSnapshot | undefined;
+ };
+ 
+ function body(response: { body: string }): Payload {
++  // SAFETY: response.body is generated by the in-process inspector app's JSON envelope; parsing preserves its named response fields.
+   return JSON.parse(response.body) as Payload;
+ }
+ 
+@@ -112,7 +126,13 @@ const EDIT = {
+   newValue: 9,
+ } as const;
+ 
+-function post(app: InspectorApp, path: string, payload: unknown) {
++type InspectorPostPayload = JsonValue | Readonly<{ reviewToken?: string | null | undefined }> | undefined;
++
++type InspectorTransportRequest = {
++  -readonly [K in keyof Parameters<InspectorApp["handle"]>[0]]: Parameters<InspectorApp["handle"]>[0][K];
++};
++
++function post(app: InspectorApp, path: string, payload: InspectorPostPayload) {
+   return app.handle({ method: "POST", url: path, body: JSON.stringify(payload) });
+ }
+ 
+@@ -137,7 +157,13 @@ describe("served inspector production regressions", () => {
+     expect(response.status).toBe(500);
+     expect(body(response).reason).toBe(WEB_SHELL_REFUSALS.handlerFailed);
+     expect(response.body).not.toContain(sentinel);
+-    const assistant = { ask: async () => { throw new Error(sentinel); } } as unknown as AssistantPanel;
++
++    const assistant: AssistantPanel = {
++      ask: async () => { throw new Error(sentinel); },
++      snapshot: () => { throw new Error(sentinel); },
++      setMode: () => { throw new Error(sentinel); },
++    };
++
+     const asyncApp = createInspectorApp({ projectRoot: dir, assistant });
+     const failed = await asyncApp.handleAsync({ method: "POST", url: "/api/assistant", body: '{"prompt":"hello"}' });
+     expect(failed.status).toBe(500);
+@@ -162,28 +188,46 @@ describe("served inspector production regressions", () => {
+     let accepts = 0;
+     const errors: unknown[] = [];
+     window.addEventListener("error", (event) => errors.push(event));
+-    window.fetch = (async (url: string, options?: { method?: string; body?: string }) => {
++    window.fetch = async (url, options) => {
+       const path = String(url);
+ 
+       if (path === "/api/accept") accepts += 1;
+ 
+       if (failure === "abort" && path === "/api/propose") throw new Error("Failed to fetch");
+ 
+-      if (failure === "nonjson" && path === "/api/propose") return { json: async () => { throw new SyntaxError("invalid JSON"); } };
+-      const result = app.handle({ method: options?.method ?? "GET", url: path, ...(options?.body === undefined ? {} : { body: options.body }) });
++      if (failure === "nonjson" && path === "/api/propose") return new window.Response("invalid JSON");
++
++    const request: InspectorTransportRequest = { method: options?.method ?? "GET", url: path };
++
++    if (isText(options?.body)) request.body = options.body;
++
++    const result = app.handle(request);
+ 
+       if (failure === "accept-lost" && path === "/api/accept") throw new Error("response lost after commit");
+ 
+-      return { json: async () => JSON.parse(result.body) };
+-    }) as unknown as typeof window.fetch;
++      return new window.Response(result.body, { status: result.status });
++  };
+ 
+     try {
+       window.document.write(inspectorPageHtml(dir));
+       await window.happyDOM.waitUntilComplete();
+-      const input = (id: string) => window.document.getElementById(id) as unknown as { value: string };
++
++      const input = (id: string) => {
++        const field = window.document.getElementById(id);
++
++        if (!(field instanceof window.HTMLInputElement) && !(field instanceof window.HTMLTextAreaElement)) {
++          throw new TypeError("Inspector field is missing.");
++        }
++
++        return field;
++      };
+ 
+       const click = async (id: string) => {
+-        (window.document.getElementById(id) as unknown as { click(): void }).click();
++        const control = window.document.getElementById(id);
++
++      if (!(control instanceof window.HTMLElement)) throw new TypeError("Inspector control is missing.");
++
++      control.click();
+         await window.happyDOM.waitUntilComplete();
+       };
+ 
+@@ -411,19 +455,16 @@ describe("served inspector drives the existing session, not a second protocol",
+   it("every declared session action names a real InspectorSession method", () => {
+     const { dir } = project();
+ 
+-    const session = createInspectorSession({ cwd: dir }) as unknown as Record<
+-      string,
+-      unknown
+-    >;
++    const session = createInspectorSession({ cwd: dir });
+ 
+     const declared = Object.values(INSPECTOR_ACTIONS)
+-      .map((route): string | null => route.session)
+-      .filter((name): name is string => name !== null);
++      .map((route) => route.session)
++      .filter((name): name is Exclude<typeof name, null> => name !== null);
+ 
+     expect(declared.length).toBeGreaterThan(0);
+ 
+     for (const name of declared) {
+-      expect(typeof session[name], `${name} is not a session method`).toBe("function");
++      expect(isSessionMethod(session[name]), `${name} is not a session method`).toBe(true);
+     }
+   });
+ });
+@@ -471,7 +512,7 @@ describe("served inspector fails closed", () => {
+   it("refuses a malformed edit rather than guessing a default", () => {
+     const { app } = project();
+ 
+-    const cases: Array<[string, unknown]> = [
++    const cases: Array<[string, JsonValue]> = [
+       ["missing documentPath", { jsonPointer: "/data", newValue: 1 }],
+       ["empty documentPath", { documentPath: "", jsonPointer: "/data", newValue: 1 }],
+       ["non-string pointer", { documentPath: "scene.json", jsonPointer: 7, newValue: 1 }],

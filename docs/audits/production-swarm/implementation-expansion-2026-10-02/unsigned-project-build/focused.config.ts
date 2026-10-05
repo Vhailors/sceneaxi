@@ -1,0 +1,3 @@
+import base from "/home/devuser/Documents/Projects/sceneaxi/vitest.config.ts";
+import { defineConfig } from "vitest/config";
+export default defineConfig({ ...base, resolve: { ...base.resolve, alias: [{ find: /^@sceneaxi\/authoring-core$/, replacement: "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/authoring-export-bridge.ts" }, { find: /^@sceneaxi\/schemas$/, replacement: "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/schema-export-bridge.ts" }, ...Object.entries(base.resolve?.alias ?? {}).map(([find, replacement]) => ({ find, replacement }))] } });

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "node": "identity-independent-audit",
+  "role": "code",
+  "scope": "read-only identity source audit; report files only",
+  "repository": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "status": "PARTIAL",
+  "auditCoverageStatus": "PARTIAL",
+  "productionReady": false,
+  "sourceEdits": [],
+  "reports": ["docs/audits/production-swarm/audit-identity.md", "docs/audits/production-swarm/audit-identity.json"],
+  "decisions": [
+    {"id": "closed-signup-launch", "recommendation": "Keep sole-admin signup-disabled launch; deny Kids; do not advertise public account verification/recovery/MFA.", "localState": "already implemented", "source": "sites/umbrella/src/provider/better-auth-provider.ts:245", "coordinatorNotified": true},
+    {"id": "lifecycle-policy", "recommendation": "Authenticated export and access disable/revocation first; ledger-preserving pseudonymization only under reviewed retention policy; no invented legal periods.", "localState": "implementation delegated to owning builder; audit source read-only"}
+  ],
+  "verification": [
+    {"command": "git rev-parse HEAD && git status --short && pnpm --filter @sceneaxi/umbrella test -- test/better-auth-provider.test.ts", "exit": 0, "outcome": "HARNESS_FAILURE", "evidence": "HEAD matches baseline; only production-swarm directory untracked at observation; No projects matched the filters; no tests ran"},
+    {"command": "pnpm --dir sites/umbrella test -- test/better-auth-provider.test.ts", "exit": 1, "outcome": "HARNESS_FAILURE", "evidence": "ERR_PNPM_NO_SCRIPT Missing script: test"},
+    {"command": "pnpm --dir sites/umbrella run test:provider", "exit": 0, "outcome": "PASS", "tests": 23, "files": 2, "evidence": "22 Better Auth provider cases plus one docs-page case; real runtime handler with memory adapter; named expected failure warnings", "coverageHole": "No deployed Neon, Next HTTP server or real browser"},
+    {"command": "pnpm --dir sites/umbrella run test:integration", "exit": 0, "outcome": "PASS", "tests": 7, "evidence": "Local provider adapter integration", "coverageHole": "Not production provider connectivity"},
+    {"command": "pnpm exec vitest run packages/auth/test --reporter=verbose", "exit": 0, "outcome": "PASS", "tests": 85, "evidence": "PASS (85) FAIL (0)", "coverageHole": "No per-test coverage report emitted; fixture seams are not provider proof"},
+    {"command": "pnpm --dir sites/umbrella run typecheck", "exit": 0, "outcome": "PASS", "evidence": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"},
+    {"command": "pnpm exec vitest run tests/sites/umbrella-login-flow.test.ts tests/sites/identity-plane-wiring.test.ts packages/site-kit/test/site-session.test.ts tests/sites/site-response-hardening.test.ts --reporter=verbose", "exit": 0, "outcome": "PASS", "tests": 153, "evidence": "PASS (153) FAIL (0)", "coverageHole": "Helper and source-order checks; not live browser route coverage"}
+  ],
+  "verificationPlatform": "available Linux host; all commands cwd real repository",
+  "requirements": [
+    {"requirement": "provider-bound sign-in/session/sign-out/revocation", "localStatus": "PASS", "productionStatus": "UNPROVED", "sources": ["sites/umbrella/test/better-auth-provider.test.ts:211", "sites/umbrella/test/better-auth-provider.test.ts:258", "sites/umbrella/test/better-auth-provider.test.ts:292"]},
+    {"requirement": "principal and admin role origin", "localStatus": "PASS", "sources": ["packages/auth/src/identity-port.ts:253#createIdentityPort", "packages/auth/src/better-auth-adapter.ts:83#createBetterAuthIdentityAdapter", "packages/auth/src/roles.ts:142", "packages/auth/src/identity-port.ts:281"], "limitation": "Bootstrap verified flag is operator attestation, not delivered-email proof"},
+    {"requirement": "CSRF/cookie/origin handling", "localStatus": "PASS_HELPER_AND_HANDLER", "productionStatus": "UNPROVED", "sources": ["sites/umbrella/src/lib/request-authority.ts:72#verifyFormOrigin", "sites/umbrella/src/provider/better-auth-provider.ts:248", "sites/umbrella/src/provider/better-auth-provider.ts:260", "tests/sites/umbrella-login-flow.test.ts:138"]},
+    {"requirement": "malformed/unconfigured refusal", "localStatus": "PASS", "sources": ["sites/umbrella/test/better-auth-provider.test.ts:703", "sites/umbrella/test/better-auth-provider.test.ts:735"]},
+    {"requirement": "Kids refusal before work", "localStatus": "PASS", "sources": ["sites/umbrella/test/better-auth-provider.test.ts:786", "packages/auth/test/role-guard.test.ts:175"]},
+    {"requirement": "account lifecycle with explicit retention policy", "localStatus": "INCOMPLETE", "sources": ["sites/umbrella/src/provider/better-auth-provider.ts:583#requiredEndpoint"], "refutation": "Throttle-counter retention exists at provider:431 and tests:609/659; it does not satisfy account/ledger retention"},
+    {"requirement": "performance/readiness", "localStatus": "PARTIAL", "sources": ["sites/umbrella/src/provider/better-auth-provider.ts:202", "sites/umbrella/src/provider/better-auth-provider.ts:396"], "limitation": "Durable throttling and bounded pool covered locally; multi-instance live throughput and proxy IP trust not tested"}
+  ],
+  "findings": [
+    {
+      "id": "IDENTITY-01", "severity": "high", "kind": "coverage-gap", "status": "OPEN_EXTERNAL_EVIDENCE",
+      "source": "sites/umbrella/test/better-auth-provider.test.ts:2#providerFixture",
+      "reproduction": "Run test:provider; runtime uses memoryAdapter and fixture records, not deployed database",
+      "impact": "No proof of live provider persistence, HTTPS deployment or actual Next front doors",
+      "owner": "integration/provider", "dependencies": ["authorized non-production deployment and disposable test data", "securely provisioned provider/database credentials"],
+      "fix": "Run stock sign-in, cookie/bearer lookup, hosted logout and failed replay through actual HTTP routes with redacted persistence evidence",
+      "acceptance": "Both provider and SceneAxi credentials invalid after logout; unrelated session preserved; no forged session or secret logs",
+      "refutation": "Real Better Auth runtime is exercised locally; absence of production evidence is not a product failure"
+    },
+    {
+      "id": "IDENTITY-02", "severity": "high", "kind": "capability-gap", "status": "OPEN_LOCAL_AND_EXTERNAL", "backlogIds": [11, 12, 13, 16],
+      "source": "sites/umbrella/src/provider/better-auth-provider.ts:583#requiredEndpoint",
+      "reproduction": "Endpoint allowlist permits only sign-in, get-session and sign-out; existing endpoint-refusal test at provider test:764 passes",
+      "impact": "No public recovery/change-credential/account export-disable-delete/MFA flow demonstrated",
+      "owner": "identity builder and persistence owner",
+      "files": ["sites/umbrella/src/provider/better-auth-provider.ts", "packages/auth/src/identity-port.ts", "packages/auth/src/store.ts", "packages/schemas lifecycle contracts (shared owner)", "new lifecycle route/page tests (builder assigns exact paths)"],
+      "dependencies": ["existing origin/provenance helpers", "ledger-preserving lifecycle contract", "email transport credentials for actual delivery"],
+      "fix": "Keep signup closed; implement authenticated export/disable and recovery contracts with explicit unconfigured refusal; add token replay/expiry and reauth tests before enabling endpoints",
+      "acceptanceCommands": ["pnpm --dir sites/umbrella run test:provider", "pnpm --dir sites/umbrella run test:integration", "pnpm exec vitest run packages/auth/test --reporter=verbose"],
+      "additionalAcceptance": "New public-boundary tests must prove lifecycle/recovery semantics; existing commands alone do not prove new features",
+      "refutation": "Closed signup is intentional; Better Auth feature availability is not SceneAxi endpoint availability; OAuth not automatically launch-required"
+    },
+    {
+      "id": "IDENTITY-03", "severity": "high", "kind": "policy-gap", "status": "OPEN_POLICY_AND_LOCAL_DOCS", "backlogIds": [13, 15],
+      "source": "sites/umbrella/src/provider/better-auth-provider.ts:338#ensureBetterAuthAdminBootstrap",
+      "reproduction": "Bootstrap stores verified flag via environment-owned provisioning; rate-limit retention SQL affects counters only",
+      "impact": "Delivered-email verification and user/ledger retention claims cannot be made",
+      "owner": "policy/docs coordinator and persistence owner",
+      "files": ["docs/production-activation.md", "docs/audits/go-live-backlog.json", "docs/audits/go-live-gaps-2026-09-26.md", "privacy/retention policy and schema migration plan (shared owners)"],
+      "dependencies": ["legal retention basis and backup policy", "real mail verification evidence for public-account claims"],
+      "fix": "Document operator attestation accurately; specify category-level retention/export/disable and ledger-preserving pseudonymization; no arbitrary legal periods or production deletion",
+      "acceptance": "Reviewed explicit policy plus local immutable-ledger lifecycle tests; external evidence remains named",
+      "refutation": "Bootstrap idempotence/conflict/rollback tests pass; no privilege escalation established; throttle retention exists"
+    },
+    {
+      "id": "IDENTITY-04", "severity": "medium", "kind": "stale-backlog", "status": "REFUTED_SOURCE_CLAIM_DOC_UPDATE_NEEDED", "backlogIds": [14],
+      "source": "sites/umbrella/test/better-auth-provider.test.ts:292#hosted-logout-flow",
+      "reproduction": "Run test:provider; provider bearer/cookie invalid after logout, including injected first-delete failure",
+      "impact": "Dated claim incorrectly directs builders to already remediated local revocation",
+      "owner": "backlog/docs owner", "dependencies": ["retain live deployment evidence gate"],
+      "files": ["docs/audits/go-live-backlog.json", "docs/audits/go-live-gaps-2026-09-26.md"],
+      "fix": "Reconcile id 14 and gap wording to current source/test evidence, without claiming deployed proof",
+      "acceptanceCommands": ["pnpm --dir sites/umbrella run test:provider", "pnpm --dir sites/umbrella run test:integration"],
+      "refutation": "Specific stale defect successfully refuted through provider Request/Response and hosted flow boundaries"
+    },
+    {
+      "id": "IDENTITY-05", "severity": "medium", "kind": "coverage-gap", "status": "OPEN_LOCAL_INTEGRATION",
+      "source": "sites/umbrella/src/app/api/login/route.ts:28#POST",
+      "reproduction": "Current successful oracles call helpers/handler and inspect route source, not browser HTTP routes",
+      "impact": "Cookie transport, proxy headers, deployed origin and Next routing could differ from tested helpers",
+      "owner": "site/integration", "dependencies": ["existing authorized local build/server/browser environment"],
+      "files": ["sites/umbrella/src/app/api/login/route.ts", "sites/umbrella/src/app/api/logout/route.ts", "sites/umbrella/src/app/api/auth/[...all]/route.ts", "browser auth integration tests (site owner assigns exact paths)"],
+      "fix": "Add real browser/HTTP tests for same-origin sign-in, hostile/missing/alias Origin, HTTPS cookie attributes, logout replay and cache controls",
+      "acceptanceCommands": ["pnpm --dir sites/umbrella run test:visual"],
+      "additionalAcceptance": "Auth-specific assertions required; screenshots or script exit alone insufficient",
+      "refutation": "Configured-origin and cookie-security helper/source-order tests pass; live-browser coverage still absent"
+    }
+  ],
+  "remainingTaskIds": ["IDENTITY-01", "IDENTITY-02", "IDENTITY-03", "IDENTITY-04", "IDENTITY-05"],
+  "missingInputs": ["authorized deployed HTTPS/provider/database test environment and disposable data permission", "secure mail transport configuration if delivery/recovery proof is required", "legal category-level retention/backup policy"],
+  "sharedChanges": ["packages/schemas lifecycle contracts and persistence/ledger interfaces belong to shared owners", "root manifest edits not needed for present verification; future dependency/export edits require integration ownership", "backlog/gap/activation-policy documentation belongs to docs coordinator"],
+  "notRun": ["live Next/browser auth front doors", "deployed Neon provider flows", "real mail delivery", "live multi-instance load tests", "account lifecycle/export/deletion proof"],
+  "failedBeforePassingAfterOracle": "not applicable: no source patch and no new reproduced security defect",
+  "safety": {"sourceReadOnly": true, "noSecretValuesPrinted": true, "noProductionChanges": true, "noCommitPushPublishDeploySpend": true, "heldKeyKidsLivePackageBoundariesPreserved": true}
+}

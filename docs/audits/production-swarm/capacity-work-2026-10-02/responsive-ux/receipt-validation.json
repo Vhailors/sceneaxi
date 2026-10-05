@@ -1,0 +1,518 @@
+{
+  "taskId": "responsive-ux",
+  "status": "PASS_HISTORICAL_RECEIPT_INTEGRITY_ONLY",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "subject": "Historical local PNG and recorded DOM metrics; no fresh rendering, no PR certification",
+  "sourceHashes": {
+    "sites/umbrella/src/app/globals.css": "37ff7ca533d6ea48037f258b60c2937a95644929c197c24190fc7387f11f2009",
+    "sites/catalog-game/src/app/globals.css": "c12f47aba173b6e3f02b740404b6f8e9af698737a7266ec7c88804c1286b5eb0",
+    "sites/catalog-web/src/app/globals.css": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3",
+    "sites/kids/src/app/globals.css": "120f68a9e0763f8d04f3df76ca3484fa562724b39101dcf8c04d6e4d274260f0",
+    "packages/site-kit/src/design-tokens.ts": "bf58bf8646f400560f2e72d751a4cf62e5db152397068a04d6e61241919be486",
+    "apps/web-shell/src/inspector-app.ts": "50f26b71434c4463a88981d35eb4b948b5fcc264c449eb128ef967afed474ae6",
+    "apps/desktop-shell/src/chrome.ts": "1c45e9cdb94fdd251cdf2703b7801c63db54ae36f867693a36121d409662008f"
+  },
+  "sourceFingerprint": "99e295737a6e1018ccaf0cb49bf65253b0bcf4d6cde3ebf015286af54da1b37e",
+  "historicalCssMatches": {
+    "sites/umbrella/src/app/globals.css": true,
+    "sites/catalog-game/src/app/globals.css": true,
+    "sites/catalog-web/src/app/globals.css": true,
+    "sites/kids/src/app/globals.css": true
+  },
+  "ledgers": [
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before.json",
+      "sha256": "822d409d1ca4b18d7e5a9089ac1537b06106aa5879232ba9aab5ecc60896f039",
+      "fields": [
+        "assertions",
+        "focusSamples",
+        "phase",
+        "receipts"
+      ]
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after.json",
+      "sha256": "da162b64944425f0c833259998f783eb12cbcc0c23310f99658ce1709646eb05",
+      "fields": [
+        "assertions",
+        "focusSamples",
+        "phase",
+        "receipts"
+      ]
+    }
+  ],
+  "receipts": [
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-umbrella-account-desktop.png",
+      "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2",
+      "bytes": 203233,
+      "width": 1440,
+      "height": 1808,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-umbrella-editor-desktop.png",
+      "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804",
+      "bytes": 235868,
+      "width": 1440,
+      "height": 1000,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(122, 100, 72)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-umbrella-account-mobile.png",
+      "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112",
+      "bytes": 191558,
+      "width": 390,
+      "height": 2901,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-umbrella-editor-mobile.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406,
+      "width": 390,
+      "height": 844,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(122, 100, 72)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-game-detail-desktop.png",
+      "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f",
+      "bytes": 417980,
+      "width": 1440,
+      "height": 2090,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          }
+        ]
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-game-detail-mobile.png",
+      "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6",
+      "bytes": 322535,
+      "width": 390,
+      "height": 4233,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          },
+          {
+            "font": "11px",
+            "align": "right"
+          }
+        ]
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-web-empty-desktop.png",
+      "sha256": "1f977591d45d52815490ee6e34f2be19cc8a6b75f78d5f7de6ea11ee36a0acf7",
+      "bytes": 346490,
+      "width": 1440,
+      "height": 1857,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-web-empty-mobile.png",
+      "sha256": "df32d3585e3601ace88482e6cb480a08bcc9791a2cb2f41505eb1c144c52f05e",
+      "bytes": 219231,
+      "width": 390,
+      "height": 2669,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-kids-empty-desktop.png",
+      "sha256": "8c68e5be8b3e1c6e395f347a416d32eacb6f9bf7918cdb66464d0486f59ef97d",
+      "bytes": 164841,
+      "width": 1440,
+      "height": 1000,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 22.734375
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/before-kids-empty-mobile.png",
+      "sha256": "86e0b3b7c43fa8649958420b8e2b30564c6ef000cdabd11fe7d090b12e5bbbce",
+      "bytes": 109527,
+      "width": 390,
+      "height": 1330,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 22.734375
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-account-desktop.png",
+      "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2",
+      "bytes": 203233,
+      "width": 1440,
+      "height": 1808,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-desktop.png",
+      "sha256": "cda2472aa524a5d1a10b81b16ad21ed2e04763954505f1ba46665d3fb710dc44",
+      "bytes": 236704,
+      "width": 1440,
+      "height": 1000,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(138, 146, 156)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-account-mobile.png",
+      "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112",
+      "bytes": 191558,
+      "width": 390,
+      "height": 2901,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-mobile.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406,
+      "width": 390,
+      "height": 844,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(138, 146, 156)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-detail-desktop.png",
+      "sha256": "5ea9d1c9936f32252dd41582bb8e8e50a2d99d615ba93b982d3ca20d73375c31",
+      "bytes": 413728,
+      "width": 1440,
+      "height": 2130,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-detail-mobile.png",
+      "sha256": "eb73b71fda5613b7c48afb850ffabb611daac0dc2b40cb2464f55395b306c1fc",
+      "bytes": 326092,
+      "width": 390,
+      "height": 4453,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-empty-desktop.png",
+      "sha256": "27a7d5ce33f007aa14d3aaf8ca292462ffa594ccc40a1f42043c98ba674e9660",
+      "bytes": 341622,
+      "width": 1440,
+      "height": 1862,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-empty-mobile.png",
+      "sha256": "96c021a773b977b01c9301ad7e8442dbf2ed90569bc787903f674efa8aca346f",
+      "bytes": 217870,
+      "width": 390,
+      "height": 2674,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-desktop.png",
+      "sha256": "e659b2d904dd30948d656d045063a594f2217178d064e7fd313316b1eaa9b3c9",
+      "bytes": 165654,
+      "width": 1440,
+      "height": 1000,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-mobile.png",
+      "sha256": "f54beda2284c106d15fd52f3389c012f82342c3ce1f235b19bde84c5347d1be3",
+      "bytes": 109054,
+      "width": 390,
+      "height": 1402,
+      "bitDepth": 8,
+      "colorType": 2,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    }
+  ],
+  "negativeControls": [
+    {
+      "input": "expected sha256=0000000000000000000000000000000000000000000000000000000000000000",
+      "observed": "PNG_HASH_MISMATCH",
+      "passed": true
+    },
+    {
+      "input": "expected sha256=0000000000000000000000000000000000000000000000000000000000000000",
+      "observed": "PNG_HASH_MISMATCH",
+      "passed": true
+    }
+  ],
+  "contrast": [
+    {
+      "phase": "before",
+      "observed": [
+        {
+          "color": "rgb(122, 100, 72)",
+          "text": "{}"
+        }
+      ],
+      "background": "#0D0F12",
+      "foreground": "#7A6448",
+      "ratio": 3.421712378659151
+    },
+    {
+      "phase": "after",
+      "observed": [
+        {
+          "color": "rgb(138, 146, 156)",
+          "text": "{}"
+        }
+      ],
+      "background": "#0D0F12",
+      "foreground": "#8A929C",
+      "ratio": 6.097978230121538
+    }
+  ],
+  "limitations": [
+    "PNG structural validation is not decoded pixel/aesthetic review",
+    "Historical ledgers omit raw HTTP status/page errors and complete source/build identity",
+    "Account screenshots do not prove authenticated purchase history",
+    "Desktop compact delegated to keyboard-ux; no fresh native browser run"
+  ]
+}

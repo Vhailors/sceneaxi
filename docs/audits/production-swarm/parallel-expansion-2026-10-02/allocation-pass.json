@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "orun-3-09og",
+  "sidecarRunId": "orun-4-h0wj",
+  "pass": 3,
+  "maximumPasses": 3,
+  "status": "PASS_3_AR05_CORRECTIONS_PENDING_INDEPENDENT_ASTRA_JUDGMENT",
+  "implementationChildrenDispatched": 0,
+  "heavyJobsStarted": 0,
+  "nextGate": "Final allowed Astra allocation review/judge; active integrate bg-84 continues. No implementation delegates or fourth allocation pass.",
+  "statusRequest": "Original orchestrator link ask timed out after 5000ms; no live phase inferred",
+  "originalLeadsNotified": 8
+}

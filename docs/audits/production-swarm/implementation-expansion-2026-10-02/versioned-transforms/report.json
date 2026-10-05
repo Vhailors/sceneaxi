@@ -1,0 +1,191 @@
+{
+  "id": "LOCAL-070",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "OWNED_IMPLEMENTATION_VERIFIED_WITH_EXPORT_PROBE; SHARED_INTEGRATION_NOT_READY",
+  "sourceHandback": true,
+  "sourceFrozen": true,
+  "sourceFiles": {
+    "packages/schemas/src/scene-composition.ts": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+    "packages/authoring-core/src/scene-composition.ts": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+    "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+    "packages/schemas/test/scene-transform-v2.test.ts": "373e313d4421d951089c6d46def343ce846f88608230942c723f44ba30e3fae7",
+    "packages/authoring-core/test/scene-transform-v2.test.ts": "521683c6ba8ba28715bfa531746d36255d72a253f8b0bac366513f15829e5702"
+  },
+  "preservedOriginalSha256": {
+    "packages/schemas/src/scene-composition.ts": "43c85cf3544bd261caa3e3504b5be4a9e9c8f7680fbcd588616a73c91c8a3c0f",
+    "packages/authoring-core/src/scene-composition.ts": "bb38670abdbf3cdc7a4205a012f1b9ba0be4506cad40cdedf516f96cdd6e0084"
+  },
+  "schemaSemantics": {
+    "version": 2,
+    "v1Unchanged": true,
+    "localConvention": "XYZ intrinsic Euler degrees; T*Rx*Ry*Rz*S",
+    "worldConvention": "column-major affine parent*child matrices, no TRS decomposition/rounding; exact cardinal trig",
+    "caps": {
+      "minimumInstances": 2,
+      "maximumInstances": 32,
+      "maximumDepth": 8,
+      "minimumScale": 1e-06,
+      "maximumComponentMagnitude": 9007199254
+    },
+    "worldScale": "actual maximum stretch and inverse maximum stretch (Jacobi spectral upper bounds), rather than wrong unrotated axis products; 1e-12 relative numeric comparison tolerance only",
+    "bounds": "conservative rest-pose AABB of existing rendered primitives through all artifact-local parents; sphere=max dimension radius, tapered cylinder=max radial dimension; animated bounds not claimed"
+  },
+  "exportRequests": {
+    "packages/schemas/src/index.ts": {
+      "from": "./scene-composition.js",
+      "values": [
+        "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+        "SCENE_MATRIX_CONVENTION_V2",
+        "multiplySceneMatricesV2",
+        "sceneMatrixFromSculptTransformV2",
+        "validateSceneCompositionIntakeV2",
+        "resolveScenePlacementsV2",
+        "migrateSceneCompositionIntakeV1ToV2",
+        "digestScenePlacementsV2",
+        "digestComposedSceneV2",
+        "projectSceneInstanceHierarchyV2",
+        "validateComposedSceneV2",
+        "composedSceneV2FromDocumentData"
+      ],
+      "types": [
+        "SceneMatrixV2",
+        "SceneCompositionIntakeV2",
+        "ResolvedScenePlacementV2",
+        "SceneBoundsV2",
+        "ComposedSceneInstanceV2",
+        "ComposedSceneV2",
+        "PlacedSceneInstanceHierarchyV2"
+      ]
+    },
+    "packages/authoring-core/src/index.ts": {
+      "from": "./scene-composition.js",
+      "values": [
+        "composeSceneV2",
+        "serializeComposedSceneV2",
+        "sceneDocumentFromComposedSceneV2",
+        "migrateComposedSceneV1ToV2"
+      ],
+      "types": [
+        "SceneCompositionResultV2"
+      ]
+    },
+    "packages/engine-presentation/src/index.ts": {
+      "from": "./scene-transforms.js",
+      "values": [
+        "resolveScenePresentationV2"
+      ],
+      "types": [
+        "ScenePresentationSourceV2"
+      ]
+    }
+  },
+  "contractRequest": {
+    "path": "packages/schemas/contracts/scene-composition-v2.schema.json",
+    "proposal": "docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/scene-composition-v2.schema.proposal.json",
+    "v1ContractUnchanged": true
+  },
+  "tested": [
+    {
+      "command": "pnpm exec vitest run --config docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/baseline.config.ts --reporter=dot",
+      "exit": 1,
+      "log": "exact-baseline-gap.log",
+      "result": "Exact pre-change schemas prefix SHA256 matches capacity-work 43c85cf...; v2 resolver missing (undefined != function). Snapshot imports only relocated for probe. Executed after addition on preserved exact pre-change snapshot, not claimed chronological first run."
+    },
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts --reporter=dot",
+      "exit": 0,
+      "log": "schema-default-after.log",
+      "result": "26 permanent source-module tests pass without probe aliases."
+    },
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts --config docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/focused.config.ts --reporter=dot",
+      "exit": 0,
+      "log": "owned-tests-after.log",
+      "result": "40 permanent tests pass with exact pending index-export aliases. Real implementations execute; aliases are probe-only, not product wiring."
+    },
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --config docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/focused.config.ts --reporter=dot",
+      "exit": 0,
+      "log": "focused-regression-after.log",
+      "result": "5 files /69 tests pass including unchanged v1 golden scene/bytes/mount/kernel save-replay."
+    },
+    {
+      "command": "pnpm exec tsc -p packages/schemas/tsconfig.json --noEmit",
+      "exit": 0,
+      "log": "schema-typecheck.log",
+      "result": "Schemas source and tests typecheck."
+    },
+    {
+      "command": "pnpm exec eslint packages/schemas/src/scene-composition.ts packages/authoring-core/src/scene-composition.ts packages/engine-presentation/src/scene-transforms.ts packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts",
+      "exit": 0,
+      "log": "lint-after.log",
+      "result": "All owned source and permanent tests lint clean."
+    },
+    {
+      "command": "pnpm check:boundaries",
+      "exit": 0,
+      "log": "boundaries.log",
+      "result": "No dependency matrix widening."
+    },
+    {
+      "command": "pnpm exec tsc -p packages/authoring-core/tsconfig.json --noEmit",
+      "exit": 2,
+      "log": "authoring-typecheck.log",
+      "result": "NOT accepted: missing new shared exports and other active local-build export. Earlier cross-package test source import error repaired to public presentation import; needs shared index/type declarations and serial build."
+    }
+  ],
+  "logSha256": {
+    "schema-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "focused-regression-after.log": "b503ab9431c942c503d290df5c01153f26fb13f1ed31d2e6f3404b31cf5c4cd0",
+    "focused-regression.log": "4466731a14cf954ed8fc8d08d4819d41051c61b1a1b64a0e940cc556199af50d",
+    "lint-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "schema-default-after.log": "13125d7a6ee2034cd36119064f74921480df16440cba25b14168b7de9fada786",
+    "schema-expanded.log": "ee314d8e12da0de3f86d688d5a8ff5b56e3816c1b010f91ab29505e4d07bf8cb",
+    "lint.log": "2c3f7e0c2da5338baa17afb9a909ea4ba46bf56e46955a83baca330fec81933a",
+    "authoring-first.log": "912285498ff3064f3354852917147f75808bd2c601d2b845b56d96358763cc41",
+    "authoring-probe.log": "80c66a6ee2eb28692aa26f036f01c91672e717acba64cd0f643365e7a71ccbdf",
+    "owned-tests-after.log": "4a1280f6bb09b06d84503bdb4cc87b3b31d38daa4164224592bea38a1b03c21f",
+    "schema-after.log": "9dfcfe62bc21b8b20fac1eb387c0acf227d87868fe80e6b3796dfc2171ab44f6",
+    "exact-baseline-gap.log": "e626bfad7646ee5c5f87e76aba5c61a1b358e59aea9094ad54a989e9990be54a",
+    "boundaries.log": "5ac5f8f646f8bb94493d428d27eff6716f0a06ab5f09efa35e3956f9c11b0e29",
+    "authoring-typecheck.log": "e63928a2aa9f4f845ea740945a1e694cf86df21eea16c57a2061de07f51b9854",
+    "fail-before.log": "6f7346929f2fc85400bedc9919754bba6df8d1d9f83fa4c37eda00306ea7b2e2"
+  },
+  "failuresRetained": [
+    "fail-before.log: initial test fixture unavailable bare Three dependency; corrected test-only resolution through existing presentation installation",
+    "authoring-first.log: missing schema public exports and erroneous intake-as-scene fixture; golden fixture reconstructed correctly",
+    "lint.log: non-null assertions; replaced with explicit checked entries, no lint bypass",
+    "focused-regression.log: migration byte test compared insertion-order JSON to canonical JSON; corrected to existing canonical serializer, exact-byte assertion retained"
+  ],
+  "integrationRequests": [
+    "Add exact schema/authoring/presentation public exports above without modifying v1 exports.",
+    "Install proposed v2 JSON schema additively; update contract fixture/checker/docs inventory under serial ownership, not v1 schema/version/golden bytes.",
+    "Add explicit openSceneKernelSessionV2/replaySceneKernelSessionV2 or equivalent schema2-only dispatch; v1 API/save shape remain unchanged. Save schema2 carries full validated scene matrix/evidence; replay recomputes matrices/bounds and terminal digest, rejects wrong majors/tampering.",
+    "Kernel must simulate artifact-local driver transforms and recompute node world matrices with multiplySceneMatricesV2 before flattening; never decompose shear matrices or send them to v1 additive-Euler simulation. Rest-pose helper output is not animated/runtime-physics proof.",
+    "Presentation: use resolveScenePresentationV2 validation before allocation. Reuse existing buildInstance with identity placement, set independent instance root.matrix from validated worldMatrix and matrixAutoUpdate=false, retaining unchanged local artifact hierarchy. Do not apply already absolute node world matrices again under worldMatrix parent. Add transactional all-instance cleanup/live guard.",
+    "Use explicit v2 authoring intake dispatch to composeSceneV2; legacy composeScene continues rejecting schema2. Document/save uses the existing composedScene data key; branch explicitly to composedSceneV2FromDocumentData on schema2.",
+    "Run regular (no probe aliases) owned tests after shared exports, then unchanged full build/gate, declarations/contracts, real kernel v2 rotated/sheared advance/save-replay negative oracles and browser pixels/cleanup. No v2 runtime success claimed before these."
+  ],
+  "notRun": [
+    "full build",
+    "full gate",
+    "site build",
+    "browser/native",
+    "v2 kernel advance/save/replay",
+    "v2 rendered pixels/collision/animated bounds",
+    "regular public authoring tests after shared export integration"
+  ],
+  "dependencies": [
+    "bg-109 shared index/contracts/kernel/presentation integration"
+  ],
+  "resources": {
+    "started": [],
+    "cleanup": "No server/browser/container/process left running; hermetic test processes exited. Existing v1 golden tmp fixture cleanup executes in finally. Audit probe snapshots/configs retained intentionally."
+  },
+  "publication": {
+    "commit": false,
+    "push": false,
+    "deploy": false,
+    "productionPass": false
+  }
+}

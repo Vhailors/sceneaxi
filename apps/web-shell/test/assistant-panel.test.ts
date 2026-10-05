@@ -25,7 +25,7 @@ import {
   createAssistantPanel,
   type AssistantCreditsView,
   type AssistantMode,
-  type AssistantPanelReason,
+  type AssistantRefusal,
   type CreateAssistantPanelOptions,
 } from "@sceneaxi/web-shell";
 import {
@@ -34,6 +34,7 @@ import {
   createModelProviderPort,
   type ModelProviderAdapter,
   type ModelProviderPort,
+  type JsonValue,
 } from "@sceneaxi/authoring-core";
 import {
   ADMIN_EMAIL_ENV_VAR,
@@ -44,6 +45,7 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
+  createHostedAiPricingPolicy,
   HOSTED_AI_ROUTE_CAPABILITIES,
   appendCreditEntry,
   createInMemoryCreditStore,
@@ -56,12 +58,20 @@ import {
 import type { CreditAccount, ModelDescriptor } from "@sceneaxi/schemas";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
+type AssistantOptionOverrides = {
+  [K in keyof CreateAssistantPanelOptions]?: CreateAssistantPanelOptions[K] | JsonValue | undefined;
+};
+
 const NOW = Date.parse("2026-07-27T10:00:00Z");
+
 const clock = () => NOW;
+
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
 });
+
 if (!adminResolution.ok) throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: the guard behind the panel checks the identity's
 // runtime provenance, so a structurally identical `{ email, source }` literal
 // is refused `AUTH_ADMIN_IDENTITY_UNPROVEN` before any assistant work happens.
@@ -74,19 +84,19 @@ const MODEL: ModelDescriptor = Object.freeze({
   version: "2026-07-24",
 });
 
-const ACCOUNT = Object.freeze({
+const ACCOUNT = Object.freeze<CreditAccount>({
   schemaVersion: 1,
   kind: "sceneaxi.credit-account",
   accountId: "acc_crew",
   userId: "usr_crew",
   createdAt: "2026-07-27T09:00:00Z",
-}) as CreditAccount;
+});
 
-const OTHER_ACCOUNT = Object.freeze({
+const OTHER_ACCOUNT = Object.freeze<CreditAccount>({
   ...ACCOUNT,
   accountId: "acc_stranger",
   userId: "usr_stranger",
-}) as CreditAccount;
+});
 
 const PRINCIPAL = issuePrincipalForTest({
   user: {
@@ -116,7 +126,7 @@ const PRINCIPAL = issuePrincipalForTest({
     expiresAt: "2026-07-28T10:00:00Z",
     tokenDigest: digestSessionToken("tok"),
   },
-}) as CreateAssistantPanelOptions["principal"] & object;
+});
 
 /** The captain, whose role the guard re-derives from the admin identity. */
 const ADMIN_PRINCIPAL = issuePrincipalForTest({
@@ -132,10 +142,11 @@ const ADMIN_PRINCIPAL = issuePrincipalForTest({
     source: "admin-env",
   },
   session: { ...PRINCIPAL.session, userId: "usr_captain" },
-}) as CreateAssistantPanelOptions["principal"] & object;
+});
 
 const funded = (credits: number, account: CreditAccount = ACCOUNT) => {
   if (credits === 0) return createLedgerState(account);
+
   const appended = appendCreditEntry(createLedgerState(account), {
     entryId: "ent_grant",
     movement: "grant",
@@ -144,7 +155,9 @@ const funded = (credits: number, account: CreditAccount = ACCOUNT) => {
     idempotencyKey: "fixture:grant",
     now: NOW,
   });
+
   if (!appended.ok) throw new Error("fixture funding failed");
+
   return appended.value.state;
 };
 
@@ -158,6 +171,7 @@ const recordedAdapter = (prompts: string[]): ModelProviderAdapter =>
     }),
     complete(request) {
       prompts.push(request.prompt);
+
       return Object.freeze({
         response: Object.freeze({
           schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -178,10 +192,12 @@ const providerStack = (
   },
 ) => {
   const prompts: string[] = [];
+
   const port = createModelProviderPort({
     adapter: recordedAdapter(prompts),
     profilePolicies: policies,
   });
+
   return { prompts, port };
 };
 
@@ -192,12 +208,16 @@ const currentCreditsView = (store: CreditStore): AssistantCreditsView =>
   Object.freeze({
     async ledgerFor(userId: string) {
       const account = await store.findAccountByUserId(userId);
+
       if (account === undefined) return undefined;
+
       const loaded = loadLedgerState(
         account,
         await store.listEntries(account.accountId),
       );
+
       if (!loaded.ok) throw new Error(loaded.message);
+
       return loaded.value;
     },
   });
@@ -217,23 +237,28 @@ const panelFor = (
     clock,
     ...overrides,
   });
+
   if (!created.ok) throw new Error(`panel refused: ${created.reason}`);
+
   return created.panel;
 };
 
 /** A funded hosted panel wired to one store, returned with that store. */
 const hostedPanel = (credits: number, overrides: PanelOverrides = {}) => {
   const state = funded(credits);
+
   const store = createInMemoryCreditStore({
     accounts: [state.account],
     entries: state.entries,
   });
+
   const stack = providerStack();
+
   const panel = panelFor(
     { fixture: stack.port, hosted: stack.port },
     {
       mode: "hosted",
-      hostedAi: { enabled: true },
+      hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
       principal: PRINCIPAL,
       credits: currentCreditsView(store),
       store,
@@ -241,6 +266,7 @@ const hostedPanel = (credits: number, overrides: PanelOverrides = {}) => {
       ...overrides,
     },
   );
+
   return { panel, store, stack, state };
 };
 
@@ -274,15 +300,17 @@ describe("assistant mode table", () => {
   it("keeps SceneAxi-hosted AI off unless a caller enables it", () => {
     expect(HOSTED_AI_DEFAULT_CONFIG.enabled).toBe(false);
     const stack = providerStack();
+
     const panel = panelFor(
       { fixture: stack.port, hosted: stack.port },
       { mode: "hosted" },
     );
+
     expect(panel.snapshot().hostedEnabled).toBe(false);
   });
 
   it("snapshots hosted enablement and fails closed on accessors", async () => {
-    const enabled = { enabled: true };
+    const enabled = { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) };
     const wired = hostedPanel(10, { hostedAi: enabled });
 
     enabled.enabled = false;
@@ -296,19 +324,23 @@ describe("assistant mode table", () => {
       ).refusal,
     ).toBeUndefined();
 
+    // SAFETY: this fixture defines a boolean-typed accessor; construction must reject accessors without invoking it.
     const throwing = Object.defineProperty({}, "enabled", {
       enumerable: true,
       get(): boolean {
         throw new Error("untrusted hosted config getter");
       },
     }) as Readonly<{ enabled: boolean }>;
+
     const refused = hostedPanel(10, { hostedAi: throwing });
 
     expect(refused.panel.snapshot().hostedEnabled).toBe(false);
+
     const snapshot = await refused.panel.ask({
       prompt: "hosted turn",
       turnId: "accessor",
     });
+
     expect(snapshot.refusal?.reason).toBe(
       BILLING_REFUSE_REASONS.hostedAiNotEnabled,
     );
@@ -345,12 +377,15 @@ describe("fixture and BYO modes never touch the ledger", () => {
 
   it("charges nothing on the BYO route even for a funded signed-in viewer", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
+
     const stack = providerStack();
     let ledgerReads = 0;
+
     const panel = panelFor(
       { fixture: stack.port, byo: stack.port },
       {
@@ -359,12 +394,13 @@ describe("fixture and BYO modes never touch the ledger", () => {
         credits: {
           ledgerFor: () => {
             ledgerReads += 1;
+
             return state;
           },
         },
         store,
         hostedTurnCredits: 4,
-        hostedAi: { enabled: true },
+        hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
       },
     );
 
@@ -438,10 +474,12 @@ describe("hosted mode debits through the existing ledger", () => {
 
   it("reads no ledger at all when the gate refuses above its own ledger", async () => {
     const reads: string[] = [];
+
     const counting = (state: LedgerState): AssistantCreditsView =>
       Object.freeze({
         ledgerFor: (userId: string) => {
           reads.push(userId);
+
           return state;
         },
       });
@@ -450,6 +488,7 @@ describe("hosted mode debits through the existing ledger", () => {
       hostedAi: HOSTED_AI_DEFAULT_CONFIG,
       credits: counting(funded(10)),
     });
+
     expect(
       (await off.panel.ask({ prompt: "hosted turn", turnId: "t1" })).refusal
         ?.reason,
@@ -459,9 +498,10 @@ describe("hosted mode debits through the existing ledger", () => {
       principal: issuePrincipalForTest({
         ...PRINCIPAL,
         session: { ...PRINCIPAL.session, surface: "kids" },
-      }) as CreateAssistantPanelOptions["principal"],
+      }),
       credits: counting(funded(10)),
     });
+
     expect(
       (await kids.panel.ask({ prompt: "hosted turn", turnId: "t1" })).refusal
         ?.reason,
@@ -571,17 +611,20 @@ describe("hosted mode debits through the existing ledger", () => {
 
   it("refuses a stale ledger even when persistence has enough credits", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
+
     const stack = providerStack();
+
     const spend = (credits: number, view: AssistantCreditsView) =>
       panelFor(
         { fixture: stack.port, hosted: stack.port },
         {
           mode: "hosted",
-          hostedAi: { enabled: true },
+          hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits }]) },
           principal: PRINCIPAL,
           credits: view,
           store,
@@ -593,6 +636,7 @@ describe("hosted mode debits through the existing ledger", () => {
       prompt: "hosted turn",
       turnId: "t1",
     });
+
     expect(first.creditBalance).toBe(9);
 
     const stale = await spend(1, creditsView(state)).ask({
@@ -623,23 +667,27 @@ describe("hosted mode debits through the existing ledger", () => {
 
   it("drops a cached balance when a later hosted refusal disproves it", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
+
     const stack = providerStack();
+
     const createPanel = () =>
       panelFor(
         { fixture: stack.port, hosted: stack.port },
         {
           mode: "hosted",
-          hostedAi: { enabled: true },
+          hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
           principal: PRINCIPAL,
           credits: currentCreditsView(store),
           store,
           hostedTurnCredits: 4,
         },
       );
+
     const panel = createPanel();
 
     expect(
@@ -739,7 +787,7 @@ describe("hosted mode debits through the existing ledger", () => {
   });
 
   it("refuses a structurally invalid ledger in the ledger's own vocabulary", async () => {
-    const broken = { ...funded(10), balance: 999 } as LedgerState;
+    const broken = { ...funded(10), balance: 999 };
     const { panel, stack } = hostedPanel(10, { credits: creditsView(broken) });
 
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
@@ -790,8 +838,9 @@ describe("hosted mode debits through the existing ledger", () => {
       ...PRINCIPAL,
       session: { ...PRINCIPAL.session, expiresAt: "2026-07-27T09:30:00Z" },
     });
+
     const { panel, store, stack } = hostedPanel(10, {
-      principal: expired as typeof PRINCIPAL,
+      principal: expired,
     });
 
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
@@ -808,10 +857,12 @@ describe("hosted mode debits through the existing ledger", () => {
     // the identity is real, so the refusal must land at ask time — before the
     // provider and before the ledger — rather than deriving a caller who named
     // their own address into `admin`.
+    // SAFETY: this deliberately unproven fixture has admin fields, but only the auth provenance guard may admit it; this test requires refusal.
     const unproven = {
       email: admin.email,
       source: ADMIN_EMAIL_ENV_VAR,
     } as typeof admin;
+
     const { panel, store, stack } = hostedPanel(10, {
       admin: unproven,
       principal: ADMIN_PRINCIPAL,
@@ -832,12 +883,14 @@ describe("hosted mode debits through the existing ledger", () => {
     // is both expired *and* backed by a credits view that fails, which is exactly
     // the pair that would otherwise answer "the credits view failed".
     const reads: string[] = [];
+
     const expired = issuePrincipalForTest({
       ...PRINCIPAL,
       session: { ...PRINCIPAL.session, expiresAt: "2026-07-27T09:30:00Z" },
     });
+
     const { panel, store, stack } = hostedPanel(10, {
-      principal: expired as typeof PRINCIPAL,
+      principal: expired,
       credits: {
         ledgerFor: (userId: string) => {
           reads.push(userId);
@@ -872,18 +925,21 @@ describe("hosted mode debits through the existing ledger", () => {
 describe("a port refusal is never billed as an answer", () => {
   it("reports the port's own reason and charges nothing", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
+
     // A port with no policy registered for the panel's profile: it refuses by
     // value, so an untranslated refusal would be billed as a completed call.
     const stack = providerStack({});
+
     const panel = panelFor(
       { fixture: stack.port, hosted: stack.port },
       {
         mode: "hosted",
-        hostedAi: { enabled: true },
+        hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
         principal: PRINCIPAL,
         credits: creditsView(state),
         store,
@@ -912,20 +968,29 @@ describe("a port refusal is never billed as an answer", () => {
 
   it("rejects a malformed port success before a hosted debit", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
-    const malformed = Object.freeze({
-      async complete() {
+
+    // SAFETY: this fixture exposes callable complete and intentionally omits the success envelope; it only exercises decoder refusal before charging.
+    const malformedResponsePort = Object.freeze({
+      async complete(request: Parameters<ModelProviderPort["complete"]>[0]): Promise<Partial<Awaited<ReturnType<ModelProviderPort["complete"]>>>> {
+        void request;
+
         return Object.freeze({ ok: true });
       },
-    }) as never as ModelProviderPort;
+    });
+
+    // SAFETY: the callable fixture intentionally returns a partial success; it is used only to require refusal at the success-envelope decoder.
+    const malformed = malformedResponsePort as ModelProviderPort;
+
     const panel = panelFor(
       { fixture: malformed, hosted: malformed },
       {
         mode: "hosted",
-        hostedAi: { enabled: true },
+        hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
         principal: PRINCIPAL,
         credits: creditsView(state),
         store,
@@ -947,6 +1012,7 @@ describe("a port refusal is never billed as an answer", () => {
 describe("Kids is denied before any metering or dispatch", () => {
   it("offers no assistant panel at all on the Kids surface", () => {
     const stack = providerStack();
+
     const created = createAssistantPanel({
       surface: "kids",
       profile: "@sceneaxi/profile-web",
@@ -957,6 +1023,7 @@ describe("Kids is denied before any metering or dispatch", () => {
     });
 
     expect(created.ok).toBe(false);
+
     if (created.ok) return;
     expect(created.reason).toBe(ASSISTANT_PANEL_REASONS.kidsSurfaceDenied);
     expect(stack.prompts).toHaveLength(0);
@@ -964,6 +1031,7 @@ describe("Kids is denied before any metering or dispatch", () => {
 
   it("offers no assistant panel for the Kids profile on any surface", () => {
     const stack = providerStack();
+
     const created = createAssistantPanel({
       surface: "web-shell",
       profile: "@sceneaxi/profile-kids",
@@ -974,12 +1042,14 @@ describe("Kids is denied before any metering or dispatch", () => {
     });
 
     expect(created.ok).toBe(false);
+
     if (created.ok) return;
     expect(created.reason).toBe(ASSISTANT_PANEL_REASONS.kidsProfileDenied);
   });
 
   it("denies Kids in every mode, including the ones that never meter", () => {
     const stack = providerStack();
+
     for (const mode of ASSISTANT_MODES) {
       const created = createAssistantPanel({
         surface: "kids",
@@ -989,18 +1059,22 @@ describe("Kids is denied before any metering or dispatch", () => {
         ports: { fixture: stack.port, byo: stack.port, hosted: stack.port },
         admin,
         clock,
-        hostedAi: { enabled: true },
+        hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
       });
+
       expect(created.ok).toBe(false);
+
       if (created.ok) continue;
       expect(created.reason).toBe(ASSISTANT_PANEL_REASONS.kidsSurfaceDenied);
     }
+
     expect(stack.prompts).toHaveLength(0);
   });
 
   it("denies the Kids surface before it validates anything else", () => {
     // Every other option is unusable; the Kids answer must still be the one
     // given, because a defect elsewhere must not be able to demote it.
+    // SAFETY: these deliberately unusable options only reach the Kids-first construction refusal asserted below.
     const created = createAssistantPanel({
       surface: "kids",
       profile: "not-a-profile" as never,
@@ -1009,7 +1083,9 @@ describe("Kids is denied before any metering or dispatch", () => {
       admin: undefined as never,
       clock: undefined as never,
     });
+
     expect(created.ok).toBe(false);
+
     if (created.ok) return;
     expect(created.reason).toBe(ASSISTANT_PANEL_REASONS.kidsSurfaceDenied);
   });
@@ -1017,6 +1093,7 @@ describe("Kids is denied before any metering or dispatch", () => {
 
 describe("construction and request refusals", () => {
   const stack = providerStack();
+
   const base = {
     surface: "web-shell",
     profile: "@sceneaxi/profile-web",
@@ -1026,12 +1103,15 @@ describe("construction and request refusals", () => {
     clock,
   } as const satisfies CreateAssistantPanelOptions;
 
-  const refusedWith = (overrides: Record<string, unknown>) => {
+  const refusedWith = (overrides: AssistantOptionOverrides) => {
+    // SAFETY: base is valid typed wiring; overrides are intentionally malformed inputs tested only through construction validation.
     const created = createAssistantPanel({
       ...base,
       ...overrides,
     } as CreateAssistantPanelOptions);
+
     expect(created.ok).toBe(false);
+
     return created.ok ? undefined : created.reason;
   };
 
@@ -1092,9 +1172,11 @@ describe("construction and request refusals", () => {
 
   it("refuses switching onto a port that cannot answer a completion", () => {
     const live = providerStack();
+
+    // SAFETY: the empty BYO fixture is never invoked; switching must reject it via isAssistantPort before dispatch.
     const panel = panelFor({
       fixture: live.port,
-      byo: {} as never as ModelProviderPort,
+      byo: {} as ModelProviderPort,
     });
 
     const switched = panel.setMode("byo");
@@ -1135,12 +1217,15 @@ describe("construction and request refusals", () => {
 
   it("refuses a clock that stops returning epoch milliseconds", async () => {
     const live = providerStack();
+
     const created = createAssistantPanel({
       ...base,
       ports: { fixture: live.port },
       clock: () => Number.NaN,
     });
+
     expect(created.ok).toBe(true);
+
     if (!created.ok) return;
     const snapshot = await created.panel.ask({ prompt: "anything" });
     expect(snapshot.refusal?.reason).toBe(
@@ -1150,12 +1235,86 @@ describe("construction and request refusals", () => {
   });
 });
 
+describe("bounded local assistant retention and admission", () => {
+  it("bounds 120 UTF-8 exchanges by both count and serialized bytes and reports dropped history", async () => {
+    const stack = providerStack();
+    const panel = panelFor({ fixture: stack.port });
+
+    for (let index = 0; index < 120; index += 1) {
+      const snapshot = await panel.ask({ prompt: `${index}:` + "😀".repeat(512) });
+      expect(snapshot.refusal).toBeUndefined();
+      expect(snapshot.turns.length).toBeLessThanOrEqual(100);
+      expect(Buffer.byteLength(JSON.stringify(snapshot.turns), "utf8")).toBeLessThanOrEqual(256 * 1024);
+      expect(Buffer.byteLength(JSON.stringify(snapshot), "utf8")).toBeLessThan(270 * 1024);
+    }
+
+    expect(panel.snapshot().turnsDropped).toBeGreaterThanOrEqual(20);
+    expect(panel.snapshot().turns.at(-1)?.prompt).toContain("119:");
+    expect(stack.prompts).toHaveLength(120);
+  });
+
+  it("measures prompt bytes rather than UTF-16 length and refuses oversized output before adding a turn", async () => {
+    const stack = providerStack();
+    const panel = panelFor({ fixture: stack.port });
+    expect((await panel.ask({ prompt: "😀".repeat(4097) })).refusal?.reason).toBe(ASSISTANT_PANEL_REASONS.promptInvalid);
+    expect(stack.prompts).toHaveLength(0);
+
+    const oversized = panelFor({ fixture: {
+      ...stack.port,
+      async complete(request) {
+        const result = await stack.port.complete(request);
+
+        if (!result.ok) return result;
+
+        return { ...result, response: { ...result.response, text: "😀".repeat(16385) } };
+      },
+    } });
+
+    const response = await oversized.ask({ prompt: "local fixture" });
+    expect(response.refusal?.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
+    expect(response.turns).toHaveLength(0);
+
+    const refusing = panelFor({ fixture: { ...stack.port, async complete() {
+      return { ok: false, reason: "x".repeat(300), message: "named response" };
+    } } });
+
+    const refused = await refusing.ask({ prompt: "local fixture" });
+    expect(refused.refusal?.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
+    expect(refused.refusal?.providerReason).toBeUndefined();
+  });
+
+  it("admits only one running and eight queued operations and preserves pinned modes", async () => {
+    const stack = providerStack();
+    let release = () => {};
+
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+
+    const panel = panelFor({ fixture: {
+      ...stack.port, async complete(request) { await barrier;
+
+ return stack.port.complete(request); },
+    }, byo: stack.port });
+
+    const pending = Array.from({ length: 9 }, (_, index) => panel.ask({ prompt: `queued-${index}` }));
+    expect(panel.setMode("byo").refusal).toBeUndefined();
+    const overflow = await panel.ask({ prompt: "not dispatched" });
+    expect(overflow.refusal?.reason).toBe(ASSISTANT_PANEL_REASONS.busy);
+    expect(stack.prompts).toHaveLength(0);
+    release();
+    await Promise.all(pending);
+    expect(stack.prompts).toHaveLength(9);
+    expect(panel.snapshot().turns.every((turn) => turn.mode === "fixture")).toBe(true);
+    expect((await panel.ask({ prompt: "new byo fixture" })).turns.at(-1)?.mode).toBe("byo");
+  });
+});
+
 describe("every panel refusal is reachable", () => {
   it("has a covering case above for each named reason", async () => {
-    const reached = new Set<AssistantPanelReason>();
+    const reached = new Set<AssistantRefusal["reason"]>();
     const stack = providerStack();
 
-    const created = (overrides: Record<string, unknown>) => {
+    const created = (overrides: AssistantOptionOverrides) => {
+      // SAFETY: overrides exercise the typed constructor's runtime refusal checks; malformed options are not trusted downstream.
       const result = createAssistantPanel({
         surface: "web-shell",
         profile: "@sceneaxi/profile-web",
@@ -1165,6 +1324,7 @@ describe("every panel refusal is reachable", () => {
         clock,
         ...overrides,
       } as CreateAssistantPanelOptions);
+
       if (!result.ok) reached.add(result.reason);
     };
 
@@ -1179,11 +1339,13 @@ describe("every panel refusal is reachable", () => {
     created({ clock: undefined });
 
     const panel = panelFor({ fixture: stack.port });
-    const record = (reason: unknown) => {
-      if (typeof reason === "string") {
-        reached.add(reason as AssistantPanelReason);
+
+    const record = (reason: AssistantRefusal["reason"] | undefined) => {
+      if (reason !== undefined) {
+        reached.add(reason);
       }
     };
+
     record((await panel.ask({ prompt: "" })).refusal?.reason);
     record(panel.setMode("hosted").refusal?.reason);
 
@@ -1194,13 +1356,16 @@ describe("every panel refusal is reachable", () => {
         },
       },
     });
+
     record(
       (await unreadable.panel.ask({ prompt: "p", turnId: "t1" })).refusal
         ?.reason,
     );
+
     const stranger = hostedPanel(10, {
       credits: creditsView(funded(10, OTHER_ACCOUNT)),
     });
+
     record(
       (await stranger.panel.ask({ prompt: "p", turnId: "t1" })).refusal?.reason,
     );
@@ -1218,9 +1383,28 @@ describe("every panel refusal is reachable", () => {
       admin,
       clock: () => Number.NaN,
     });
+
     if (stopped.ok) {
       record((await stopped.panel.ask({ prompt: "p" })).refusal?.reason);
     }
+
+    let release = () => {};
+
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+
+    const queued = panelFor({ fixture: {
+      ...stack.port,
+      async complete(request) { await barrier;
+
+ return stack.port.complete(request); },
+    } });
+
+    const pending = Array.from({ length: 9 }, () => queued.ask({ prompt: "queued" }));
+    const overflow = await queued.ask({ prompt: "not admitted" });
+    expect(overflow.refusal?.reason).toBe(ASSISTANT_PANEL_REASONS.busy);
+    record(overflow.refusal?.reason);
+    release();
+    await Promise.all(pending);
 
     expect([...reached].sort()).toEqual(
       Object.values(ASSISTANT_PANEL_REASONS).sort(),

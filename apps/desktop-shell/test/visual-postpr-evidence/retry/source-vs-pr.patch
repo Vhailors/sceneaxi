@@ -1,0 +1,371 @@
+diff --git a/apps/desktop-shell/src/chrome.ts b/apps/desktop-shell/src/chrome.ts
+index 96466927..5a02eb2e 100644
+--- a/apps/desktop-shell/src/chrome.ts
++++ b/apps/desktop-shell/src/chrome.ts
+@@ -1149,6 +1149,14 @@ body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-s
+ .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+ :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+ .view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
++/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
++:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
++:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
++@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed="true"],button[aria-selected="true"]{border:1px solid Highlight}}
++:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed="true"]):hover{background:var(--hover);color:var(--text)}
++button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
++button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
++:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
+ button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+ /* An inert control is dimmed by paint, never by element opacity: opacity
+@@ -1243,7 +1251,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .left-dock{border-right:1px solid var(--line)}
+ .inspector{border-left:1px solid var(--line)}
+ .panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+-.panel-empty{margin:0;padding:var(--space-4) var(--space-3);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
++.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
++.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}
+ .panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
+ .panel-note .dot{margin-top:5px}
+ .project-panel{flex:none;border-bottom:1px solid var(--line)}
+@@ -1276,7 +1285,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}
+ .asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}
+ .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
+-.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
++.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}
+ .asset-browser-card .asset-browser-meta{display:none}
+ .scene-entities{padding:0 var(--space-2) var(--space-3)}
+ .scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
+@@ -1289,10 +1298,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+ .scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
+ .shell[data-details-open="true"] .scene-entity-identity dl{display:grid}
+-.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
++.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+ .scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+ .scene-entity-identity dd{min-width:0;margin:0}
+-.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
++.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}
+ .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
+ .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
+@@ -1320,7 +1329,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+ .ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}
+ .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+-.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
++.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
++.pass-row>div{min-width:0;overflow-wrap:anywhere}
++.pass-row:nth-child(even){background:var(--well)}
+ .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
+ .pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}
+ .pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}
+@@ -1458,13 +1469,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .shell[data-assistant="denied"] .assistant-mark{background:${SIGNAL.sceneSurface}}
+ .shell[data-assistant="denied"] .assistant-mark::before{background:var(--scene)}
+ .assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}
+-.icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}
++.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}
++:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}
+ /* An icon button on the accent fill keeps the on-accent glyph colour: without
+    this the later single-class rule wins and paints --dim on orange (1.1:1). */
+ .primary-button.icon-button{color:var(--on-accent)}
+ .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
+ .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+-.assistant-empty{margin:0;font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
++.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
+ .assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}
+ .shell[data-assistant-busy="true"] .assistant-live{display:flex}
+ .assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}
+@@ -1473,9 +1485,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .assistant-live i:nth-child(3){height:22px;animation-delay:.24s}
+ .assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}
+ .assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+-.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
++.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+ .shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+-.assistant-result{min-width:0;font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;animation:rise .16s ease-out}
++.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}
+ .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
+ .assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+ .assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+@@ -1543,13 +1555,16 @@ code,kbd{font-family:var(--mono);font-size:.86em}
+ .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+ .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
+ .mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}
+-.overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
++.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
++.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}
+ .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
+ .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
+ .palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}
+ .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
+ .palette-group ul{list-style:none;margin:0;padding:0}
+-.palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
++.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}
++.palette-name{min-width:0;overflow-wrap:anywhere}
++.palette-item kbd{flex:none;white-space:nowrap}
+ .palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+ .palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
+ .palette-name{flex:1;font-size:13px}
+diff --git a/apps/web-shell/src/inspector-app.ts b/apps/web-shell/src/inspector-app.ts
+index 3dd8e9df..8479dcb9 100644
+--- a/apps/web-shell/src/inspector-app.ts
++++ b/apps/web-shell/src/inspector-app.ts
+@@ -26,6 +26,8 @@ import {
+   contentHash,
+   parseDocumentText,
+   type ApplyDiagnostic,
++  type JsonObject,
++  type JsonValue,
+ } from "@sceneaxi/authoring-core";
+ import {
+   createInspectorSession,
+@@ -35,6 +37,8 @@ import {
+ import { createDefaultAssistantPanel } from "./assistant-default.js";
+ import type {
+   AssistantPanel,
++  AssistantAskRequest,
++  AssistantPanelReason,
+   AssistantPanelSnapshot,
+   AssistantRefusal,
+   CreateAssistantPanelResult,
+@@ -196,13 +200,41 @@ const JSON_TYPE = "application/json; charset=utf-8";
+ 
+ const HTML_TYPE = "text/html; charset=utf-8";
+ 
+-function jsonBody(payload: Readonly<Record<string, unknown>>): string {
++type AssistantTurnRequest = { -readonly [K in keyof AssistantAskRequest]: AssistantAskRequest[K] };
++
++type InspectorResponsePayload = Readonly<{
++  app?: string;
++  ok?: boolean;
++  action?: string;
++  reason?: ServedRefusalReason;
++  message?: string;
++  projectRoot?: string;
++  reviewToken?: string | null;
++  snapshot?: InspectorSnapshot | AssistantPanelSnapshot;
++  documentPath?: string;
++  documentId?: string;
++  contentHash?: string;
++  dataKeys?: string[];
++  routes?: string[];
++  assistantReason?: AssistantPanelReason;
++}>;
++
++function isText(value: JsonValue | undefined): value is string {
++  return typeof value === "string";
++}
++
++function isJsonObject(value: JsonValue): value is JsonObject {
++  // The caller supplies JSON.parse output, so only the root object/array distinction remains.
++  return typeof value === "object" && value !== null && !Array.isArray(value);
++}
++
++function jsonBody(payload: InspectorResponsePayload): string {
+   return `${JSON.stringify(payload, null, 2)}\n`;
+ }
+ 
+ function okResponse(
+   action: string,
+-  payload: Readonly<Record<string, unknown>>,
++  payload: InspectorResponsePayload,
+ ): InspectorHttpResponse {
+   return {
+     status: 200,
+@@ -216,7 +248,7 @@ function refuse(
+   action: string,
+   reason: ServedRefusalReason,
+   message: string,
+-  extra: Readonly<Record<string, unknown>> = {},
++  extra: InspectorResponsePayload = {},
+ ): InspectorHttpResponse {
+   return {
+     status,
+@@ -281,11 +313,11 @@ function refuseRequest(
+  */
+ export function resolveInsideProjectRoot(
+   projectRoot: string,
+-  documentPath: unknown,
++  documentPath: JsonValue | undefined,
+ ):
+   | { readonly ok: true; readonly documentPath: string; readonly absolute: string }
+   | ({ readonly ok: false } & RequestRefusal) {
+-  if (typeof documentPath !== "string" || documentPath.length === 0) {
++  if (!isText(documentPath) || documentPath.length === 0) {
+     return {
+       ok: false,
+       reason: WEB_SHELL_REFUSALS.editFieldInvalid,
+@@ -318,7 +350,7 @@ export function resolveInsideProjectRoot(
+ function parseJsonObject(
+   body: string | undefined,
+ ):
+-  | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }
++  | { readonly ok: true; readonly value: JsonObject }
+   | ({ readonly ok: false } & RequestRefusal) {
+   const text = body ?? "";
+ 
+@@ -331,7 +363,7 @@ function parseJsonObject(
+   }
+ 
+   if (text.trim() === "") return { ok: true, value: {} };
+-  let parsed: unknown;
++  let parsed: JsonValue;
+ 
+   try {
+     parsed = JSON.parse(text);
+@@ -345,7 +377,7 @@ function parseJsonObject(
+     };
+   }
+ 
+-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
++  if (!isJsonObject(parsed)) {
+     return {
+       ok: false,
+       reason: WEB_SHELL_REFUSALS.requestBodyNotJson,
+@@ -353,7 +385,7 @@ function parseJsonObject(
+     };
+   }
+ 
+-  return { ok: true, value: parsed as Record<string, unknown> };
++  return { ok: true, value: parsed };
+ }
+ 
+ /**
+@@ -424,7 +456,7 @@ export function createInspectorApp(
+   let reviewGeneration = 0;
+   let activeReviewToken: string | null = null;
+ 
+-  const documentStatus = (path: unknown): InspectorHttpResponse => {
++  const documentStatus = (path: JsonValue | undefined): InspectorHttpResponse => {
+     const resolved = resolveInsideProjectRoot(projectRoot, path);
+ 
+     if (!resolved.ok) return refuseRequest("document", resolved);
+@@ -476,7 +508,7 @@ export function createInspectorApp(
+     if (!resolved.ok) return refuseRequest("propose", resolved);
+     const jsonPointer = parsed.value["jsonPointer"];
+ 
+-    if (typeof jsonPointer !== "string") {
++    if (!isText(jsonPointer)) {
+       return refuseRequest("propose", {
+         reason: WEB_SHELL_REFUSALS.editFieldInvalid,
+         message:
+@@ -529,7 +561,7 @@ export function createInspectorApp(
+     const reviewToken = parsed.value["reviewToken"];
+ 
+     if (
+-      typeof reviewToken !== "string" ||
++      !isText(reviewToken) ||
+       activeReviewToken === null ||
+       reviewToken !== activeReviewToken
+     ) {
+@@ -577,12 +609,16 @@ export function createInspectorApp(
+       }
+     }
+ 
+-    const snapshot = await panel.ask({
+-      prompt: typeof parsed.value["prompt"] === "string" ? parsed.value["prompt"] : "",
+-      ...(typeof parsed.value["turnId"] === "string"
+-        ? { turnId: parsed.value["turnId"] }
+-        : {}),
+-    });
++    const prompt = parsed.value["prompt"];
++    const turnId = parsed.value["turnId"];
++
++    const request: AssistantTurnRequest = {
++      prompt: isText(prompt) ? prompt : "",
++    };
++
++    if (isText(turnId)) request.turnId = turnId;
++
++    const snapshot = await panel.ask(request);
+ 
+     return assistantSnapshotResponse("assistant", snapshot);
+   };
+@@ -627,7 +663,8 @@ export function createInspectorApp(
+       );
+     }
+ 
+-    const [action, matched] = entry as [
++    // SAFETY: entry comes from Object.entries of the closed INSPECTOR_ACTIONS registry, preserving its key/value pairs.
++  const [action, matched] = entry as [
+       InspectorAction,
+       (typeof INSPECTOR_ACTIONS)[InspectorAction],
+     ];
+@@ -760,19 +797,34 @@ export function inspectorPageHtml(projectRoot: string): string {
+ <title>SceneAxi inspector — ${root}</title>
+ <style>
+   :root { color-scheme: light dark; }
+-  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 1.5rem; }
+-  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }
+-  .root { opacity: .7; margin: 0 0 1.25rem; word-break: break-all; }
+-  form { display: grid; gap: .5rem; max-width: 46rem; }
+-  label { display: grid; gap: .2rem; }
+-  input { font: inherit; padding: .35rem .5rem; }
+-  .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+-  button { font: inherit; padding: .4rem .9rem; cursor: pointer; }
+-  button[disabled] { cursor: not-allowed; opacity: .45; }
+-  pre { border: 1px solid currentColor; padding: .75rem; overflow-x: auto; max-width: 60rem; }
++  * { box-sizing: border-box; }
++  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 24px; background: Canvas; color: CanvasText; }
++  h1 { font-size: 1.1rem; margin: 0 0 4px; }
++  .root { margin: 0 0 20px; overflow-wrap: anywhere; }
++  form { display: grid; gap: 12px; max-width: 46rem; min-width: 0; }
++  label { display: grid; gap: 4px; min-width: 0; }
++  input { font: inherit; width: 100%; min-width: 0; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid currentColor; border-radius: 4px; }
++  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
++  button { font: inherit; min-height: 36px; padding: 8px 12px; cursor: pointer; background: ButtonFace; color: ButtonText; border: 1px solid currentColor; border-radius: 4px; }
++  button[disabled] { cursor: not-allowed; border-style: dashed; }
++  :is(button,input,select,textarea,a[href],summary,[tabindex]):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; scroll-margin: 12px; }
++  @media (forced-colors: active) { :focus-visible { outline-color: Highlight; } }
++  :is(input,select,textarea):user-invalid { border-color: #b3261e; }
++  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
++  button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 4px; }
++  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
++  pre { border: 1px solid currentColor; border-radius: 4px; padding: 16px; max-width: 60rem; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; tab-size: 2; line-height: 1.65; }
++  pre:empty { min-height: 3rem; border-style: dashed; }
++  pre[aria-busy="true"] { border-inline-start-width: 3px; }
++  code { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
++  @media (prefers-color-scheme: dark) { :is(input,select,textarea):user-invalid { border-color: #FF4D5E; } }
+   .phase { font-weight: 700; }
++  #note:not(:empty) { display: block; margin-top: 8px; padding: 8px 12px; border-left: 2px solid currentColor; overflow-wrap: anywhere; }
+   .refused { color: #b3261e; }
+-  footer { margin-top: 2rem; opacity: .7; max-width: 46rem; }
++  /* Foundations danger paint remains legible on the browser's dark Canvas. */
++  @media (prefers-color-scheme: dark) { .refused { color: #FF4D5E; } }
++  footer { margin-top: 32px; max-width: 46rem; overflow-wrap: anywhere; }
++  @media (max-width: 480px) { body { padding: 16px; } .actions button { flex: 1 1 auto; } }
+ </style>
+ </head>
+ <body>
+diff --git a/desktop/linux/src/renderer/byo-configuration.ts b/desktop/linux/src/renderer/byo-configuration.ts
+index 6c3d1b0e..6a8cdab7 100644
+--- a/desktop/linux/src/renderer/byo-configuration.ts
++++ b/desktop/linux/src/renderer/byo-configuration.ts
+@@ -39,14 +39,23 @@ function installStyles(): void {
+ .desktop-byo-config-label{font-size:11px;color:var(--dim)}
+ .desktop-byo-config select,.desktop-byo-config input{box-sizing:border-box;width:100%;min-width:0;height:36px;border:1px solid var(--line-control);border-radius:6px;background:var(--panel);color:var(--text);font:12px var(--sans);padding:0 var(--space-2)}
+ .desktop-byo-config input::placeholder{color:var(--dim)}
+-.desktop-byo-config select:focus-visible,.desktop-byo-config input:focus-visible,.desktop-byo-config button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
++.desktop-byo-config select:focus-visible,.desktop-byo-config input:focus-visible,.desktop-byo-config button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 4px var(--well);scroll-margin:var(--space-3)}
++.desktop-byo-config :is(input,select):enabled:hover{border-color:var(--line-hover)}
++.desktop-byo-config input:user-invalid{border-color:var(--refuse)}
++@media (forced-colors:active){.desktop-byo-config :focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}}
+ .desktop-byo-config-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-2)}
+ .desktop-byo-config button{min-width:0;min-height:32px;padding:var(--space-1) var(--space-2);border-radius:6px;border:1px solid var(--line-control);background:var(--panel);color:var(--text);font:600 11px var(--sans);transition:background-color .14s ease,border-color .14s ease}
+ .desktop-byo-config button:not(:disabled):hover{border-color:var(--accent);background:var(--header)}
+ .desktop-byo-config button[data-primary]{border-color:var(--accent);color:var(--accent)}
+ /* Disabled labels keep AA contrast: paint with the inert token, never composite opacity. */
+ .desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control)}
+-.desktop-byo-config-message{margin:0;font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere}
++/* The same stable status well serves configured and unavailable states without implying success. */
++.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere;user-select:text}
++.desktop-byo-config-message:empty{display:none}
++.desktop-byo-config-message[role="alert"]{border-left-color:var(--refuse);color:var(--text)}
++.desktop-byo-config button:not(:disabled):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
++.desktop-byo-config button:not(:disabled):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
++@media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}}
+ @media (prefers-reduced-motion: reduce){.desktop-byo-config *{scroll-behavior:auto}}
+ `;
+   document.head.append(style);

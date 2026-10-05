@@ -1,0 +1,7 @@
+--- a/packages/schemas/src/desktop-scene-physics.ts
++++ b/packages/schemas/src/desktop-scene-physics.ts
+@@ -107,2 +107,2 @@
+-export type ScenePhysicsCatalog = ScenePhysicsColliderCatalog | ScenePhysicsLegacyCatalog;
+-export type ScenePhysicsCatalogInput = ScenePhysicsCatalog;
++export type ScenePhysicsCatalog = ScenePhysicsLegacyCatalog & Readonly<{ colliders?: readonly ScenePhysicsCollider[] }>;
++export type ScenePhysicsCatalogInput = ScenePhysicsColliderCatalog | ScenePhysicsLegacyCatalog;

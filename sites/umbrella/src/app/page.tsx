@@ -31,8 +31,16 @@ export default function OverviewPage() {
       <section className="hero release-hero" aria-labelledby="release-title">
         <div className="hero-inner hero-inner-split">
           <div className="hero-copy">
-            <p className="badge">{RELEASE_MARKER}</p>
-            <h1 id="release-title">Build scenes. Keep the source.</h1>
+            <div className="title-row hero-title">
+              <h1 id="release-title">
+                <span className="hero-line">Build scenes.</span>{" "}
+                <span className="hero-line">Keep the source.</span>
+              </h1>
+              <span className="chip chip-needs-review release-chip">
+                <span className="dot" aria-hidden="true" />
+                {RELEASE_MARKER}
+              </span>
+            </div>
             <p className="lede">
               Build interactive scenes as local, reviewable files, then open them through
               a versioned product profile.
@@ -196,7 +204,7 @@ export default function OverviewPage() {
             only when you choose account-backed editor or hosted-AI features.
           </p>
         </div>
-        <nav className="path-links" aria-label="First-release paths">
+        <nav className="path-links" aria-label="First-release paths" data-link-list="arrows">
           <a href="/docs">Read the docs</a>
           <a href={LIVE_OPEN_PATH}>Open the proof</a>
           <a href="/login">Sign in</a>

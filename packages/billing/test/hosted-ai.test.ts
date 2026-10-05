@@ -5,7 +5,7 @@ import {
   digestSessionToken,
   resolveAdminIdentity,
 } from "@sceneaxi/auth";
-import type { CreditAccount, CreditLedgerEntry } from "@sceneaxi/schemas";
+import type { CreditAccount, CreditLedgerEntry, JsonValue, Principal } from "@sceneaxi/schemas";
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
@@ -13,31 +13,37 @@ import {
   HOSTED_AI_ROUTE_CAPABILITIES,
   appendCreditEntry,
   createInMemoryCreditStore,
+  createHostedAiPricingPolicy,
+  HostedAiProviderUncertainError,
   createLedgerState,
   meteringIdempotencyKey,
   runMeteredModelCall,
   type CreditStore,
+  type HostedAiConfig,
   type CreditsSaleSettlement,
   type LedgerState,
 } from "@sceneaxi/billing";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
 });
+
 if (!adminResolution.ok) throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: guards check the identity's runtime provenance,
 // so a structurally identical `{ email, source }` literal is refused.
 const admin = adminResolution.value;
 
-const ACCOUNT = Object.freeze({
+const ACCOUNT: CreditAccount = Object.freeze({
   schemaVersion: 1,
   kind: "sceneaxi.credit-account",
   accountId: "acc_crew",
   userId: "usr_crew",
   createdAt: "2026-07-25T09:00:00Z",
-}) as CreditAccount;
+});
 
 const principal = (
   overrides: {
@@ -47,9 +53,10 @@ const principal = (
     disabled?: boolean;
     expiresAt?: string;
   } = {},
-): unknown => {
+): Principal => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
+
   return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
@@ -83,6 +90,7 @@ const principal = (
 
 const funded = (credits: number): LedgerState => {
   if (credits === 0) return createLedgerState(ACCOUNT);
+
   const appended = appendCreditEntry(createLedgerState(ACCOUNT), {
     entryId: "ent_grant",
     movement: "grant",
@@ -91,7 +99,9 @@ const funded = (credits: number): LedgerState => {
     idempotencyKey: "fixture:grant",
     now: NOW,
   });
+
   if (!appended.ok) throw new Error("fixture funding failed");
+
   return appended.value.state;
 };
 
@@ -120,9 +130,11 @@ const spendBehindTheCaller = async (
     idempotencyKey: meteringIdempotencyKey(ACCOUNT.accountId, "other_turn"),
     now: NOW,
   });
+
   if (!spent.ok || spent.value.entry === undefined) {
     throw new Error("fixture concurrent debit failed");
   }
+
   await store.appendEntry(spent.value.entry);
 };
 
@@ -134,31 +146,38 @@ const spendBehindTheCaller = async (
  * that merely returned a value could not tell that apart from a refusal after a
  * completed call.
  */
-const recordingProvider = (response: unknown = { text: "fixture answer" }) => {
+const recordingProvider = (response: JsonValue = { text: "fixture answer" }) => {
   const calls: number[] = [];
+
   return {
     calls,
     call: () => {
       calls.push(calls.length + 1);
+
       return response;
     },
   };
 };
 
-const hostedOn = { enabled: true } as const;
+const hostedOn = { enabled: true, pricing: createHostedAiPricingPolicy([
+  { model: "fixture-model", operation: "turn", capability: "hosted-ai-assistant", credits: 7 },
+  { model: "fixture-model", operation: "turn", capability: "metered-model-port", credits: 3 },
+]) } as const;
 
 /** A funded hosted request; overrides narrow it to the case under test. */
 const hostedCall = (
   state: LedgerState,
   provider: ReturnType<typeof recordingProvider>,
-  overrides: Record<string, unknown> = {},
-) =>
-  runMeteredModelCall({
+  overrides: HostedCallOverrides = {},
+) => {
+  // SAFETY: default fields form the hosted fixture; each test overrides only the inputs needed to exercise its refusal boundary.
+  return runMeteredModelCall({
     route: "hosted",
     capability: "hosted-ai-assistant",
     call: provider.call,
     now: NOW,
     hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
     admin,
     principal: principal(),
     state,
@@ -169,6 +188,7 @@ const hostedCall = (
     surface: "web-shell",
     ...overrides,
   } as never);
+};
 
 describe("hosted-AI routes", () => {
   it("names both routes and the capabilities each may bill", () => {
@@ -191,12 +211,14 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider({ text: "fixture answer" });
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal(),
       state,
@@ -208,8 +230,10 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     });
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.replayed).toBe(false);
+
     if (result.value.replayed) return;
     expect(provider.calls.length).toBe(1);
     expect(result.value.response).toEqual({ text: "fixture answer" });
@@ -232,12 +256,15 @@ describe("runMeteredModelCall — hosted route, funded", () => {
   it("bills a direct port call under its own matrix capability", async () => {
     const state = funded(20);
     const provider = recordingProvider();
+
     const result = await hostedCall(state, provider, {
       capability: "metered-model-port",
       creditAmount: 3,
       idempotencyKey: "port_01",
     });
+
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.capability).toBe("metered-model-port");
     expect(result.value.balance).toBe(17);
@@ -247,12 +274,14 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal({ role: "admin" }),
       state,
@@ -262,7 +291,9 @@ describe("runMeteredModelCall — hosted route, funded", () => {
       idempotencyKey: "turn_admin",
       surface: "web-shell",
     });
+
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(provider.calls.length).toBe(1);
     expect(result.value.metered).toBe(false);
@@ -275,12 +306,14 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider();
+
     const request = {
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal({ role: "admin" }),
       store,
@@ -292,12 +325,14 @@ describe("runMeteredModelCall — hosted route, funded", () => {
 
     const absent = await runMeteredModelCall(request);
     expect(absent.ok).toBe(false);
+
     if (absent.ok) return;
     expect(absent.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
 
     await spendBehindTheCaller(state, store, 1);
     const stale = await runMeteredModelCall({ ...request, state });
     expect(stale.ok).toBe(false);
+
     if (stale.ok) return;
     expect(stale.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls).toHaveLength(0);
@@ -307,12 +342,14 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider();
+
     const first = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal(),
       state,
@@ -321,7 +358,9 @@ describe("runMeteredModelCall — hosted route, funded", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "turn_01",
     });
+
     expect(first.ok).toBe(true);
+
     if (!first.ok || first.value.state === undefined) return;
 
     const replay = await runMeteredModelCall({
@@ -330,6 +369,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal(),
       state: first.value.state,
@@ -338,7 +378,9 @@ describe("runMeteredModelCall — hosted route, funded", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "turn_01",
     });
+
     expect(replay.ok).toBe(true);
+
     if (!replay.ok) return;
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.balance).toBe(93);
@@ -346,6 +388,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     // The retry is answered from the debit that already exists, so the upstream
     // provider is not paid a second time for one charge.
     expect(provider.calls.length).toBe(1);
+
     if (!replay.value.replayed) return;
     expect(replay.value.entry.idempotencyKey).toBe(
       meteringIdempotencyKey(ACCOUNT.accountId, "turn_01"),
@@ -364,11 +407,13 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     const first = await hostedCall(state, provider, { store });
     expect(first.ok).toBe(true);
+
     if (!first.ok || first.value.state === undefined) return;
     expect(first.value.balance).toBe(3);
 
     const replay = await hostedCall(first.value.state, provider, { store });
     expect(replay.ok).toBe(true);
+
     if (!replay.ok) return;
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.balance).toBe(3);
@@ -382,10 +427,12 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     const first = await hostedCall(state, provider, { store });
     expect(first.ok).toBe(true);
+
     if (!first.ok) return;
 
     const replay = await hostedCall(state, provider, { store });
     expect(replay.ok).toBe(false);
+
     if (replay.ok) return;
     expect(replay.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(1);
@@ -401,6 +448,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const store = storeFor(state);
     const provider = recordingProvider();
     let raced = false;
+
     const racedStore: CreditStore = {
       ...store,
       findAccountByUserId: (userId) => store.findAccountByUserId(userId),
@@ -412,6 +460,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
           raced = true;
           await store.appendEntry({ ...entry, entryId: "ent_race_winner" });
         }
+
         return store.appendOrReplayEntry(entry);
       },
       settleCreditsSale: (settlement: CreditsSaleSettlement) =>
@@ -420,10 +469,12 @@ describe("runMeteredModelCall — hosted route, funded", () => {
 
     const result = await hostedCall(state, provider, { store: racedStore });
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     // The provider was entered, so this is a completed call carrying a real
     // answer — not the response-less replayed shape.
     expect(result.value.replayed).toBe(false);
+
     if (result.value.replayed) return;
     expect(result.value.response).toEqual({ text: "fixture answer" });
     expect(result.value.debitReplayed).toBe(true);
@@ -443,6 +494,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     const result = await hostedCall(state, provider, { store });
     expect(result.ok).toBe(true);
+
     if (!result.ok || result.value.replayed) return;
     expect(result.value.debitReplayed).toBe(false);
   });
@@ -453,6 +505,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     const first = await hostedCall(state, provider, { store });
     expect(first.ok).toBe(true);
+
     if (!first.ok || first.value.state === undefined) return;
 
     for (const overrides of [
@@ -463,7 +516,9 @@ describe("runMeteredModelCall — hosted route, funded", () => {
         store,
         ...overrides,
       });
+
       expect(mutated.ok).toBe(false);
+
       if (mutated.ok) return;
       expect(mutated.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
       expect(provider.calls.length).toBe(1);
@@ -477,13 +532,16 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     const first = await hostedCall(state, provider, { store });
     expect(first.ok).toBe(true);
+
     if (!first.ok || first.value.state === undefined) return;
 
     const replay = await hostedCall(first.value.state, provider, {
       store,
       principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }),
     });
+
     expect(replay.ok).toBe(false);
+
     if (replay.ok) return;
     expect(replay.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
     expect(provider.calls.length).toBe(1);
@@ -496,6 +554,7 @@ describe("runMeteredModelCall — hosted route is default-off", () => {
     const provider = recordingProvider();
     const result = await hostedCall(state, provider, { hostedAi: undefined });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
     expect(provider.calls.length).toBe(0);
@@ -504,10 +563,13 @@ describe("runMeteredModelCall — hosted route is default-off", () => {
   it("refuses under the shipped default configuration", async () => {
     const state = funded(100);
     const provider = recordingProvider();
+
     const result = await hostedCall(state, provider, {
       hostedAi: HOSTED_AI_DEFAULT_CONFIG,
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
     expect(provider.calls.length).toBe(0);
@@ -515,12 +577,16 @@ describe("runMeteredModelCall — hosted route is default-off", () => {
 
   it("refuses a truthy-but-not-true opt-in, so nothing enables it by accident", async () => {
     const state = funded(100);
+
     for (const enabled of ["true", 1, {}]) {
       const provider = recordingProvider();
+
       const result = await hostedCall(state, provider, {
         hostedAi: { enabled },
       });
+
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
       expect(provider.calls.length).toBe(0);
@@ -529,6 +595,7 @@ describe("runMeteredModelCall — hosted route is default-off", () => {
 
   it("refuses before identity or the ledger is consulted", async () => {
     const provider = recordingProvider();
+
     // No principal, no admin, no state, no store — and still the *same* refusal,
     // which is what makes "off" answerable without an account.
     const result = await runMeteredModelCall({
@@ -537,7 +604,9 @@ describe("runMeteredModelCall — hosted route is default-off", () => {
       call: provider.call,
       now: NOW,
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
     expect(provider.calls.length).toBe(0);
@@ -551,6 +620,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     const provider = recordingProvider();
     const result = await hostedCall(state, provider, { store });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
     expect(provider.calls.length).toBe(0);
@@ -564,6 +634,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     const provider = recordingProvider();
     const result = await hostedCall(state, provider, { store });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
     expect(provider.calls.length).toBe(0);
@@ -584,6 +655,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     });
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(0);
@@ -604,6 +676,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     });
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(0);
@@ -616,6 +689,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     // answer questions about it. The refusal still comes from the entitlement
     // layer that owns identity vocabulary.
     const state = funded(100);
+
     for (const [overrides, reason] of [
       [
         { principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }) },
@@ -632,17 +706,21 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     ] as const) {
       const reads: string[] = [];
       const backing = storeFor(state);
+
       const watchedStore = Object.freeze({
         ...backing,
         findAccountById(accountId: string) {
           reads.push(accountId);
+
           return backing.findAccountById(accountId);
         },
         listEntries(accountId: string) {
           reads.push(accountId);
+
           return backing.listEntries(accountId);
         },
       });
+
       const provider = recordingProvider();
 
       const result = await hostedCall(state, provider, {
@@ -651,6 +729,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       });
 
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(reason);
       expect(reads).toEqual([]);
@@ -660,15 +739,19 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
 
   it("refuses an anonymous hosted call", async () => {
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.accountRequired);
     expect(provider.calls.length).toBe(0);
@@ -677,10 +760,13 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
   it("surfaces the guard's own reason for a settled session", async () => {
     const state = funded(100);
     const provider = recordingProvider();
+
     const expired = await hostedCall(state, provider, {
       principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }),
     });
+
     expect(expired.ok).toBe(false);
+
     if (expired.ok) return;
     expect(expired.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
     expect(provider.calls.length).toBe(0);
@@ -689,10 +775,13 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
   it("refuses a ledger owned by another user", async () => {
     const state = funded(100);
     const provider = recordingProvider();
+
     const result = await hostedCall(state, provider, {
       principal: principal({ userId: "usr_someone" }),
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.accountNotOwned);
     expect(provider.calls.length).toBe(0);
@@ -703,11 +792,12 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     // stranger's account id validates. The account persistence returns is what
     // settles it: the entries of an account the principal does not own are never
     // loaded, so a guessed metering key cannot be answered from them.
-    const other = Object.freeze({
+    const other: CreditAccount = Object.freeze({
       ...ACCOUNT,
       accountId: "acc_other",
       userId: "usr_other",
-    }) as CreditAccount;
+    });
+
     const otherFunded = appendCreditEntry(createLedgerState(other), {
       entryId: "ent_other_grant",
       movement: "grant",
@@ -716,7 +806,9 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       idempotencyKey: "fixture:other-grant",
       now: NOW,
     });
+
     if (!otherFunded.ok) throw new Error("fixture funding failed");
+
     const otherSpent = appendCreditEntry(otherFunded.value.state, {
       entryId: "ent_other_turn",
       movement: "debit",
@@ -725,19 +817,25 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       idempotencyKey: meteringIdempotencyKey(other.accountId, "turn_01"),
       now: NOW,
     });
+
     if (!otherSpent.ok) throw new Error("fixture debit failed");
+
     const backing = createInMemoryCreditStore({
       accounts: [other],
       entries: otherSpent.value.state.entries,
     });
+
     const histories: string[] = [];
+
     const store = Object.freeze({
       ...backing,
       listEntries(accountId: string) {
         histories.push(accountId);
+
         return backing.listEntries(accountId);
       },
     });
+
     const provider = recordingProvider();
 
     const result = await hostedCall(
@@ -747,6 +845,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     );
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.accountNotOwned);
     expect(histories).toEqual([]);
@@ -756,6 +855,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
 
   it("refuses an absent hosted ledger port before the provider runs", async () => {
     const state = funded(100);
+
     for (const overrides of [
       { store: undefined },
       { store: { findAccountById: 1 } },
@@ -763,6 +863,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       const provider = recordingProvider();
       const result = await hostedCall(state, provider, overrides);
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
       expect(provider.calls.length).toBe(0);
@@ -771,10 +872,12 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
 
   it("refuses missing debit attribution before the provider runs", async () => {
     const state = funded(100);
+
     for (const overrides of [{ reason: "  " }, { idempotencyKey: "" }]) {
       const provider = recordingProvider();
       const result = await hostedCall(state, provider, overrides);
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
       expect(provider.calls.length).toBe(0);
@@ -784,7 +887,9 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
   it("accepts an injected store whose methods live on a prototype", async () => {
     const state = funded(100);
     const backing = storeFor(state);
+
     class PrototypeCreditStore implements CreditStore {
+        get hostedCalls() { return backing.hostedCalls; }
       findReconciliation(...args: Parameters<CreditStore["findReconciliation"]>) {
         return backing.findReconciliation(...args);
       }
@@ -813,12 +918,15 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
         return backing.settleCreditsSale(settlement);
       }
     }
+
     const provider = recordingProvider();
+
     const result = await hostedCall(state, provider, {
       store: new PrototypeCreditStore(),
     });
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.metered).toBe(true);
     expect(result.value.balance).toBe(93);
@@ -828,10 +936,12 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
 
   it("refuses a missing or non-positive credit amount", async () => {
     const state = funded(100);
+
     for (const creditAmount of [undefined, 0, -1, 1.5]) {
       const provider = recordingProvider();
       const result = await hostedCall(state, provider, { creditAmount });
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.creditAmountRequired);
       expect(provider.calls.length).toBe(0);
@@ -843,6 +953,7 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
   it("names a provider failure and appends nothing", async () => {
     const state = funded(100);
     const store = storeFor(state);
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
@@ -851,6 +962,7 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
       },
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal(),
       state,
@@ -859,7 +971,9 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "turn_fail",
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
@@ -869,12 +983,14 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
   it("names a rejected async provider the same way", async () => {
     const state = funded(100);
     const store = storeFor(state);
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
       call: () => Promise.reject(new Error("transport timeout")),
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
       admin,
       principal: principal(),
       state,
@@ -883,7 +999,9 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "turn_reject",
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
@@ -899,20 +1017,25 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const state = funded(100);
     const store = storeFor(state);
     const calls: number[] = [];
+
     const refusal = {
       ok: false as const,
       reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
     };
+
     const result = await hostedCall(state, recordingProvider(), {
       store,
       call: () => {
         calls.push(calls.length + 1);
+
         if (!refusal.ok) throw new Error(refusal.reason);
+
         return refusal;
       },
     });
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
     expect(calls.length).toBe(1);
@@ -925,14 +1048,17 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const state = funded(100);
     const provider = recordingProvider();
     const store = storeFor(state);
+
     const throwingStore = Object.freeze({
       ...store,
       appendOrReplayEntry() {
         throw new Error("db down");
       },
     });
+
     const result = await hostedCall(state, provider, { store: throwingStore });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
     // The provider did run — the failure is downstream of it — but nothing was
@@ -948,14 +1074,17 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const state = funded(100);
     const provider = recordingProvider();
     const store = storeFor(state);
+
     const throwingStore = Object.freeze({
       ...store,
       findAccountById() {
         throw new Error("db down");
       },
     });
+
     const result = await hostedCall(state, provider, { store: throwingStore });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
     expect(provider.calls.length).toBe(0);
@@ -967,14 +1096,17 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const state = funded(100);
     const provider = recordingProvider();
     const store = storeFor(state);
+
     const emptyStore = Object.freeze({
       ...store,
       findAccountById() {
         return undefined;
       },
     });
+
     const result = await hostedCall(state, provider, { store: emptyStore });
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(0);
@@ -985,15 +1117,19 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
 describe("runMeteredModelCall — the BYO route stays free", () => {
   it("runs with no account, no store, and no ledger", async () => {
     const provider = recordingProvider({ text: "byo answer" });
+
     const result = await runMeteredModelCall({
       route: "byo",
       capability: "byo-model-keys",
       call: provider.call,
       now: NOW,
     });
+
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.replayed).toBe(false);
+
     if (result.value.replayed) return;
     expect(provider.calls.length).toBe(1);
     expect(result.value.response).toEqual({ text: "byo answer" });
@@ -1005,6 +1141,7 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
 
   it("does not need the hosted opt-in — BYO is not the hosted route", async () => {
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "byo",
       capability: "byo-model-keys",
@@ -1012,6 +1149,7 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
       now: NOW,
       hostedAi: HOSTED_AI_DEFAULT_CONFIG,
     });
+
     expect(result.ok).toBe(true);
     expect(provider.calls.length).toBe(1);
   });
@@ -1020,6 +1158,7 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "byo",
       capability: "byo-model-keys",
@@ -1034,7 +1173,9 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
       idempotencyKey: "byo_01",
       surface: "web-shell",
     });
+
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.metered).toBe(false);
     expect(result.value.entry).toBeUndefined();
@@ -1046,13 +1187,16 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
 
   it("refuses a hosted capability on the BYO route", async () => {
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "byo",
       capability: "hosted-ai-assistant",
       call: provider.call,
       now: NOW,
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.capabilityUnknown);
     expect(provider.calls.length).toBe(0);
@@ -1063,14 +1207,18 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
   it("denies the Kids surface before identity, provider, or ledger", async () => {
     const state = funded(100);
     const store = storeFor(state);
+
     for (const route of HOSTED_AI_ROUTES) {
       const provider = recordingProvider();
+
+      // SAFETY: deliberately invalid boundary fixture tests refusal before provider invocation; it is never treated as an admitted request.
       const result = await runMeteredModelCall({
         route,
         capability: HOSTED_AI_ROUTE_CAPABILITIES[route][0],
         call: provider.call,
         now: NOW,
         hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
         admin,
         principal: principal(),
         state,
@@ -1080,7 +1228,9 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
         idempotencyKey: `kids_${route}`,
         surface: "kids",
       });
+
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
       expect(provider.calls.length).toBe(0);
@@ -1090,6 +1240,7 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
 
   it("denies a Kids session even when the surface is not named", async () => {
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "byo",
       capability: "byo-model-keys",
@@ -1097,7 +1248,9 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
       now: NOW,
       principal: principal({ surface: "kids" }),
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
     expect(provider.calls.length).toBe(0);
@@ -1105,6 +1258,7 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
 
   it("denies Kids ahead of the default-off refusal, so the deny is not maskable", async () => {
     const provider = recordingProvider();
+
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "hosted-ai-assistant",
@@ -1112,7 +1266,9 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
       now: NOW,
       surface: "kids",
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
   });
@@ -1121,23 +1277,30 @@ describe("runMeteredModelCall — Kids is denied on every route", () => {
 describe("runMeteredModelCall — request shape", () => {
   it("refuses an unnamed or unknown route", async () => {
     const provider = recordingProvider();
+
     for (const route of [undefined, "", "hosted-ai", "HOSTED", 1]) {
+      // SAFETY: deliberately invalid boundary fixture tests refusal before provider invocation; it is never treated as an admitted request.
       const result = await runMeteredModelCall({
         route,
         capability: "byo-model-keys",
         call: provider.call,
         now: NOW,
       } as never);
+
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiRouteInvalid);
     }
+
     expect(provider.calls.length).toBe(0);
   });
 
   it("refuses a non-object request, a bad clock, and a missing provider call", async () => {
+    // SAFETY: deliberately invalid boundary fixture tests refusal before provider invocation; it is never treated as an admitted request.
     const notObject = await runMeteredModelCall(null as never);
     expect(notObject.ok).toBe(false);
+
     if (!notObject.ok) {
       expect(notObject.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
     }
@@ -1148,18 +1311,23 @@ describe("runMeteredModelCall — request shape", () => {
       call: () => null,
       now: Number.NaN,
     });
+
     expect(badClock.ok).toBe(false);
+
     if (!badClock.ok) {
       expect(badClock.reason).toBe(BILLING_REFUSE_REASONS.clockInvalid);
     }
 
+    // SAFETY: deliberately invalid boundary fixture tests refusal before provider invocation; it is never treated as an admitted request.
     const noCall = await runMeteredModelCall({
       route: "byo",
       capability: "byo-model-keys",
       call: undefined,
       now: NOW,
     } as never);
+
     expect(noCall.ok).toBe(false);
+
     if (!noCall.ok) {
       expect(noCall.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
     }
@@ -1167,16 +1335,130 @@ describe("runMeteredModelCall — request shape", () => {
 
   it("refuses a capability outside the matrix", async () => {
     const provider = recordingProvider();
+
+    // SAFETY: deliberately invalid boundary fixture tests refusal before provider invocation; it is never treated as an admitted request.
     const result = await runMeteredModelCall({
       route: "hosted",
       capability: "free-lunch",
       call: provider.call,
       now: NOW,
       hostedAi: hostedOn,
+      model: "fixture-model", operation: "turn",
     } as never);
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.capabilityUnknown);
     expect(provider.calls.length).toBe(0);
   });
 });
+
+
+describe("durable hosted reservation and pricing boundary", () => {
+  it("admits one provider execution for overlapping identical keys", async () => {
+    const state = funded(10);
+    const store = storeFor(state);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+
+    const call = async () => { calls++; await pending;
+
+ return { text: "one result" }; };
+
+    const a = hostedCall(state, recordingProvider(), { store, call });
+
+    while (calls === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+    const b = await hostedCall(state, recordingProvider(), { store, call });
+    expect(b).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.storeFailed });
+    expect(calls).toBe(1);
+    release();
+    const result = await a;
+    expect(result).toMatchObject({ ok: true, value: { balance: 3 } });
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+  });
+
+  it("different keys cannot reserve the same seven available credits", async () => {
+    const state = funded(10);
+    const store = storeFor(state);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+
+    const a = hostedCall(state, recordingProvider(), { store, call: async () => { calls++; await pending;
+
+ return "a"; } });
+
+    while (calls === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const b = await hostedCall(state, recordingProvider(), { store, idempotencyKey: "turn_b", call: () => { calls++;
+
+ return "b"; } });
+
+    expect(b).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.balanceInsufficient });
+    expect(calls).toBe(1);
+    await expect(spendBehindTheCaller(state, store, 8)).rejects.toThrow(/reserved/);
+    release();
+    expect(await a).toMatchObject({ ok: true, value: { balance: 3 } });
+  });
+
+  it("confirmed failure releases funding but uncertain outcome never re-executes", async () => {
+    const state = funded(10);
+    const store = storeFor(state);
+    const failed = await hostedCall(state, recordingProvider(), { store, call: () => { throw new Error("confirmed failure"); } });
+    expect(failed).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.hostedAiProviderFailed });
+    let calls = 0;
+    const uncertain = await hostedCall(state, recordingProvider(), { store, call: () => { calls++; throw new HostedAiProviderUncertainError(); } });
+    expect(uncertain).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.storeFailed });
+
+    const retry = await hostedCall(state, recordingProvider(), { store, call: () => { calls++;
+
+ return "must not execute"; } });
+
+    expect(retry).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.storeFailed });
+    expect(calls).toBe(1);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("a retained provider response resumes an uncertain debit without another call", async () => {
+    const state = funded(10);
+    const store = storeFor(state);
+    let calls = 0;
+    const badStore = { ...store, appendOrReplayEntry() { throw new Error("unavailable before debit"); } };
+
+    const call = () => { calls++;
+
+ return { text: "durable answer" }; };
+
+    expect(await hostedCall(state, recordingProvider(), { store: badStore, call })).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.storeFailed });
+    const recovered = await hostedCall(state, recordingProvider(), { store, call });
+    expect(recovered).toMatchObject({ ok: true, value: { response: { text: "durable answer" }, balance: 3 } });
+    expect(calls).toBe(1);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+  });
+
+  it("unknown model/operation, forged policy or caller quote cannot select the debit", async () => {
+    const state = funded(100);
+
+    for (const overrides of [
+      { model: "unknown" }, { operation: "unknown" }, { creditAmount: 1 },
+      { hostedAi: { enabled: true } },
+      { hostedAi: { enabled: true, pricing: { quote: () => ({ credits: 7 }) } } },
+      { store: { ...storeFor(state), hostedCalls: undefined } },
+    ]) {
+      const provider = recordingProvider();
+      const result = await hostedCall(state, provider, overrides);
+      expect(result.ok).toBe(false);
+      expect(provider.calls).toHaveLength(0);
+    }
+
+    expect(() => createHostedAiPricingPolicy([{ model: "fixture", operation: "turn", capability: "hosted-ai-assistant", credits: 0 }])).toThrow();
+  });
+});
+
+type HostedCallOverrideValue = JsonValue | undefined | CreditStore | TestCreditStore | HostedAiConfig | LedgerState | ReturnType<typeof principal> | typeof admin | (() => JsonValue | Promise<JsonValue>) | { enabled: JsonValue; pricing?: { quote: () => { credits: number } } };
+
+type TestCreditStore = Omit<CreditStore, "hostedCalls"> & { hostedCalls?: CreditStore["hostedCalls"] };
+
+type HostedCallOverrides = { [Field: string]: HostedCallOverrideValue };

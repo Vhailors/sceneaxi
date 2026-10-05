@@ -1,0 +1,4093 @@
+{
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "FAIL",
+  "visualStatus": "PASS_BOUNDED_MEASUREMENTS",
+  "verificationStatus": "FAIL_OWNING_TEST_AND_ROOT_BUILD",
+  "productionReady": false,
+  "productUiEdited": false,
+  "tool": "No browser-tool interface exposed; existing installed Playwright drives actual Chromium",
+  "authority": [
+    "docs/audits/production-swarm/FINAL.md",
+    "docs/design-foundations.md",
+    "packages/site-kit/src/design-tokens.ts",
+    "finish-authoring.md",
+    "finish-assets-kids.md",
+    "finish-engine.md",
+    "finish-cli-desktop.md",
+    "finish-integration.md",
+    "finish-visual-umbrella.md",
+    "finish-visual-catalogs.md",
+    "finish-visual-desktop.md"
+  ],
+  "peerReportsAllLanded": true,
+  "builds": [
+    {
+      "site": "umbrella",
+      "exitCode": 0,
+      "seconds": 85.97,
+      "log": "docs/audits/production-swarm/visual/build-umbrella.log"
+    },
+    {
+      "site": "catalog-game",
+      "exitCode": 0,
+      "seconds": 55.73,
+      "log": "docs/audits/production-swarm/visual/build-catalog-game.log"
+    },
+    {
+      "site": "catalog-web",
+      "exitCode": 0,
+      "seconds": 55.79,
+      "log": "docs/audits/production-swarm/visual/build-catalog-web.log"
+    },
+    {
+      "site": "kids",
+      "exitCode": 0,
+      "seconds": 24.39,
+      "log": "docs/audits/production-swarm/visual/build-kids.log"
+    }
+  ],
+  "rootBuild": {
+    "exitCode": 1,
+    "output": "apps/web-shell/src/account-panel.ts(178,44): error TS2540: Cannot assign to 'principal' because it is a read-only property.\napps/web-shell/src/account-panel.ts(180,40): error TS2540: Cannot assign to 'state' because it is a read-only property.\napps/web-shell/src/account-panel.ts(182,60): error TS2540: Cannot assign to 'payWith' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(847,49): error TS2540: Cannot assign to 'principal' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(850,22): error TS2540: Cannot assign to 'model' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(851,22): error TS2540: Cannot assign to 'operation' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(852,47): error TS2540: Cannot assign to 'state' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(853,47): error TS2540: Cannot assign to 'store' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(854,59): error TS2540: Cannot assign to 'creditAmount' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(855,22): error TS2540: Cannot assign to 'reason' because it is a read-only property.\napps/web-shell/src/assistant-panel.ts(857,24): error TS2540: Cannot assign to 'idempotencyKey' because it is a read-only property.\napps/web-shell/src/inspector-app.ts(573,38): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'JsonValue | undefined'.\napps/web-shell/test/account-panel.test.ts(351,58): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'JsonValue | undefined'.\n  Type 'Record<string, unknown>' is missing the following properties from type 'readonly JsonValue[]': length, concat, join, slice, and 26 more.\n",
+    "log": "docs/audits/production-swarm/visual/build-root.log"
+  },
+  "tests": {
+    "initial": {
+      "files": 25,
+      "total": 917,
+      "passed": 908,
+      "failed": 9,
+      "pending": 0
+    },
+    "failedSuiteRerun": {
+      "files": 2,
+      "total": 89,
+      "passed": 88,
+      "failed": 1,
+      "pending": 0
+    },
+    "reconciledDistinctTests": {
+      "total": 917,
+      "passed": 916,
+      "failed": 1,
+      "pending": 0
+    },
+    "failures": [
+      {
+        "file": "tests/sites/umbrella-visual.test.ts",
+        "test": "the Engine Desktop editor shell stays honest (sceneaxi#184) renders every control through the one kind-aware helper",
+        "output": [
+          "AssertionError: expected '\"use client\";\\n\\n/**\\n * The Engine D\u2026' to contain '\"aria-disabled\": true'\n    at /home/devuser/Documents/Projects/sceneaxi/tests/sites/umbrella-visual.test.ts:1187:19\n    at file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11\n    at file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26\n    at file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)\n    at file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10)\n    at file:///home/devuser/Documents/Projects/sceneaxi/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:2956:64"
+        ]
+      }
+    ],
+    "receipts": [
+      "visual/owning-tests.json",
+      "visual/failed-suites-rerun.json"
+    ]
+  },
+  "coverage": {
+    "publicPageTypes": 20,
+    "fixtureItemDetails": 4,
+    "mainPageViewportCases": 56,
+    "additionalStateCases": 8,
+    "fullItemInventoryCases": 8,
+    "desktopScenarios": 10,
+    "primaryAfterFrames": 82,
+    "pixelReceiptCount": 196,
+    "beforePeerFrames": 46,
+    "focusAfterFrames": 68,
+    "darkLightPreferenceChecks": 56,
+    "desktopActualFocusedKeyboardSamples": 45
+  },
+  "contrastNotes": {
+    "sitePrimaryMinimum": 5.13,
+    "desktopPrimaryMinimum": 6.16,
+    "method": "WCAG sRGB relative luminance; alpha-composite ancestor background colors. Gradient backgrounds or nonunit ancestor opacity are recorded unresolved, not falsely certified. Disabled controls excluded from mandatory thresholds.",
+    "exception": "Editor td.ed-cr-current old value {} is 3.42:1 at11px; Foundations v2 explicitly accepts this redundant stale diff value, not a standalone primary fact.",
+    "limitations": "No exhaustive pixel-background gradient contrast, every hover/pressed state, or human image inspection certification."
+  },
+  "spacingNotes": "Shared Foundations site neutrals and4px semantic spacing rhythm retained; Cinematic Pro desktop rhythm4/8/12/16/24. Computed spacing ledgers include fluid gutters, font-relative inline spacing and fixed structural chrome metrics; not all geometric pixels are claimed four-aligned.",
+  "recoveredFindings": [
+    "Raw bounding-box overlaps between multiline links and nested tabindex containers were refuted by inline-fragment geometry.",
+    "Web editor apparent six overlaps refuted after ancestor scroll/hidden clipping; diagnostics record zero visible intersections.",
+    "Editor Tab reached browser chrome after four valid focused links; BODY is outside-document focus, not a missing ring.",
+    "Initial desktop capture import failed ERR_UNSUPPORTED_RESOLVE_REQUEST; file URL corrected without product edits.",
+    "Concurrent schema artifact SCENE_PHYSICS_SHAPE_KINDS mismatch broke desktop8binarytests/capture; partial root refresh restored CLI. Root refresh still failed unrelated web-shell typing.",
+    "Kids pointer/programmatic focus showed no focus-visible ring, correctly by modality. Actual keyboard Tab measured3px solid rings for enabled Stop/For grown-ups; browser chrome excursions excluded."
+  ],
+  "sourceFingerprints": [
+    {
+      "path": "sites/umbrella/src/app/globals.css",
+      "sha256": "adc8024cdf26249884d087f8fa4b0eb8e210338e8874b433229fa1e138ad1636"
+    },
+    {
+      "path": "sites/catalog-game/src/app/globals.css",
+      "sha256": "b06bedfc29fda0b0a35577dbab218c9378d76039f68070e76636566c9bd898ec"
+    },
+    {
+      "path": "sites/catalog-web/src/app/globals.css",
+      "sha256": "7c2059631f6e709c6b460b82e3f2057092ade86128b38fbb03621f8d9250931d"
+    },
+    {
+      "path": "sites/kids/src/app/globals.css",
+      "sha256": "5b89b60910e37db72dcb52b886a506fbfd39ee5d59ec41c91292f2b9825a5315"
+    },
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "sha256": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178"
+    },
+    {
+      "path": "apps/desktop-shell/src/visual-tokens.ts",
+      "sha256": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7"
+    },
+    {
+      "path": "desktop/linux/src/renderer/byo-configuration.ts",
+      "sha256": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb"
+    }
+  ],
+  "ledger": [
+    {
+      "site": "umbrella",
+      "surface": "/",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-home-desktop.png",
+        "bytes": 428610,
+        "sha256": "823f8c01ec25f8d89a8a27b55fd97ea4eb9bb0a8ff8a69d37f4eef096f7ed5f3"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-home-desktop-focus.png",
+        "bytes": 174535,
+        "sha256": "aeb818a911fed7fe2431a6f618110ba4d9d6578e77ff9a370360a49e7ab8aab4"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/open",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.16,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-open-desktop.png",
+        "bytes": 389475,
+        "sha256": "db6f71bcaef5f9e92d90ce80b10c235f050876a759bb1b8581a5071642a9247a"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-open-desktop-focus.png",
+        "bytes": 111009,
+        "sha256": "c363675e202a6cf96892958ccb849eb168209858b980296e22f3fe6a590c5a69"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-desktop.png",
+        "bytes": 61230,
+        "sha256": "5bba636298e8d1c3da58ea30112aace3a888b932fe57e563621e8a1b78f86639"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-desktop-focus.png",
+        "bytes": 61230,
+        "sha256": "5bba636298e8d1c3da58ea30112aace3a888b932fe57e563621e8a1b78f86639"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/account",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-account-desktop.png",
+        "bytes": 203233,
+        "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-account-desktop-focus.png",
+        "bytes": 133524,
+        "sha256": "51e85ef51802e375797d9feb39626a200064e305d38ec3b9b352937ebb396521"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/login",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-login-desktop.png",
+        "bytes": 86698,
+        "sha256": "b2a0d49af68a255bad56d2bf5b6a8596576e8ed72296cc3583ba6863225a5aea"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-login-desktop-focus.png",
+        "bytes": 86979,
+        "sha256": "b24eb992866339db55aa4a7ffb56d3f28d736dd80d557b0ad5305eb367659c43"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-desktop.png",
+        "bytes": 454305,
+        "sha256": "818772006d2e2d6a3d30927f49d228145bc2595aee63ee10d6a5da59ee04d2c1"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-desktop-focus.png",
+        "bytes": 149456,
+        "sha256": "b06c384efb9561c5830c1dbdd0a7cf2495755aca9d33ba60542f316c1c033356"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/pricing",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-desktop.png",
+        "bytes": 520853,
+        "sha256": "c5e056bdc0a1dc1dad7077b242e496e6743b83a8eb3dcc6367f94a020b716988"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-desktop-focus.png",
+        "bytes": 161995,
+        "sha256": "6ffb6773be804683cb081b7dec53bf0439143f0934404a06fafa3be00e328248"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/profiles",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-desktop.png",
+        "bytes": 361066,
+        "sha256": "a9c8f189b810cd644a5049973218e4cbb58c5f58c76d68e83122fc48b123ba63"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-desktop-focus.png",
+        "bytes": 142575,
+        "sha256": "be5dc88873674955ff2162b351394f093e017a500947ad1a4e4c265911c9a827"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/engine",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.8,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-desktop.png",
+        "bytes": 588912,
+        "sha256": "3ed5190d6d943f5a277cab472d7bbab38f6ec6ae268bc68bbcb830cf7e2d427f"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-desktop-focus.png",
+        "bytes": 130991,
+        "sha256": "1ad35c0c63c90b8df0ddecdae7806f1d90ea45a4fa2c494f1eb2f4224c1c7340"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/faq",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-desktop.png",
+        "bytes": 123099,
+        "sha256": "55695e769a49afe713d1823c25c29eeca7f51ef5ecbc0275fef57427c0960ae5"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-desktop-focus.png",
+        "bytes": 86024,
+        "sha256": "03755598cec2f542e50540ff246acf9d010703437fbd3b537dea37bf0514a144"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/cli",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-desktop.png",
+        "bytes": 102112,
+        "sha256": "03428c6c8799846fb081930a281e828e6f87eae1d84861d32565e44a83c4a235"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-desktop-focus.png",
+        "bytes": 89610,
+        "sha256": "bc489abce82ed55919b4590f4a11e4ebf489c825968bd94cb274f5a803e310f9"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/credits-and-pricing",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-desktop.png",
+        "bytes": 124767,
+        "sha256": "8856fa70b911c6d23d27b6f5c1019852013d050fd789c9d324c6be39ebcaab61"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-desktop-focus.png",
+        "bytes": 88966,
+        "sha256": "d0b4436a43575c9c6316f6d57e2c3cf0e33177dda541ae78c9782ca4009350f8"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/getting-started",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-desktop.png",
+        "bytes": 104928,
+        "sha256": "29d2d86c1a8f101a8ce0b3607e08aa7af16323fecd4dca6c6c56bd2753f05e72"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-desktop-focus.png",
+        "bytes": 69368,
+        "sha256": "114eb3473c54986935db152f9c1a5abe4f84db319bde73bb8037fb4c55d480f1"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/admin/ledger",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-desktop.png",
+        "bytes": 70593,
+        "sha256": "1842a159bd116f6aee472bdd017ed589e422e204a3f4fbda784fa55f07b91243"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-desktop-focus.png",
+        "bytes": 70797,
+        "sha256": "8a2709e7c9e98c8569a0569248ca7d914ef1a528f6a53bbc8a1a8298e2cd0e24"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/qa-not-found",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-desktop.png",
+        "bytes": 80327,
+        "sha256": "9e75305672980e9c815d7819a867852f09e9c812aa370de28c3b83e2789eea95"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-desktop-focus.png",
+        "bytes": 80657,
+        "sha256": "b20e9fbb5e07cd9a5dab97211e88a9cdbc777f6b4dc480791fbdea9b98324a33"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-home-mobile.png",
+        "bytes": 278239,
+        "sha256": "c9b3e0cbf27d5b143f8950bb24d757bd8d71322bfb6d1de0e4ac8df785893f95"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-home-mobile-focus.png",
+        "bytes": 65522,
+        "sha256": "d261c6ac4a39595d44ab3b2ce90cf82a2513465d62bde54c47d9834569756039"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/open",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.16,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-open-mobile.png",
+        "bytes": 300357,
+        "sha256": "b9163744b93bd042550b62993a3b0b08ed3175432f7714e0ca6f35e4c769e404"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-open-mobile-focus.png",
+        "bytes": 78963,
+        "sha256": "d238e3eb9f381f82c14b42b3eb7de551dd898f13bf3adf6adbce9a8f7ac8d4ee"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-mobile.png",
+        "bytes": 54292,
+        "sha256": "6c8284244ab7632526a74f871e600b20f59025b4d5b199090fc4a6d75f0e9feb"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-mobile-focus.png",
+        "bytes": 54292,
+        "sha256": "6c8284244ab7632526a74f871e600b20f59025b4d5b199090fc4a6d75f0e9feb"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/account",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-account-mobile.png",
+        "bytes": 191558,
+        "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-account-mobile-focus.png",
+        "bytes": 73874,
+        "sha256": "3242541ba8a7362e503c4d3b3d6888618c93234ba3ba1eb20b42af1d4b5e178a"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/login",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-login-mobile.png",
+        "bytes": 76637,
+        "sha256": "f964a900b68a327a3c8207fa9a8fa9def4f2a40ff50e221ed6a3a1fdd7aa420e"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-login-mobile-focus.png",
+        "bytes": 55297,
+        "sha256": "2b725d4716b5c3cfa76936dfb5534aedd78aa2394cfecb44735c87d34bd4cdc2"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-mobile.png",
+        "bytes": 428969,
+        "sha256": "618dab073348762336cd8306a0d0114c07dce31601bfea21fa31b5f3e5bf9286"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-mobile-focus.png",
+        "bytes": 53501,
+        "sha256": "35dc816344c3baa6a7c0f93e2ba1d85b78fc6d1c4561c3355f83b0d1dcc5fb5f"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/pricing",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-mobile.png",
+        "bytes": 499193,
+        "sha256": "33a85981554b5f19a69e505d7763404704c761ebd0a1944250a0747fc032fb00"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-mobile-focus.png",
+        "bytes": 69848,
+        "sha256": "0d96f9fde26580139645791542d1c5d5417cce114281d18947c73d305590d2e4"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/profiles",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.81,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-mobile.png",
+        "bytes": 317634,
+        "sha256": "ad718732d1437856b3f2546695c779e9d7422e1d240b0c5b5f407013cac47608"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-mobile-focus.png",
+        "bytes": 75980,
+        "sha256": "c1aec9e695d2b049503016e4423244ef2b6db8c96c9542d71d9823d38371ee8c"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/engine",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.8,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-mobile.png",
+        "bytes": 562928,
+        "sha256": "ad4251602fa079201fbe7675eeee099a292e5f4269801f43361a8190f4646034"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-mobile-focus.png",
+        "bytes": 62257,
+        "sha256": "29ebed60f4647146108d6d8face849b7d020c50f4dc056bd72f98672c4232f18"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/faq",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-mobile.png",
+        "bytes": 117956,
+        "sha256": "640f92476cf3454e64589d52f82cca35f0a8d53a02504294ce679406e451e92c"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-mobile-focus.png",
+        "bytes": 58066,
+        "sha256": "5e08b9c0c8ac3ce8d1d6f661a3b650735633eba9d460d36e5e2f432cefd532a6"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/cli",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-mobile.png",
+        "bytes": 96492,
+        "sha256": "d0a5fee8289aaf5c8f852e83f9bd70e4b67244b85dee70dc9ee2d4c860314bc7"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-mobile-focus.png",
+        "bytes": 60586,
+        "sha256": "1033184f2c4f9aaaeafd718d9a14999f9688ce28af0b58e3c728936425dfd6e1"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/credits-and-pricing",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-mobile.png",
+        "bytes": 118468,
+        "sha256": "08376366e5b9d836641445cecd201b9eca7c3cdc2b2d22dfdd3343f0b74eed4d"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-mobile-focus.png",
+        "bytes": 59354,
+        "sha256": "29c998503ace30ac64f86234bf06bb3284d3c07b0433ea37a3a86a7a9b404f25"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/docs/getting-started",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-mobile.png",
+        "bytes": 94940,
+        "sha256": "bbbf0a3c9e941214a04acb109879967e7242167866cef9f45ec46ab569c1388a"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-mobile-focus.png",
+        "bytes": 53491,
+        "sha256": "a74a7d719e6e96862d8af15e11e569e5763791766b2202c86b6f8bf74f5ebf04"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/admin/ledger",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-mobile.png",
+        "bytes": 64846,
+        "sha256": "de6d39c650ebb4873e3380dd6bc79c72d0b977c1dd9bc492329be6c70de50dde"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-mobile-focus.png",
+        "bytes": 45174,
+        "sha256": "016e885f1bdc457abc2eacc27cd28d3d13bce93e8edf3c3176afc3f5c1196c82"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/qa-not-found",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.33,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-mobile.png",
+        "bytes": 70844,
+        "sha256": "b2133c4914b5c759b9400b23beea08933d50e2b898c8e4a37a8375aab85c35e8"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-mobile-focus.png",
+        "bytes": 52519,
+        "sha256": "82e61ab10bdf0c76b7f22aae3ecbbeca41dc517506e92c8f39d45cba1843abbf"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.31,
+      "unresolvedContrastSamples": 27,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-desktop.png",
+        "bytes": 455864,
+        "sha256": "791515d3b7efce83b5d71b6d61271dc22e3fa2097d4909f3c8fde26befe1c74b"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-desktop-focus.png",
+        "bytes": 309166,
+        "sha256": "cf2bbb8a3cb4377b24b4c240fed8d4f76785e1680693bee7ad7ad82f3fd5aa02"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/lantern-prop",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 9,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-desktop.png",
+        "bytes": 417980,
+        "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-desktop-focus.png",
+        "bytes": 276293,
+        "sha256": "5a583f1be74d6ba50a27eff49680ae7a4d13d9c166194bce23b5aec4c2b91274"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/publish",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-desktop.png",
+        "bytes": 287610,
+        "sha256": "0c58cfa97df570cb5f14ef06c6a859bfddc92153cdab31a880ded2218c3fcdec"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-desktop-focus.png",
+        "bytes": 136264,
+        "sha256": "b7bf0e663a06984fadf857af7498c635d77cd1969fc8e892e2cf24685acb89f8"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/?q=no-match-independent-qa",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.31,
+      "unresolvedContrastSamples": 6,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-desktop.png",
+        "bytes": 307140,
+        "sha256": "58a73ae3b3448d0baf0b1166ddb889b2fc6259179703fa0dfb4d0557606b3020"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-desktop-focus.png",
+        "bytes": 204091,
+        "sha256": "052d6ba7dd40c5dfd9e4bf12b9bbf049200cb304103ac6b00230530fe4a3f9ae"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/?sort=unsupported",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.13,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-desktop.png",
+        "bytes": 78958,
+        "sha256": "2af5e6067a9a91e38f91c056bedf7a3d47aad3bf4cd2eca6646bca568048a007"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-desktop-focus.png",
+        "bytes": 79645,
+        "sha256": "2e0476442d8e772f08556fdd718e4ed9eeb687864997c8bd6de68a5f4299cff5"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/qa-missing",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-desktop.png",
+        "bytes": 86164,
+        "sha256": "0928248793d2d03ddccd47dd1f55a6c79e43e6efa5fd993d831b4b0b46aadb61"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-desktop-focus.png",
+        "bytes": 86733,
+        "sha256": "272262d29b9de26f035660552cc4250bfc13652338ffe85948dd739a8ad09958"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.31,
+      "unresolvedContrastSamples": 27,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-mobile.png",
+        "bytes": 452022,
+        "sha256": "57dd8a5c16fa0dc192c85911ad241742950baceaf1ecff75d557668712fcb144"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-mobile-focus.png",
+        "bytes": 141420,
+        "sha256": "f8c85fac21cf924f6f16b426931d98d8d7e9f906a43cb593489586d8df7f869f"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/lantern-prop",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 9,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-mobile.png",
+        "bytes": 322535,
+        "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-mobile-focus.png",
+        "bytes": 54399,
+        "sha256": "3735e70eded194b61b51d53a1261e5693a4e5efb049622f647e9c2b93b6bd252"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/publish",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-mobile.png",
+        "bytes": 252586,
+        "sha256": "af09fade483e847d8725aa39ee6ae168e22a5ba5f2c71f247845f6f8eafbf3f5"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-mobile-focus.png",
+        "bytes": 56733,
+        "sha256": "9d4d94b8a1c35c3e70693468b5f51671387d6518c02bb25997f8b4dd338f46c2"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/?q=no-match-independent-qa",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.31,
+      "unresolvedContrastSamples": 6,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-mobile.png",
+        "bytes": 208858,
+        "sha256": "e649470df27e7c58650c3be343059be22b5a159a43e048e39519bfa5839d445d"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-mobile-focus.png",
+        "bytes": 94245,
+        "sha256": "01b009fad488137ffce15a1e12fc39228d242b5c07b94132a665fce99ec5cca7"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/?sort=unsupported",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.13,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-mobile.png",
+        "bytes": 67199,
+        "sha256": "4380f30d7fa93b0c0fca8d99c49e5a7d48fc395109f6cc96fb9fb068236fc7f2"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-mobile-focus.png",
+        "bytes": 49065,
+        "sha256": "6e6685d517be2ca54e31a07c618f87e8fc333851e7ed9a582c1c880d1b98f1d9"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/qa-missing",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.54,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-mobile.png",
+        "bytes": 72469,
+        "sha256": "516ebf73855c170fcca457de6bf724fc9bcc5964d2ee7f5c6a326042b2fc4768"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-mobile-focus.png",
+        "bytes": 51018,
+        "sha256": "f3597817e44c9a1e18bd31a3f35beb549ff895d3936c25c011e4c621a8b0b9fb"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 13,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-desktop.png",
+        "bytes": 512577,
+        "sha256": "a93231329561fd10806f7933cc4b132abcf512e1e8faff497838f7fd7f2ad500"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-desktop-focus.png",
+        "bytes": 351035,
+        "sha256": "13e2693879676a97c40d5065840734cf49a6ea81c89d609342a8b70ddcd91649"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/harbour-diorama",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 8,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-desktop.png",
+        "bytes": 347161,
+        "sha256": "1d32174f24d07f22e8aa2725b1f46c6052221d108e4d70a2770c20c60674b0a5"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-desktop-focus.png",
+        "bytes": 269049,
+        "sha256": "6cc4c9bff9cf02ed0b09fb8f0fd9bf0447f618717ec89e99d45e19929361b2e4"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/publish",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-desktop.png",
+        "bytes": 290999,
+        "sha256": "5c7db3542c18240b695169d93c3f38f28ecae7f72d26637a756d07fc77a2b271"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-desktop-focus.png",
+        "bytes": 136730,
+        "sha256": "949119eb5705ece93e0fc6159f272aa9774df32072e4b0afd9d4c761151cb6ce"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/?q=no-match-independent-qa",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 6,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-desktop.png",
+        "bytes": 346174,
+        "sha256": "7fad05116fa8e62b9c5a8c60d2a7e255898e9f3c9a004d6b425dbc1e699de075"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-desktop-focus.png",
+        "bytes": 236469,
+        "sha256": "cbd34c725daca55e1dd932e341ca9a9b19520d49b843fac9aa6be96701580e8b"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/?sort=unsupported",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-desktop.png",
+        "bytes": 79186,
+        "sha256": "fbeda3112fb108d2f5753f1ca675306b6066df7f0abeb0249500b9f53832b164"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-desktop-focus.png",
+        "bytes": 79857,
+        "sha256": "441177a94b7a4b331ceedb3749a663327496978fee62e67dadeaf63efbd3db6d"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/qa-missing",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.1,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-desktop.png",
+        "bytes": 86847,
+        "sha256": "4c28554621f802ec7a90daaf6c471c65521bbb5383ebf8ffebadd793891cd921"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-desktop-focus.png",
+        "bytes": 87433,
+        "sha256": "f2cb40aff21fefc827272c1215494336144c51064e3962eafdb5394ab862987a"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 13,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-mobile.png",
+        "bytes": 326647,
+        "sha256": "9db11fd99397220071c965e3f56826229ddfce9206ff8a68c34d7c55c61130d9"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-mobile-focus.png",
+        "bytes": 138682,
+        "sha256": "b793bedb66b8c77ea3f35a6c55ca9e0d8824877df9fbccc80d9668a655e76054"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/harbour-diorama",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 8,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-mobile.png",
+        "bytes": 270548,
+        "sha256": "d7eba9d00b745e814fa1e932bf6f163de592f54e637f6e3dc4d86dc0abd630e6"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-mobile-focus.png",
+        "bytes": 54824,
+        "sha256": "b0e3381746f8783df097bb15df1cadca74f17bf8ed00808971299c0e66f07864"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/publish",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-mobile.png",
+        "bytes": 255122,
+        "sha256": "cf83e61d00079b0e037681d39e282252ec4d6ab20357b43b34e5f4a94cce8fb5"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-mobile-focus.png",
+        "bytes": 56076,
+        "sha256": "eab2890437d5bee34ff5e8476fcdfcc9601ef99181dd9b6ea9f0f83e893a6728"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/?q=no-match-independent-qa",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.9,
+      "unresolvedContrastSamples": 6,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-mobile.png",
+        "bytes": 218947,
+        "sha256": "317107f1b6a33d091a90961c746d5f3afd318b4ab1f2aac32689aec7677209dc"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-mobile-focus.png",
+        "bytes": 102776,
+        "sha256": "f97e29b02e90ef5bba291c9737b22befd22d5833996ce41a3d3402c85f487445"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/?sort=unsupported",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 5.71,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-mobile.png",
+        "bytes": 67922,
+        "sha256": "1fe63f0e940f84f2e774f54d19efaa5b6db09f6dd7d2a57bdc0975ecfeb735b5"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-mobile-focus.png",
+        "bytes": 48563,
+        "sha256": "c8326c582fd7a98039f14b764c527247b7ca11890c3d1c3c04409bc7c8829fe5"
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/qa-missing",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": 6.1,
+      "unresolvedContrastSamples": 0,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-mobile.png",
+        "bytes": 73386,
+        "sha256": "0bdad61ffd6ac63d1375f71ea63d2c2ab3308333e41a6885d1182ba6706d3902"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-mobile-focus.png",
+        "bytes": 51062,
+        "sha256": "af93c6dc5579ea551b3dece3c57b61dfb7d0875332a469f0d9bf6cf61b74a8ac"
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "/",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": null,
+      "unresolvedContrastSamples": 31,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-home-desktop.png",
+        "bytes": 164841,
+        "sha256": "8c68e5be8b3e1c6e395f347a416d32eacb6f9bf7918cdb66464d0486f59ef97d"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-home-desktop-focus.png",
+        "bytes": 166403,
+        "sha256": "445e90dd8a2beaa84db226a4b601ddac54df9adc39a531075740575cd11995ca"
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "/",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "controlOverlap": true,
+        "focus": true,
+        "pageErrors": true
+      },
+      "spacing": "PASS: shared token composition; fluid/typographic metrics not required to be multiples of four",
+      "minimumTextContrast": null,
+      "unresolvedContrastSamples": 31,
+      "lightMode": "PASS: unchanged dark palette under light preference",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-home-mobile.png",
+        "bytes": 109527,
+        "sha256": "86e0b3b7c43fa8649958420b8e2b30564c6ef000cdabd11fe7d090b12e5bbbce"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-home-mobile-focus.png",
+        "bytes": 42119,
+        "sha256": "fb4537d2035720fcca46cea1f8ae39117a891c8a1e113f7e7e42cb1432cfbde9"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor",
+      "state": "editor-preview",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [
+        {
+          "text": "{}",
+          "ratio": 3.42,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        }
+      ],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-desktop.png",
+        "bytes": 235868,
+        "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor?profile=web",
+      "state": "editor-web-preview",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-desktop.png",
+        "bytes": 165758,
+        "sha256": "0ce2114d337521effd70f71ae0eb18e92c3c9e86ea235300ff21f14e1c495bc2"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor?profile=kids",
+      "state": "editor-kids-refusal",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-desktop.png",
+        "bytes": 39829,
+        "sha256": "4ca6944d1bfae1a8070e51044cbb36ea458b9c03f9368e39afd0c9dadde66b42"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor",
+      "state": "editor-preview",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-mobile.png",
+        "bytes": 53406,
+        "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor?profile=web",
+      "state": "editor-web-preview",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-mobile.png",
+        "bytes": 53406,
+        "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207"
+      }
+    },
+    {
+      "site": "umbrella",
+      "surface": "/editor?profile=kids",
+      "state": "editor-kids-refusal",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-mobile.png",
+        "bytes": 35035,
+        "sha256": "16569dad4d031a182ad376e444e1dc7a70a92fc73e40dab236b23f4b7cb3aea6"
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "/",
+      "state": "activity-playing",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop.png",
+        "bytes": 163311,
+        "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf"
+      },
+      "focusSamples": [
+        {
+          "text": "For grown-ups",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        },
+        {
+          "text": "\u25a0Stop",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        },
+        {
+          "text": "For grown-ups",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        }
+      ],
+      "outsideDocumentFocusExcursions": 2,
+      "focusMethod": "Actual Tab, not programmatic focus after pointer input; browser chrome excursions excluded",
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop-focus.png",
+        "bytes": 163311,
+        "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf"
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "/",
+      "state": "activity-playing",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true,
+        "contrast": true,
+        "pageErrors": true,
+        "focus": true,
+        "controlOverlap": true
+      },
+      "contrastExceptions": [],
+      "overlapRefutation": "Web apparent raw overlap removed by actual ancestor clipping; editor-diagnostics.json records zero visible intersections",
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile.png",
+        "bytes": 107881,
+        "sha256": "b32538afb23d9ef8989026d99c50b5252cbe9c9e393eac63e94d57022b4d1b90"
+      },
+      "focusSamples": [
+        {
+          "text": "For grown-ups",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        },
+        {
+          "text": "\u25a0Stop",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        },
+        {
+          "text": "For grown-ups",
+          "outline": "solid",
+          "width": "3px",
+          "color": "rgb(237, 239, 242)",
+          "focusVisible": true,
+          "visible": true
+        }
+      ],
+      "outsideDocumentFocusExcursions": 2,
+      "focusMethod": "Actual Tab, not programmatic focus after pointer input; browser chrome excursions excluded",
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile-focus.png",
+        "bytes": 40279,
+        "sha256": "fc9a3dfb2a490598a6f8189c1593ad5b9bb08aceb016f3c440629cdcb40885c4"
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/lantern-prop",
+      "state": "complete fixture inventory",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-desktop.png",
+        "bytes": 417980,
+        "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/lantern-prop",
+      "state": "complete fixture inventory",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-mobile.png",
+        "bytes": 322535,
+        "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/market-stall-kit",
+      "state": "complete fixture inventory",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-desktop.png",
+        "bytes": 414792,
+        "sha256": "d04534f62ada58e4d50c95e92ba732c6a0e88d72b7ac5a16e2abcfce7fa3c2a3"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/market-stall-kit",
+      "state": "complete fixture inventory",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-mobile.png",
+        "bytes": 326210,
+        "sha256": "e39ec843ae61cf240f42c9ad6ddda3c02a47f1d7dc7226d084d511454102b7e4"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/odd-price-charm",
+      "state": "complete fixture inventory",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-desktop.png",
+        "bytes": 346058,
+        "sha256": "2b74544d211e7831e82686450e032409fa432b9d3b9838fb98832f3ac7ae44b2"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-game",
+      "surface": "/item/odd-price-charm",
+      "state": "complete fixture inventory",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-mobile.png",
+        "bytes": 277015,
+        "sha256": "2277162b56fc2a1fb0fc7f24a2bf732b5f283472f1e8b0ac6498a51be19a2d4c"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/harbour-diorama",
+      "state": "complete fixture inventory",
+      "viewport": "desktop",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-desktop.png",
+        "bytes": 347161,
+        "sha256": "1d32174f24d07f22e8aa2725b1f46c6052221d108e4d70a2770c20c60674b0a5"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "catalog-web",
+      "surface": "/item/harbour-diorama",
+      "state": "complete fixture inventory",
+      "viewport": "mobile",
+      "status": "PASS",
+      "checks": {
+        "http": true,
+        "overflow": true
+      },
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-mobile.png",
+        "bytes": 270548,
+        "sha256": "d7eba9d00b745e814fa1e932bf6f163de592f54e637f6e3dc4d86dc0abd630e6"
+      },
+      "scope": "Geometry + HTTP; full shared contrast/focus exercised on representative detail above"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "empty",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.01,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-empty.png",
+        "sha256": "93a5bf4582d76f79c70fb5d3758faaad60bcf4a35e7d926bb73ca91688aa1416",
+        "bytes": 209271,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-empty.png",
+        "sha256": "26fcde977d6a5d8e22c0e81c208068b6081854c3463f5702810ad4600de352be",
+        "bytes": 209652,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "selected",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 6.21,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-selected.png",
+        "sha256": "565b8b77912af21616ae3e73b88ff6dce7fafcf1f74117adefe04cb48c2d1448",
+        "bytes": 235665,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-selected.png",
+        "sha256": "37f349e3d1271f997c398af5fecb964bad21be6258e5fe60b2b4eb79ce2f5640",
+        "bytes": 236435,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "byok",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.01,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-byok.png",
+        "sha256": "8c4d56b4233689aaae33ae16982e2fbde4dfc28a09b1adced528f26095733d58",
+        "bytes": 232280,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-byok.png",
+        "sha256": "3f682528449f219ccf3af979dc84e0786aae78b4a43ecc4cfdbd7725de20677a",
+        "bytes": 232652,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "narrow",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.57,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-narrow.png",
+        "sha256": "7b1aeb6b695431b555ffbd90318addc18beda310c59776f75b33f13e380b24d9",
+        "bytes": 101656,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-narrow.png",
+        "sha256": "10cc6867d7f4f2561eb19eb513f1e0c49e97cc4f2a7a590464d0134c0f63d5fd",
+        "bytes": 102515,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "byok-narrow",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.63,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-byok-narrow.png",
+        "sha256": "5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784",
+        "bytes": 111694,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-byok-narrow.png",
+        "sha256": "bb7a4ba843469bb1177eabda249f3ac0a82ee0f3456ed68f4d6ebf6672ce21ad",
+        "bytes": 112390,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "palette",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 6.67,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-palette.png",
+        "sha256": "54050f7fff6ca3643f2d5df22e1d1b84c9e7379547fa33fd7ae68a8fb115a87a",
+        "bytes": 149766,
+        "width": 1280,
+        "height": 900,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-palette.png",
+        "sha256": "799df6698ae4351bf5d70bbbd8147578bb170f921a2a9322204bc13b0e950580",
+        "bytes": 149812,
+        "width": 1280,
+        "height": 900,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "mobile-refusal",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 0,
+      "focusNotApplicable": true,
+      "minimumTextContrast": 10.01,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-mobile-refusal.png",
+        "sha256": "7b2de19a8e012cba4a89e720ab7a488dabb0eaf1aa82b4fe453b00a0e627061f",
+        "bytes": 17708,
+        "width": 390,
+        "height": 844,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-mobile-refusal.png",
+        "sha256": "7b2de19a8e012cba4a89e720ab7a488dabb0eaf1aa82b4fe453b00a0e627061f",
+        "bytes": 17708,
+        "width": 390,
+        "height": 844,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "busy",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.01,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-busy.png",
+        "sha256": "cdc4030124814a20e4bc5e9ad2a89537133d9395e0c06b78efff926ec2d59987",
+        "bytes": 209297,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-busy.png",
+        "sha256": "12f6129ae5e06a2849e810d9aeaddfb4bdcd2ed52af919df0a9da7b0556f1b0c",
+        "bytes": 209686,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "web",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 7.01,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-web.png",
+        "sha256": "2c8cf85b66526e2c2769ec5ed252ea76517543a24e4586eafc549c4276a80965",
+        "bytes": 176792,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-web.png",
+        "sha256": "30219b78ad318a4235ee6940c9fed69d92f902dec7e54adb130231c920919d8e",
+        "bytes": 177193,
+        "width": 1440,
+        "height": 1000,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    },
+    {
+      "site": "desktop-chrome",
+      "surface": "kids",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "status": "PASS",
+      "checks": {
+        "overflow": true,
+        "pageErrors": true,
+        "contrast": true,
+        "focus": true
+      },
+      "focusSampleCount": 5,
+      "focusNotApplicable": false,
+      "minimumTextContrast": 6.16,
+      "screenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-kids.png",
+        "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+        "bytes": 111306,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "focusScreenshot": {
+        "path": "docs/audits/production-swarm/visual/qa-desktop-focus-kids.png",
+        "sha256": "8e6b54ab03e6972246ec65a28ed092805f7f22c70c4a3a3ee4a5801d9e865756",
+        "bytes": 112225,
+        "width": 900,
+        "height": 640,
+        "phase": "after-independent-qa"
+      },
+      "scope": "Real emitted CLI HTML and seed bridge, no physical GPU/native proof; loading is explicitly visual fixture"
+    }
+  ],
+  "pixelReceipts": [
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-detail-desktop.png",
+      "sha256": "ca4ad4026f95206af263ad7b3c78eaebb39276fdd7b5873b821360049f46704b",
+      "bytes": 420481,
+      "width": 1440,
+      "height": 2063,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-detail-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-detail-mobile.png",
+      "sha256": "b2bab49af219b27d4c4448db1aa031734cdd2164cc86ba0ca719ca6d3ebe381f",
+      "bytes": 327726,
+      "width": 390,
+      "height": 4199,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-detail-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-empty-desktop.png",
+      "sha256": "a22c1c98f1b20362fa58ebdfc1998b441ff5ff7efc9b707933cc28982654c412",
+      "bytes": 296300,
+      "width": 1440,
+      "height": 1556,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-empty-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-empty-mobile.png",
+      "sha256": "d901d6e9053041d8394c706c3369f3b722e8843b467e24f8d68ea616bdb05312",
+      "bytes": 202029,
+      "width": 390,
+      "height": 2271,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-empty-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-home-desktop.png",
+      "sha256": "bc3fe25f8b87d7ad2fbe57e188ab3b3dbcae6c2acfdf8fb4599a26822e47df76",
+      "bytes": 449905,
+      "width": 1440,
+      "height": 1787,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-home-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-home-mobile.png",
+      "sha256": "479f734b9a483e78b464f99cbcd911e36403b746ba3ef152e85b52e0cfaf57da",
+      "bytes": 468825,
+      "width": 390,
+      "height": 4158,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-home-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-publish-desktop.png",
+      "sha256": "4dbf206fd36b52163e94d502399a46ff27936a3aefd37e968b61acb31ce24b79",
+      "bytes": 282660,
+      "width": 1440,
+      "height": 2022,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-publish-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-publish-mobile.png",
+      "sha256": "f2b92f2863e3b8982c4425014bf509d0eb5255b0aca528009b6101aa2abffc8e",
+      "bytes": 247485,
+      "width": 390,
+      "height": 3113,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-publish-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-refused-desktop.png",
+      "sha256": "eec25b6fdfdab6bc6980a1f83703d1e73be9a4fc296c160e4d2e6e31e5b9876f",
+      "bytes": 78673,
+      "width": 1440,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-refused-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-game-before-refused-mobile.png",
+      "sha256": "fb70464cab183a521b9f5cc3eb2342f260ab8ab0e5e6deff6f7fb985dd1e1388",
+      "bytes": 67012,
+      "width": 390,
+      "height": 999,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-game/test/visual-evidence/before-refused-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-detail-desktop.png",
+      "sha256": "b97b4cb0dcc4ab3affe8b88e895bf26d978f886868640182b63db075bb4e9401",
+      "bytes": 343304,
+      "width": 1440,
+      "height": 1649,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-detail-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-detail-mobile.png",
+      "sha256": "9501d947926ccc36e00e3dbaf1099ebaf91a1db013142f561a7e47629f956583",
+      "bytes": 270685,
+      "width": 390,
+      "height": 3868,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-detail-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-empty-desktop.png",
+      "sha256": "7f2d9566240c023411afa905b866db8fdc8af212e29e2a22771802db7eec1f7a",
+      "bytes": 333484,
+      "width": 1440,
+      "height": 1602,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-empty-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-empty-mobile.png",
+      "sha256": "a87f0333f55926477f00ce9aa116a6869747a804b760b25a6b52d21bd562fdae",
+      "bytes": 212204,
+      "width": 390,
+      "height": 2346,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-empty-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-home-desktop.png",
+      "sha256": "119f65c2a51fb4ffa9b021d07cc9d57cb299e5e9c5a82840b8b0d420703143b6",
+      "bytes": 514790,
+      "width": 1440,
+      "height": 1938,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-home-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-home-mobile.png",
+      "sha256": "8effd73356e73d7593230c2622888122a48e194cc2f955e2aee7d167f1ef3dca",
+      "bytes": 327095,
+      "width": 390,
+      "height": 3271,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-home-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-publish-desktop.png",
+      "sha256": "ca9b93ba2c6d8da0081617957940d67a0afecf531fe95a083c37941e9f2eae5b",
+      "bytes": 286987,
+      "width": 1440,
+      "height": 2022,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-publish-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-publish-mobile.png",
+      "sha256": "10989395d1a192620b80773385690f9ac3e4865d913890d6d90cbb99a41e1397",
+      "bytes": 249638,
+      "width": 390,
+      "height": 3158,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-publish-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-refused-desktop.png",
+      "sha256": "80e9ae1489df1c1c39a66357292d9c9687a6f487aa2405e99cae47dcc4e64565",
+      "bytes": 79602,
+      "width": 1440,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-refused-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/catalog-web-before-refused-mobile.png",
+      "sha256": "276942798be0c67b59b8d984a17e3ea9794e214301b78e2b932863b25d066693",
+      "bytes": 67811,
+      "width": 390,
+      "height": 1044,
+      "phase": "before-peer",
+      "originalPath": "sites/catalog-web/test/visual-evidence/before-refused-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-busy.png",
+      "sha256": "7ec5445d01ca3e41631c2d51804b6a9875df824807757eb8c668fe62dae0a255",
+      "bytes": 296727,
+      "width": 1680,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-busy.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-byok-narrow.png",
+      "sha256": "6e5fec8e794c1b699bb24df4ff86d121a2273ff06273eb4c49833532bd984944",
+      "bytes": 108434,
+      "width": 900,
+      "height": 640,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-byok-narrow.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-byok.png",
+      "sha256": "cefd32b4ad0f16b19c52298ee5d7d56ed5fbeffe3df73627770a19e3cf849582",
+      "bytes": 244586,
+      "width": 1680,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-byok.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-empty.png",
+      "sha256": "5e289ff3580090e54687e35e48075461c38d7b58d14b094084ab2c9e2a579687",
+      "bytes": 226848,
+      "width": 1680,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-empty.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-kids.png",
+      "sha256": "b531e898e8b4365219f5c87ca2331a2408b942209fbc398400081e246f214635",
+      "bytes": 111531,
+      "width": 900,
+      "height": 640,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-kids.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-mobile-refusal.png",
+      "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+      "bytes": 17367,
+      "width": 375,
+      "height": 812,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-mobile-refusal.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-narrow.png",
+      "sha256": "7e19df62850d8e94f5c65b363c0d8782b91c0a4e8686f2ceb1b698a410790843",
+      "bytes": 95412,
+      "width": 900,
+      "height": 640,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-narrow.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-palette.png",
+      "sha256": "c216e5428edb62c0f4ff50bd565261aa1561fe2e1e07b92890a7aaad1ff3501c",
+      "bytes": 145749,
+      "width": 1280,
+      "height": 900,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-palette.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-selected.png",
+      "sha256": "daf1f81cab4ed72a33aba8b3f5c65f21b0efc6aa63447c7f23a1cc9884ad6405",
+      "bytes": 245081,
+      "width": 1680,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-selected.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-desktop-before-web.png",
+      "sha256": "02ed546400b9babed40d7549c6a76fd615902ae97b69d613685972d4abc87c16",
+      "bytes": 192773,
+      "width": 1680,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/screenshots/finish-visual-desktop-before-web.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-account-desktop.png",
+      "sha256": "d694263bb1bb951ba1afe71d4e1b559d2bb6d74f5f4bc4375b7347fda0d90acd",
+      "bytes": 197945,
+      "width": 1440,
+      "height": 1786,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-account-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-account-mobile.png",
+      "sha256": "665fb13bf23cf0e825e694bb4aedbf802ebf9fc76db8f0244fbff8b805868114",
+      "bytes": 188750,
+      "width": 390,
+      "height": 2910,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-account-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-docs-desktop.png",
+      "sha256": "3eeec26e53790a33f9461b1348350476fc1a81defdb7072c9db429f88c7e5f08",
+      "bytes": 454129,
+      "width": 1440,
+      "height": 3683,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-docs-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-docs-mobile.png",
+      "sha256": "cf372569c692bbd70617ea5e111ddd0447edb98cab96abceaa9245d31aa39950",
+      "bytes": 419691,
+      "width": 390,
+      "height": 6470,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-docs-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-editor-desktop.png",
+      "sha256": "44b7fd73fa10271ad94524db9e7c36b9dd3ecac4b93050c84a584227c3f58e27",
+      "bytes": 233758,
+      "width": 1440,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-editor-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-editor-mobile.png",
+      "sha256": "5a0f12692c9eb15b126cf2c3b1927df14023a4349400788cb6be8915a652b664",
+      "bytes": 44249,
+      "width": 390,
+      "height": 844,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-editor-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-landing-desktop.png",
+      "sha256": "823f8c01ec25f8d89a8a27b55fd97ea4eb9bb0a8ff8a69d37f4eef096f7ed5f3",
+      "bytes": 428610,
+      "width": 1440,
+      "height": 3258,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-landing-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-landing-mobile.png",
+      "sha256": "b85ac8c9d1669c0f3766ee40e38cbe4f7de697af9e24d7ca7da02f733507d9f6",
+      "bytes": 272557,
+      "width": 390,
+      "height": 4722,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-landing-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-login-desktop.png",
+      "sha256": "27be0843428f2cc8486070a42070e1eaf081caf2c3e7613ed1eb5e0f6f922b6a",
+      "bytes": 95711,
+      "width": 1440,
+      "height": 1011,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-login-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-login-mobile.png",
+      "sha256": "577717160ca7f5327dbb819b650c433f32aa68d656563c527c8034267a85fb8f",
+      "bytes": 88748,
+      "width": 390,
+      "height": 1591,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-login-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-open-desktop.png",
+      "sha256": "4eb5132e293c7833ecd30b541e586853c822c369f4716f63452cc4a373223000",
+      "bytes": 376685,
+      "width": 1440,
+      "height": 3572,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-open-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/finish-visual-umbrella-before-open-mobile.png",
+      "sha256": "c2325100089f6f80a79e2e78ba3c4a6528c682ce73b84048575eff2f949c9070",
+      "bytes": 276974,
+      "width": 390,
+      "height": 4540,
+      "phase": "before-peer",
+      "originalPath": "docs/audits/production-swarm/finish-visual-umbrella-before-open-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/kids-before-activity-desktop.png",
+      "sha256": "b361fe5f199a6b2239953f03caac9209031381d4c911ff3c078fdc53441a6894",
+      "bytes": 162530,
+      "width": 1440,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "sites/kids/test/visual-evidence/before-activity-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/kids-before-activity-mobile.png",
+      "sha256": "424a9a2d8432018db86f12a8975aee93698b171f61de78b8f568059d2019d599",
+      "bytes": 108634,
+      "width": 390,
+      "height": 1491,
+      "phase": "before-peer",
+      "originalPath": "sites/kids/test/visual-evidence/before-activity-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/kids-before-playing-desktop.png",
+      "sha256": "8ef0b1aa7947797cd1a991538434cda6d510c70367e461dace9c097bf6378a21",
+      "bytes": 159697,
+      "width": 1440,
+      "height": 1000,
+      "phase": "before-peer",
+      "originalPath": "sites/kids/test/visual-evidence/before-playing-desktop.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/before/kids-before-playing-mobile.png",
+      "sha256": "f78b181ed15a769806153eb7d1df823d113d3f9f2ab27b4e29d5ad48ec65f24b",
+      "bytes": 104132,
+      "width": 390,
+      "height": 1491,
+      "phase": "before-peer",
+      "originalPath": "sites/kids/test/visual-evidence/before-playing-mobile.png"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-desktop-focus.png",
+      "sha256": "cf2bbb8a3cb4377b24b4c240fed8d4f76785e1680693bee7ad7ad82f3fd5aa02",
+      "bytes": 309166,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-desktop.png",
+      "sha256": "791515d3b7efce83b5d71b6d61271dc22e3fa2097d4909f3c8fde26befe1c74b",
+      "bytes": 455864,
+      "width": 1440,
+      "height": 1985,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-mobile-focus.png",
+      "sha256": "f8c85fac21cf924f6f16b426931d98d8d7e9f906a43cb593489586d8df7f869f",
+      "bytes": 141420,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-home-mobile.png",
+      "sha256": "57dd8a5c16fa0dc192c85911ad241742950baceaf1ecff75d557668712fcb144",
+      "bytes": 452022,
+      "width": 390,
+      "height": 4447,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-desktop-focus.png",
+      "sha256": "5a583f1be74d6ba50a27eff49680ae7a4d13d9c166194bce23b5aec4c2b91274",
+      "bytes": 276293,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-desktop.png",
+      "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f",
+      "bytes": 417980,
+      "width": 1440,
+      "height": 2090,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-mobile-focus.png",
+      "sha256": "3735e70eded194b61b51d53a1261e5693a4e5efb049622f647e9c2b93b6bd252",
+      "bytes": 54399,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-lantern-prop-mobile.png",
+      "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6",
+      "bytes": 322535,
+      "width": 390,
+      "height": 4233,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-desktop-focus.png",
+      "sha256": "272262d29b9de26f035660552cc4250bfc13652338ffe85948dd739a8ad09958",
+      "bytes": 86733,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-desktop.png",
+      "sha256": "0928248793d2d03ddccd47dd1f55a6c79e43e6efa5fd993d831b4b0b46aadb61",
+      "bytes": 86164,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-mobile-focus.png",
+      "sha256": "f3597817e44c9a1e18bd31a3f35beb549ff895d3936c25c011e4c621a8b0b9fb",
+      "bytes": 51018,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-item-qa-missing-mobile.png",
+      "sha256": "516ebf73855c170fcca457de6bf724fc9bcc5964d2ee7f5c6a326042b2fc4768",
+      "bytes": 72469,
+      "width": 390,
+      "height": 1187,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-desktop-focus.png",
+      "sha256": "b7bf0e663a06984fadf857af7498c635d77cd1969fc8e892e2cf24685acb89f8",
+      "bytes": 136264,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-desktop.png",
+      "sha256": "0c58cfa97df570cb5f14ef06c6a859bfddc92153cdab31a880ded2218c3fcdec",
+      "bytes": 287610,
+      "width": 1440,
+      "height": 2232,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-mobile-focus.png",
+      "sha256": "9d4d94b8a1c35c3e70693468b5f51671387d6518c02bb25997f8b4dd338f46c2",
+      "bytes": 56733,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-publish-mobile.png",
+      "sha256": "af09fade483e847d8725aa39ee6ae168e22a5ba5f2c71f247845f6f8eafbf3f5",
+      "bytes": 252586,
+      "width": 390,
+      "height": 3416,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-desktop-focus.png",
+      "sha256": "052d6ba7dd40c5dfd9e4bf12b9bbf049200cb304103ac6b00230530fe4a3f9ae",
+      "bytes": 204091,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-desktop.png",
+      "sha256": "58a73ae3b3448d0baf0b1166ddb889b2fc6259179703fa0dfb4d0557606b3020",
+      "bytes": 307140,
+      "width": 1440,
+      "height": 1811,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-mobile-focus.png",
+      "sha256": "01b009fad488137ffce15a1e12fc39228d242b5c07b94132a665fce99ec5cca7",
+      "bytes": 94245,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-q-no-match-independent-qa-mobile.png",
+      "sha256": "e649470df27e7c58650c3be343059be22b5a159a43e048e39519bfa5839d445d",
+      "bytes": 208858,
+      "width": 390,
+      "height": 2594,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-desktop-focus.png",
+      "sha256": "2e0476442d8e772f08556fdd718e4ed9eeb687864997c8bd6de68a5f4299cff5",
+      "bytes": 79645,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-desktop.png",
+      "sha256": "2af5e6067a9a91e38f91c056bedf7a3d47aad3bf4cd2eca6646bca568048a007",
+      "bytes": 78958,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-mobile-focus.png",
+      "sha256": "6e6685d517be2ca54e31a07c618f87e8fc333851e7ed9a582c1c880d1b98f1d9",
+      "bytes": 49065,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-game-sort-unsupported-mobile.png",
+      "sha256": "4380f30d7fa93b0c0fca8d99c49e5a7d48fc395109f6cc96fb9fb068236fc7f2",
+      "bytes": 67199,
+      "width": 390,
+      "height": 1114,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-desktop-focus.png",
+      "sha256": "13e2693879676a97c40d5065840734cf49a6ea81c89d609342a8b70ddcd91649",
+      "bytes": 351035,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-desktop.png",
+      "sha256": "a93231329561fd10806f7933cc4b132abcf512e1e8faff497838f7fd7f2ad500",
+      "bytes": 512577,
+      "width": 1440,
+      "height": 2127,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-mobile-focus.png",
+      "sha256": "b793bedb66b8c77ea3f35a6c55ca9e0d8824877df9fbccc80d9668a655e76054",
+      "bytes": 138682,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-home-mobile.png",
+      "sha256": "9db11fd99397220071c965e3f56826229ddfce9206ff8a68c34d7c55c61130d9",
+      "bytes": 326647,
+      "width": 390,
+      "height": 3489,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-desktop-focus.png",
+      "sha256": "6cc4c9bff9cf02ed0b09fb8f0fd9bf0447f618717ec89e99d45e19929361b2e4",
+      "bytes": 269049,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-desktop.png",
+      "sha256": "1d32174f24d07f22e8aa2725b1f46c6052221d108e4d70a2770c20c60674b0a5",
+      "bytes": 347161,
+      "width": 1440,
+      "height": 1644,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-mobile-focus.png",
+      "sha256": "b0e3381746f8783df097bb15df1cadca74f17bf8ed00808971299c0e66f07864",
+      "bytes": 54824,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-harbour-diorama-mobile.png",
+      "sha256": "d7eba9d00b745e814fa1e932bf6f163de592f54e637f6e3dc4d86dc0abd630e6",
+      "bytes": 270548,
+      "width": 390,
+      "height": 3869,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-desktop-focus.png",
+      "sha256": "f2cb40aff21fefc827272c1215494336144c51064e3962eafdb5394ab862987a",
+      "bytes": 87433,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-desktop.png",
+      "sha256": "4c28554621f802ec7a90daaf6c471c65521bbb5383ebf8ffebadd793891cd921",
+      "bytes": 86847,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-mobile-focus.png",
+      "sha256": "af93c6dc5579ea551b3dece3c57b61dfb7d0875332a469f0d9bf6cf61b74a8ac",
+      "bytes": 51062,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-item-qa-missing-mobile.png",
+      "sha256": "0bdad61ffd6ac63d1375f71ea63d2c2ab3308333e41a6885d1182ba6706d3902",
+      "bytes": 73386,
+      "width": 390,
+      "height": 1232,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-desktop-focus.png",
+      "sha256": "949119eb5705ece93e0fc6159f272aa9774df32072e4b0afd9d4c761151cb6ce",
+      "bytes": 136730,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-desktop.png",
+      "sha256": "5c7db3542c18240b695169d93c3f38f28ecae7f72d26637a756d07fc77a2b271",
+      "bytes": 290999,
+      "width": 1440,
+      "height": 2232,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-mobile-focus.png",
+      "sha256": "eab2890437d5bee34ff5e8476fcdfcc9601ef99181dd9b6ea9f0f83e893a6728",
+      "bytes": 56076,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-publish-mobile.png",
+      "sha256": "cf83e61d00079b0e037681d39e282252ec4d6ab20357b43b34e5f4a94cce8fb5",
+      "bytes": 255122,
+      "width": 390,
+      "height": 3461,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-desktop-focus.png",
+      "sha256": "cbd34c725daca55e1dd932e341ca9a9b19520d49b843fac9aa6be96701580e8b",
+      "bytes": 236469,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-desktop.png",
+      "sha256": "7fad05116fa8e62b9c5a8c60d2a7e255898e9f3c9a004d6b425dbc1e699de075",
+      "bytes": 346174,
+      "width": 1440,
+      "height": 1857,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-mobile-focus.png",
+      "sha256": "f97e29b02e90ef5bba291c9737b22befd22d5833996ce41a3d3402c85f487445",
+      "bytes": 102776,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-q-no-match-independent-qa-mobile.png",
+      "sha256": "317107f1b6a33d091a90961c746d5f3afd318b4ab1f2aac32689aec7677209dc",
+      "bytes": 218947,
+      "width": 390,
+      "height": 2669,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-desktop-focus.png",
+      "sha256": "441177a94b7a4b331ceedb3749a663327496978fee62e67dadeaf63efbd3db6d",
+      "bytes": 79857,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-desktop.png",
+      "sha256": "fbeda3112fb108d2f5753f1ca675306b6066df7f0abeb0249500b9f53832b164",
+      "bytes": 79186,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-mobile-focus.png",
+      "sha256": "c8326c582fd7a98039f14b764c527247b7ca11890c3d1c3c04409bc7c8829fe5",
+      "bytes": 48563,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-catalog-web-sort-unsupported-mobile.png",
+      "sha256": "1fe63f0e940f84f2e774f54d19efaa5b6db09f6dd7d2a57bdc0975ecfeb735b5",
+      "bytes": 67922,
+      "width": 390,
+      "height": 1159,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-busy.png",
+      "sha256": "cdc4030124814a20e4bc5e9ad2a89537133d9395e0c06b78efff926ec2d59987",
+      "bytes": 209297,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-byok-narrow.png",
+      "sha256": "5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784",
+      "bytes": 111694,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-byok.png",
+      "sha256": "8c4d56b4233689aaae33ae16982e2fbde4dfc28a09b1adced528f26095733d58",
+      "bytes": 232280,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-empty.png",
+      "sha256": "93a5bf4582d76f79c70fb5d3758faaad60bcf4a35e7d926bb73ca91688aa1416",
+      "bytes": 209271,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-busy.png",
+      "sha256": "12f6129ae5e06a2849e810d9aeaddfb4bdcd2ed52af919df0a9da7b0556f1b0c",
+      "bytes": 209686,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-byok-narrow.png",
+      "sha256": "bb7a4ba843469bb1177eabda249f3ac0a82ee0f3456ed68f4d6ebf6672ce21ad",
+      "bytes": 112390,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-byok.png",
+      "sha256": "3f682528449f219ccf3af979dc84e0786aae78b4a43ecc4cfdbd7725de20677a",
+      "bytes": 232652,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-empty.png",
+      "sha256": "26fcde977d6a5d8e22c0e81c208068b6081854c3463f5702810ad4600de352be",
+      "bytes": 209652,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-kids.png",
+      "sha256": "8e6b54ab03e6972246ec65a28ed092805f7f22c70c4a3a3ee4a5801d9e865756",
+      "bytes": 112225,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-mobile-refusal.png",
+      "sha256": "7b2de19a8e012cba4a89e720ab7a488dabb0eaf1aa82b4fe453b00a0e627061f",
+      "bytes": 17708,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-narrow.png",
+      "sha256": "10cc6867d7f4f2561eb19eb513f1e0c49e97cc4f2a7a590464d0134c0f63d5fd",
+      "bytes": 102515,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-palette.png",
+      "sha256": "799df6698ae4351bf5d70bbbd8147578bb170f921a2a9322204bc13b0e950580",
+      "bytes": 149812,
+      "width": 1280,
+      "height": 900,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-selected.png",
+      "sha256": "37f349e3d1271f997c398af5fecb964bad21be6258e5fe60b2b4eb79ce2f5640",
+      "bytes": 236435,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-focus-web.png",
+      "sha256": "30219b78ad318a4235ee6940c9fed69d92f902dec7e54adb130231c920919d8e",
+      "bytes": 177193,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-kids.png",
+      "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+      "bytes": 111306,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-mobile-refusal.png",
+      "sha256": "7b2de19a8e012cba4a89e720ab7a488dabb0eaf1aa82b4fe453b00a0e627061f",
+      "bytes": 17708,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-narrow.png",
+      "sha256": "7b1aeb6b695431b555ffbd90318addc18beda310c59776f75b33f13e380b24d9",
+      "bytes": 101656,
+      "width": 900,
+      "height": 640,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-palette.png",
+      "sha256": "54050f7fff6ca3643f2d5df22e1d1b84c9e7379547fa33fd7ae68a8fb115a87a",
+      "bytes": 149766,
+      "width": 1280,
+      "height": 900,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-selected.png",
+      "sha256": "565b8b77912af21616ae3e73b88ff6dce7fafcf1f74117adefe04cb48c2d1448",
+      "bytes": 235665,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-desktop-web.png",
+      "sha256": "2c8cf85b66526e2c2769ec5ed252ea76517543a24e4586eafc549c4276a80965",
+      "bytes": 176792,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-desktop.png",
+      "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f",
+      "bytes": 417980,
+      "width": 1440,
+      "height": 2090,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-mobile.png",
+      "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6",
+      "bytes": 322535,
+      "width": 390,
+      "height": 4233,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-desktop.png",
+      "sha256": "d04534f62ada58e4d50c95e92ba732c6a0e88d72b7ac5a16e2abcfce7fa3c2a3",
+      "bytes": 414792,
+      "width": 1440,
+      "height": 2069,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-mobile.png",
+      "sha256": "e39ec843ae61cf240f42c9ad6ddda3c02a47f1d7dc7226d084d511454102b7e4",
+      "bytes": 326210,
+      "width": 390,
+      "height": 4257,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-desktop.png",
+      "sha256": "2b74544d211e7831e82686450e032409fa432b9d3b9838fb98832f3ac7ae44b2",
+      "bytes": 346058,
+      "width": 1440,
+      "height": 1644,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-mobile.png",
+      "sha256": "2277162b56fc2a1fb0fc7f24a2bf732b5f283472f1e8b0ac6498a51be19a2d4c",
+      "bytes": 277015,
+      "width": 390,
+      "height": 3877,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-desktop.png",
+      "sha256": "1d32174f24d07f22e8aa2725b1f46c6052221d108e4d70a2770c20c60674b0a5",
+      "bytes": 347161,
+      "width": 1440,
+      "height": 1644,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-mobile.png",
+      "sha256": "d7eba9d00b745e814fa1e932bf6f163de592f54e637f6e3dc4d86dc0abd630e6",
+      "bytes": 270548,
+      "width": 390,
+      "height": 3869,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop.png",
+      "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf",
+      "bytes": 163311,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile.png",
+      "sha256": "b32538afb23d9ef8989026d99c50b5252cbe9c9e393eac63e94d57022b4d1b90",
+      "bytes": 107881,
+      "width": 390,
+      "height": 1330,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-home-desktop-focus.png",
+      "sha256": "445e90dd8a2beaa84db226a4b601ddac54df9adc39a531075740575cd11995ca",
+      "bytes": 166403,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-home-desktop.png",
+      "sha256": "8c68e5be8b3e1c6e395f347a416d32eacb6f9bf7918cdb66464d0486f59ef97d",
+      "bytes": 164841,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-home-mobile-focus.png",
+      "sha256": "fb4537d2035720fcca46cea1f8ae39117a891c8a1e113f7e7e42cb1432cfbde9",
+      "bytes": 42119,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-home-mobile.png",
+      "sha256": "86e0b3b7c43fa8649958420b8e2b30564c6ef000cdabd11fe7d090b12e5bbbce",
+      "bytes": 109527,
+      "width": 390,
+      "height": 1330,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-account-desktop-focus.png",
+      "sha256": "51e85ef51802e375797d9feb39626a200064e305d38ec3b9b352937ebb396521",
+      "bytes": 133524,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-account-desktop.png",
+      "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2",
+      "bytes": 203233,
+      "width": 1440,
+      "height": 1808,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-account-mobile-focus.png",
+      "sha256": "3242541ba8a7362e503c4d3b3d6888618c93234ba3ba1eb20b42af1d4b5e178a",
+      "bytes": 73874,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-account-mobile.png",
+      "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112",
+      "bytes": 191558,
+      "width": 390,
+      "height": 2901,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-desktop-focus.png",
+      "sha256": "8a2709e7c9e98c8569a0569248ca7d914ef1a528f6a53bbc8a1a8298e2cd0e24",
+      "bytes": 70797,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-desktop.png",
+      "sha256": "1842a159bd116f6aee472bdd017ed589e422e204a3f4fbda784fa55f07b91243",
+      "bytes": 70593,
+      "width": 1440,
+      "height": 1014,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-mobile-focus.png",
+      "sha256": "016e885f1bdc457abc2eacc27cd28d3d13bce93e8edf3c3176afc3f5c1196c82",
+      "bytes": 45174,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-admin-ledger-mobile.png",
+      "sha256": "de6d39c650ebb4873e3380dd6bc79c72d0b977c1dd9bc492329be6c70de50dde",
+      "bytes": 64846,
+      "width": 390,
+      "height": 1393,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-desktop-focus.png",
+      "sha256": "bc489abce82ed55919b4590f4a11e4ebf489c825968bd94cb274f5a803e310f9",
+      "bytes": 89610,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-desktop.png",
+      "sha256": "03428c6c8799846fb081930a281e828e6f87eae1d84861d32565e44a83c4a235",
+      "bytes": 102112,
+      "width": 1440,
+      "height": 1241,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-mobile-focus.png",
+      "sha256": "1033184f2c4f9aaaeafd718d9a14999f9688ce28af0b58e3c728936425dfd6e1",
+      "bytes": 60586,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-cli-mobile.png",
+      "sha256": "d0a5fee8289aaf5c8f852e83f9bd70e4b67244b85dee70dc9ee2d4c860314bc7",
+      "bytes": 96492,
+      "width": 390,
+      "height": 1864,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-desktop-focus.png",
+      "sha256": "d0b4436a43575c9c6316f6d57e2c3cf0e33177dda541ae78c9782ca4009350f8",
+      "bytes": 88966,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-desktop.png",
+      "sha256": "8856fa70b911c6d23d27b6f5c1019852013d050fd789c9d324c6be39ebcaab61",
+      "bytes": 124767,
+      "width": 1440,
+      "height": 1548,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-mobile-focus.png",
+      "sha256": "29c998503ace30ac64f86234bf06bb3284d3c07b0433ea37a3a86a7a9b404f25",
+      "bytes": 59354,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-credits-and-pricing-mobile.png",
+      "sha256": "08376366e5b9d836641445cecd201b9eca7c3cdc2b2d22dfdd3343f0b74eed4d",
+      "bytes": 118468,
+      "width": 390,
+      "height": 2236,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-desktop-focus.png",
+      "sha256": "b06c384efb9561c5830c1dbdd0a7cf2495755aca9d33ba60542f316c1c033356",
+      "bytes": 149456,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-desktop.png",
+      "sha256": "818772006d2e2d6a3d30927f49d228145bc2595aee63ee10d6a5da59ee04d2c1",
+      "bytes": 454305,
+      "width": 1440,
+      "height": 3637,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-desktop-focus.png",
+      "sha256": "03755598cec2f542e50540ff246acf9d010703437fbd3b537dea37bf0514a144",
+      "bytes": 86024,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-desktop.png",
+      "sha256": "55695e769a49afe713d1823c25c29eeca7f51ef5ecbc0275fef57427c0960ae5",
+      "bytes": 123099,
+      "width": 1440,
+      "height": 1598,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-mobile-focus.png",
+      "sha256": "5e08b9c0c8ac3ce8d1d6f661a3b650735633eba9d460d36e5e2f432cefd532a6",
+      "bytes": 58066,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-faq-mobile.png",
+      "sha256": "640f92476cf3454e64589d52f82cca35f0a8d53a02504294ce679406e451e92c",
+      "bytes": 117956,
+      "width": 390,
+      "height": 2280,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-desktop-focus.png",
+      "sha256": "114eb3473c54986935db152f9c1a5abe4f84db319bde73bb8037fb4c55d480f1",
+      "bytes": 69368,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-desktop.png",
+      "sha256": "29d2d86c1a8f101a8ce0b3607e08aa7af16323fecd4dca6c6c56bd2753f05e72",
+      "bytes": 104928,
+      "width": 1440,
+      "height": 1520,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-mobile-focus.png",
+      "sha256": "a74a7d719e6e96862d8af15e11e569e5763791766b2202c86b6f8bf74f5ebf04",
+      "bytes": 53491,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-getting-started-mobile.png",
+      "sha256": "bbbf0a3c9e941214a04acb109879967e7242167866cef9f45ec46ab569c1388a",
+      "bytes": 94940,
+      "width": 390,
+      "height": 2029,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-mobile-focus.png",
+      "sha256": "35dc816344c3baa6a7c0f93e2ba1d85b78fc6d1c4561c3355f83b0d1dcc5fb5f",
+      "bytes": 53501,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-docs-mobile.png",
+      "sha256": "618dab073348762336cd8306a0d0114c07dce31601bfea21fa31b5f3e5bf9286",
+      "bytes": 428969,
+      "width": 390,
+      "height": 6397,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-desktop-focus.png",
+      "sha256": "5bba636298e8d1c3da58ea30112aace3a888b932fe57e563621e8a1b78f86639",
+      "bytes": 61230,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-desktop.png",
+      "sha256": "5bba636298e8d1c3da58ea30112aace3a888b932fe57e563621e8a1b78f86639",
+      "bytes": 61230,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-desktop.png",
+      "sha256": "4ca6944d1bfae1a8070e51044cbb36ea458b9c03f9368e39afd0c9dadde66b42",
+      "bytes": 39829,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-mobile.png",
+      "sha256": "16569dad4d031a182ad376e444e1dc7a70a92fc73e40dab236b23f4b7cb3aea6",
+      "bytes": 35035,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-mobile-focus.png",
+      "sha256": "6c8284244ab7632526a74f871e600b20f59025b4d5b199090fc4a6d75f0e9feb",
+      "bytes": 54292,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-mobile.png",
+      "sha256": "6c8284244ab7632526a74f871e600b20f59025b4d5b199090fc4a6d75f0e9feb",
+      "bytes": 54292,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-desktop.png",
+      "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804",
+      "bytes": 235868,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-mobile.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-desktop.png",
+      "sha256": "0ce2114d337521effd70f71ae0eb18e92c3c9e86ea235300ff21f14e1c495bc2",
+      "bytes": 165758,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-mobile.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-desktop-focus.png",
+      "sha256": "1ad35c0c63c90b8df0ddecdae7806f1d90ea45a4fa2c494f1eb2f4224c1c7340",
+      "bytes": 130991,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-desktop.png",
+      "sha256": "3ed5190d6d943f5a277cab472d7bbab38f6ec6ae268bc68bbcb830cf7e2d427f",
+      "bytes": 588912,
+      "width": 1440,
+      "height": 4538,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-mobile-focus.png",
+      "sha256": "29ebed60f4647146108d6d8face849b7d020c50f4dc056bd72f98672c4232f18",
+      "bytes": 62257,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-engine-mobile.png",
+      "sha256": "ad4251602fa079201fbe7675eeee099a292e5f4269801f43361a8190f4646034",
+      "bytes": 562928,
+      "width": 390,
+      "height": 7950,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-home-desktop-focus.png",
+      "sha256": "aeb818a911fed7fe2431a6f618110ba4d9d6578e77ff9a370360a49e7ab8aab4",
+      "bytes": 174535,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-home-desktop.png",
+      "sha256": "823f8c01ec25f8d89a8a27b55fd97ea4eb9bb0a8ff8a69d37f4eef096f7ed5f3",
+      "bytes": 428610,
+      "width": 1440,
+      "height": 3258,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-home-mobile-focus.png",
+      "sha256": "d261c6ac4a39595d44ab3b2ce90cf82a2513465d62bde54c47d9834569756039",
+      "bytes": 65522,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-home-mobile.png",
+      "sha256": "c9b3e0cbf27d5b143f8950bb24d757bd8d71322bfb6d1de0e4ac8df785893f95",
+      "bytes": 278239,
+      "width": 390,
+      "height": 4331,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-login-desktop-focus.png",
+      "sha256": "b24eb992866339db55aa4a7ffb56d3f28d736dd80d557b0ad5305eb367659c43",
+      "bytes": 86979,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-login-desktop.png",
+      "sha256": "b2a0d49af68a255bad56d2bf5b6a8596576e8ed72296cc3583ba6863225a5aea",
+      "bytes": 86698,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-login-mobile-focus.png",
+      "sha256": "2b725d4716b5c3cfa76936dfb5534aedd78aa2394cfecb44735c87d34bd4cdc2",
+      "bytes": 55297,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-login-mobile.png",
+      "sha256": "f964a900b68a327a3c8207fa9a8fa9def4f2a40ff50e221ed6a3a1fdd7aa420e",
+      "bytes": 76637,
+      "width": 390,
+      "height": 1466,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-open-desktop-focus.png",
+      "sha256": "c363675e202a6cf96892958ccb849eb168209858b980296e22f3fe6a590c5a69",
+      "bytes": 111009,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-open-desktop.png",
+      "sha256": "db6f71bcaef5f9e92d90ce80b10c235f050876a759bb1b8581a5071642a9247a",
+      "bytes": 389475,
+      "width": 1440,
+      "height": 3636,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-open-mobile-focus.png",
+      "sha256": "d238e3eb9f381f82c14b42b3eb7de551dd898f13bf3adf6adbce9a8f7ac8d4ee",
+      "bytes": 78963,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-open-mobile.png",
+      "sha256": "b9163744b93bd042550b62993a3b0b08ed3175432f7714e0ca6f35e4c769e404",
+      "bytes": 300357,
+      "width": 390,
+      "height": 4510,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-desktop-focus.png",
+      "sha256": "6ffb6773be804683cb081b7dec53bf0439143f0934404a06fafa3be00e328248",
+      "bytes": 161995,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-desktop.png",
+      "sha256": "c5e056bdc0a1dc1dad7077b242e496e6743b83a8eb3dcc6367f94a020b716988",
+      "bytes": 520853,
+      "width": 1440,
+      "height": 3846,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-mobile-focus.png",
+      "sha256": "0d96f9fde26580139645791542d1c5d5417cce114281d18947c73d305590d2e4",
+      "bytes": 69848,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-pricing-mobile.png",
+      "sha256": "33a85981554b5f19a69e505d7763404704c761ebd0a1944250a0747fc032fb00",
+      "bytes": 499193,
+      "width": 390,
+      "height": 6650,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-desktop-focus.png",
+      "sha256": "be5dc88873674955ff2162b351394f093e017a500947ad1a4e4c265911c9a827",
+      "bytes": 142575,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-desktop.png",
+      "sha256": "a9c8f189b810cd644a5049973218e4cbb58c5f58c76d68e83122fc48b123ba63",
+      "bytes": 361066,
+      "width": 1440,
+      "height": 2923,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-mobile-focus.png",
+      "sha256": "c1aec9e695d2b049503016e4423244ef2b6db8c96c9542d71d9823d38371ee8c",
+      "bytes": 75980,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-profiles-mobile.png",
+      "sha256": "ad718732d1437856b3f2546695c779e9d7422e1d240b0c5b5f407013cac47608",
+      "bytes": 317634,
+      "width": 390,
+      "height": 4497,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-desktop-focus.png",
+      "sha256": "b20e9fbb5e07cd9a5dab97211e88a9cdbc777f6b4dc480791fbdea9b98324a33",
+      "bytes": 80657,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-desktop.png",
+      "sha256": "9e75305672980e9c815d7819a867852f09e9c812aa370de28c3b83e2789eea95",
+      "bytes": 80327,
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-mobile-focus.png",
+      "sha256": "82e61ab10bdf0c76b7f22aae3ecbbeca41dc517506e92c8f39d45cba1843abbf",
+      "bytes": 52519,
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-qa-not-found-mobile.png",
+      "sha256": "b2133c4914b5c759b9400b23beea08933d50e2b898c8e4a37a8375aab85c35e8",
+      "bytes": 70844,
+      "width": 390,
+      "height": 1345,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop-focus.png",
+      "bytes": 163311,
+      "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf",
+      "width": 1440,
+      "height": 1000,
+      "phase": "after-independent-qa"
+    },
+    {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile-focus.png",
+      "bytes": 40279,
+      "sha256": "fc9a3dfb2a490598a6f8189c1593ad5b9bb08aceb016f3c440629cdcb40885c4",
+      "width": 390,
+      "height": 844,
+      "phase": "after-independent-qa"
+    }
+  ],
+  "rawEvidence": [
+    "visual/browser-ledger.json",
+    "visual/browser-ledger-initial.json",
+    "visual/additional-states.json",
+    "visual/editor-diagnostics.json",
+    "visual/catalog-item-inventory.json",
+    "visual/desktop-ledger.json",
+    "visual/desktop-focus-ledger.json"
+  ],
+  "limits": [
+    "Local production builds and simulated origin only; no deployment or production-ready claim.",
+    "Account/login/admin are real unconfigured/refused states; authenticated/member history/provider interactions not verified.",
+    "No dedicated browser/image-viewer tool available: screenshots captured but no independent human aesthetic review.",
+    "Desktop screenshot viewport framing is not native IPC/GPU proof; busy is explicit visual fixture.",
+    "Before screenshots are byte-verified peer captures, not independently recreated baseline.",
+    "Concurrent unrelated source edits prevent whole-checkout stable-source certification.",
+    "No entire repository gate rerun; existing scoped tests retain1failure and root build retains14errors."
+  ],
+  "safety": "SAFETY: Only generated Markdown/JSON/PNG/log evidence in owned paths. No TS/JS source, type assertions, lint exemptions, dependencies, behavior/contracts, commits, push, provider/production mutation.",
+  "ledgerStatusCounts": {
+    "PASS": 82
+  }
+}

@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "status": "BASELINE_PREPARED_CANDIDATE_NOT_VERIFIED",
+  "capturedAt": "2026-10-02T09:02:06.296923+00:00",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "branch": "production-swarm",
+  "localHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "worktreeInventorySha256": "fe52317041b984c2cfd11976efdddf9efdcd38631a1c52ab8e01c70c27cde936",
+  "sourceStatusCount": 1002,
+  "trackedDirtyCount": 368,
+  "untrackedCount": 634,
+  "currentSourceFiles": 1910,
+  "baseFiles": 1101,
+  "oldPublishedFiles": 456,
+  "oldReviewedCi": {
+    "sha": "346933c105305224d575bf9319256301c1eeabfa",
+    "fail": 9,
+    "skip": 2,
+    "pass": 0,
+    "fresh": false
+  },
+  "oldPublishedDiff": {
+    "D": 825,
+    "M": 204,
+    "A": 180,
+    "R": 1,
+    "freshReproductionCommand": "git diff --name-status dd77cc9cb91d24091082e0c5bc20a130f0f51ffc 346933c105305224d575bf9319256301c1eeabfa",
+    "freshlyReproducedCounts": {
+      "D": 825,
+      "M": 204,
+      "A": 180,
+      "R": 1
+    }
+  },
+  "localBuild": {
+    "status": "NOT_RERUN",
+    "datedDeepReviewStatus": "FAIL",
+    "reason": "Full root build/gate belong to serial integration; no historical green transferred."
+  },
+  "originalLocalIds": 113,
+  "missing53DelegatedExclusively": "missing-capabilities",
+  "ledgerRows": 355,
+  "laneTaskCounts": {
+    "authoring-assets": 58,
+    "engine-physics": 40,
+    "desktop-cli": 73,
+    "missing-capabilities": 59,
+    "identity-provider": 13,
+    "security-delivery": 73,
+    "billing": 25,
+    "sites-accessibility": 14
+  },
+  "unapprovedMissingBasePaths": [
+    "tests/e2e/desktop-asset-import-order-golden.test.ts",
+    "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
+    "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+    "tests/helpers/scoped-tmpdir.ts"
+  ],
+  "artifactInventory": "artifact-inventory.json",
+  "ownership": "ownership.json",
+  "ledger": "ledger.json",
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "7a5e6d6bacd793f5fd177f64075d7d5f296e974aa02e90b76ccabf634eb64242",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git branch --show-current",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "ff8895a91084f4472b90faef85d7f1f246ecf5821a7bdba385dad9ec60bee678",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git status --porcelain=v1 -z --untracked-files=all",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "6aabff295df589b9f477016f2686c0db9efab9def720accd20f38cd34b10001d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-tree -rz dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "85f4a8738c521917b364af9be7d8f15602f253f5e099ca2041381c9857e3b8e0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-tree -rz 346933c105305224d575bf9319256301c1eeabfa",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "0337f4a2ab6c750df7e6437635da59f1a5398a086ddaf497b61c459a1cb5c58b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-tree -rz 4e532e2fbf43e9948741578ab6208a3277870405",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "5df4cb3fbe680efec496cdb8e8f6c7f66446805ce150b6c2c966702ff05a559a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-files -z",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "af4e1ddee6fd4267f75cd0af2a1f2d60454ef6d81081faf82c282ce0c4253431",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-files --others --exclude-standard -z",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "73f4bc14777d8ea9c0e792b060add4c0f31c604d460548efebdaaacf918f2833",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    },
+    {
+      "command": "git ls-files --stage -z",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "stdoutSha256": "ccd536f36da8d6cee57cbc1497ec3144c7d24cebbacdfd7b208c6fcec0a56c1b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeoutSeconds": 30
+    }
+  ],
+  "baselineTests": "No application tests executed by this report-only preparation node.",
+  "resources": "No fixture copies, servers, containers, installs, accounts or provider connections; zero temporary resources requiring cleanup.",
+  "publicationPerformed": false,
+  "modelDispatch": "Requested model/tier recorded; no endpoint available to verify or launch model dispatch from this node.",
+  "remoteEvidence": [
+    {
+      "path": "remote-pr.json",
+      "exit": 0
+    },
+    {
+      "path": "remote-checks.json",
+      "exit": 0
+    }
+  ],
+  "executableCounts": {
+    "base": 4,
+    "oldPublished": 0,
+    "current": 4
+  },
+  "priorPreparationFailures": [
+    {
+      "step": "machine finding normalization",
+      "exit": 1,
+      "output": "AttributeError: 'str' object has no attribute 'get' on final additionalFindings",
+      "recovery": "Accept string-form additional findings without dropping records; successful script rerun."
+    },
+    {
+      "step": "shell-filtered diff counting",
+      "exit": 1,
+      "output": "IndexError: list index out of range",
+      "recovery": "Native Git diff captured directly with subprocess; exhaustive counts D825/M204/A180/R1 now asserted."
+    }
+  ],
+  "freshRemote": {
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+    "state": "OPEN",
+    "sha": "346933c105305224d575bf9319256301c1eeabfa",
+    "base": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+    "ciConclusions": {
+      "FAILURE": 9,
+      "SKIPPED": 2
+    },
+    "capturedAt": "2026-10-02T09:02:08.606346+00:00"
+  },
+  "controlStatus": "DONE_VERIFIED_REPORT_INVARIANTS_ONLY",
+  "ownershipHandoff": "RELEASED_TO_SERIAL_INTEGRATION; lanes own only their fix pairs after dispatch",
+  "applicationCompletion": "NOT_VERIFIED_BY_BASELINE",
+  "productionStatus": "BLOCKED",
+  "additiveReportInventory": "control-artifact-inventory.json"
+}

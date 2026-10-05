@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneAxi inspector — /home/devuser/Documents/Projects/sceneaxi</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 24px; background: Canvas; color: CanvasText; }
+  h1 { font-size: 1.1rem; margin: 0 0 4px; }
+  .root { margin: 0 0 20px; overflow-wrap: anywhere; }
+  form { display: grid; gap: 12px; max-width: 46rem; min-width: 0; }
+  label { display: grid; gap: 4px; min-width: 0; }
+  input { font: inherit; width: 100%; min-width: 0; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid currentColor; border-radius: 4px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+  button { font: inherit; min-height: 36px; padding: 8px 12px; cursor: pointer; background: ButtonFace; color: ButtonText; border: 1px solid currentColor; border-radius: 4px; }
+  button[disabled] { cursor: not-allowed; border-style: dashed; }
+  :is(button,input,select,textarea,a[href],summary,[tabindex]):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; scroll-margin: 12px; }
+  @media (forced-colors: active) { :focus-visible { outline-color: Highlight; } }
+  :is(input,select,textarea):user-invalid { border-color: #b3261e; }
+  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
+  button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 4px; }
+  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
+  pre { border: 1px solid currentColor; border-radius: 4px; padding: 16px; max-width: 60rem; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; tab-size: 2; line-height: 1.65; }
+  pre:empty { min-height: 3rem; border-style: dashed; }
+  pre[aria-busy="true"] { border-inline-start-width: 3px; }
+  code { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  @media (prefers-color-scheme: dark) { :is(input,select,textarea):user-invalid { border-color: #FF4D5E; } }
+  .phase { font-weight: 700; }
+  #note:not(:empty) { display: block; margin-top: 8px; padding: 8px 12px; border-left: 2px solid currentColor; overflow-wrap: anywhere; }
+  .refused { color: #b3261e; }
+  /* Foundations danger paint remains legible on the browser's dark Canvas. */
+  @media (prefers-color-scheme: dark) { .refused { color: #FF4D5E; } }
+  footer { margin-top: 32px; max-width: 46rem; overflow-wrap: anywhere; }
+  @media (max-width: 480px) { body { padding: 16px; } .actions button { flex: 1 1 auto; } }
+</style>
+</head>
+<body>
+<h1>SceneAxi inspector</h1>
+<p class="root">Serving <code>/home/devuser/Documents/Projects/sceneaxi</code> — local authoring only, loopback only.</p>
+
+<form id="edit">
+  <label>Document path (relative to the project root)
+    <input id="documentPath" value="scene.json" required />
+  </label>
+  <label>JSON Pointer
+    <input id="jsonPointer" value="/data/entities/0/x" />
+  </label>
+  <label>New value (JSON)
+    <input id="newValue" value="42" required />
+  </label>
+  <div class="actions">
+    <button type="submit" id="propose">Propose</button>
+    <button type="button" id="accept" disabled>Accept</button>
+    <button type="button" id="reject" disabled>Reject</button>
+    <button type="button" id="recover" hidden>Resolve pending apply</button>
+    <button type="button" id="reconcile" hidden>Read authoritative state</button>
+  </div>
+</form>
+
+<p>Phase: <span class="phase" id="phase">idle</span> <span id="note" role="status" aria-live="polite"></span></p>
+<pre id="diff">No proposal yet. Propose an edit to review its diff before anything is written.</pre>
+
+<footer>
+  Nothing is written until you accept. This page is a protocol client of
+  <code>@sceneaxi/authoring-core</code>; the same operation through the CLI
+  produces byte-identical documents.
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { phase: "idle", reviewToken: null, busy: false, uncertain: false };
+
+function controls() {
+  const blocked = state.busy || state.uncertain;
+  const reviewing = state.phase === "reviewing" && typeof state.reviewToken === "string";
+  $("propose").disabled = blocked;
+  $("accept").disabled = blocked || !reviewing;
+  $("reject").disabled = blocked || !reviewing;
+  $("recover").disabled = blocked;
+  $("reconcile").hidden = !state.uncertain;
+  $("reconcile").disabled = state.busy;
+}
+
+function render(payload) {
+  const snapshot = payload.snapshot;
+  if (snapshot) {
+    if (Object.hasOwn(payload, "reviewToken")) state.reviewToken = payload.reviewToken;
+    state.phase = snapshot.phase ?? state.phase;
+    $("phase").textContent = state.phase;
+    $("diff").textContent = snapshot.renderedDiff
+      ? (state.phase === "applied" ? "Applied change (history):\n" : "") + snapshot.renderedDiff
+      : "No current proposal. Propose an edit to review before anything is written.";
+    $("recover").hidden = snapshot.journalRecoveryPending !== true;
+  }
+  $("note").textContent = payload.ok ? "" : " — refused: " + payload.message;
+  $("note").className = payload.ok ? "" : "refused";
+  controls();
+}
+
+async function call(path, body) {
+  if (state.busy || (state.uncertain && path !== "/api/state")) return;
+  state.busy = true;
+  controls();
+  try {
+    const response = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: body === undefined ? {} : { "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await response.json();
+    if (!payload || typeof payload.ok !== "boolean" ||
+        (path === "/api/state" && !payload.snapshot)) throw new Error("Invalid response");
+    if (path === "/api/state") state.uncertain = false;
+    render(payload);
+  } catch {
+    state.uncertain = true;
+    state.reviewToken = null;
+    $("phase").textContent = "unknown";
+    $("diff").textContent = "Current outcome unknown. Read authoritative state before another operation.";
+    $("note").textContent = " — connection or response failed; outcome unknown. No write was retried. Read authoritative state.";
+    $("note").className = "refused";
+  } finally {
+    state.busy = false;
+    controls();
+  }
+}
+
+$("edit").addEventListener("submit", (event) => {
+  event.preventDefault();
+  let newValue;
+  try {
+    newValue = JSON.parse($("newValue").value);
+  } catch (error) {
+    $("note").textContent = " — new value must be valid JSON: " + error.message;
+    $("note").className = "refused";
+    return;
+  }
+  void call("/api/propose", {
+    documentPath: $("documentPath").value,
+    jsonPointer: $("jsonPointer").value,
+    newValue,
+  });
+});
+$("accept").addEventListener("click", () => void call("/api/accept", {
+  reviewToken: state.reviewToken,
+}));
+$("reject").addEventListener("click", () => void call("/api/reject", {
+  reviewToken: state.reviewToken,
+}));
+$("recover").addEventListener("click", () => void call("/api/recover", {}));
+$("reconcile").addEventListener("click", () => void call("/api/state"));
+void call("/api/state");
+</script>
+</body>
+</html>

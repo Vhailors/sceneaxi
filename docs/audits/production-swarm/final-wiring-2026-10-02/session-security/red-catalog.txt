@@ -1,0 +1,54 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi
+
+xx···············································
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/site-kit/test/catalog-server-fetch.test.ts > configured-origin catalog own-session transport > composed boundary refuses credential accessors and Proxy get traps without reads
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ packages/site-kit/test/catalog-server-fetch.test.ts:28:24
+     26|     const getter = vi.fn(() => "own-session.secret");
+     27|     expect(await plane.identity.resolvePrincipal({ surface: "site", ge…
+     28|     expect(getter).not.toHaveBeenCalled();
+       |                        ^
+     29|     const get = vi.fn(() => { throw new Error("private Proxy read"); }…
+     30|     const proxy = new Proxy({ surface: "site" as const, sessionToken: …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/site-kit/test/catalog-server-fetch.test.ts > configured-origin catalog own-session transport > captures deployment options without evaluating origin/credential getters
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/site-kit/test/catalog-server-fetch.test.ts:40:25
+     38|     const options = { approved: true, get configuredOrigin() { return …
+     39|     const plane = createCatalogServerIdentityPlane(options);
+     40|     expect(plane.wired).toBe(false);
+       |                         ^
+     41|     expect(await plane.identity.resolvePrincipal({ surface: "site", se…
+     42|     expect(getter).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 47 passed (49)
+   Start at  16:40:42
+   Duration  6.38s (transform 5.40s, setup 0ms, import 1.65s, tests 4.57s, environment 0ms)
+

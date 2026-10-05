@@ -89,6 +89,7 @@ import {
   parseScenePackageCatalog,
   type ScenePackageMutation,
   type ComposedScene,
+  type JsonObject,
   type PhysicsWorldHost,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
@@ -285,7 +286,7 @@ export type DesktopMountableScene = MountableScene & Readonly<{
 }>;
 
 function consistentProjectAssetManifest(
-  data: unknown,
+  data: JsonObject,
   stored: ComposedScene,
 ):
   | Readonly<{

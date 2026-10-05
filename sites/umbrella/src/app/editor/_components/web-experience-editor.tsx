@@ -24,8 +24,13 @@ export function WebExperienceEditor({
     <section className="webxp-editor" aria-label="Web Experience editor">
       <header className="webxp-head">
         <div>
-          <p className="eyebrow">Web Experience profile</p>
-          <h2>Page canvas</h2>
+          <div className="title-row">
+            <h2>Page canvas</h2>
+            <span className="chip chip-experimental">
+              <span className="dot" aria-hidden="true" />
+              Web Experience profile
+            </span>
+          </div>
           <p>
             Page and HTML authoring, one site canvas, known asset injection, and
             a safe Three embed. Desktop engine tools stay outside this surface.
@@ -140,9 +145,9 @@ export function WebExperienceEditor({
 
           <section className="webxp-three" aria-label="Safe Three embed">
             <div className="webxp-three-head">
-              <div>
-                <p className="eyebrow">Safe Three embed</p>
+              <div className="title-row">
                 <h3>Presentation seam</h3>
+                <span className="chip chip-dormant">Safe Three embed</span>
               </div>
               <span className="mono">
                 {view.threeEmbed.advancesSession ? "advances" : "draw-only"}

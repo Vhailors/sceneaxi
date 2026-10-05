@@ -1,0 +1,10 @@
+# Conditional integration proposal — not applied
+
+Evidence: maximum source admission passes actual current public proposal; GUI maximum apply/reload is uncovered. Do not change parser/storage/budgets merely because a historical stall exists.
+
+1. After explicit handoff, desktop owner instruments `electron/main.ts:943-953`, bridge `asset-import`/authoring accept/reload command dispatch; importer owner instruments `contained-gltf.ts:2369-2477`, manifestFrom/projectAssetManifestEntry, copyEntry `:2561`. Emit monotonic start/end plus job-generation and bytes only (no document bodies, credentials or paths). Profile main and renderer heartbeat, process working-set RSS using this driver.
+2. If planning stalls, desktop adapter owns ONE worker per generation for read/parse/projection/base64/review planning; strict source/path/limit authority is rechecked on main commit. Carry immutable source digest, base document hash and job generation across worker boundary. Cancellation retires generation/worker BEFORE proposal publication; late results never alter state. Do not cancel atomic apply/rollback mid-write. Keep canonical copy byte identity and current 8MiB/16 asset limits.
+3. Add explicit native asset-cancel command/control only through canonical desktop command schema/map with narrow job identifier and state transition. UI cancel ack <=500ms and no canonical or copy mutation BEFORE commit. Do not label review Reject or picker Cancel as in-flight cancellation. Enable driver assertion only after real seam implemented and source+packaged artifact matched.
+4. Serializer compaction/versioning is NOT proposed without measured evidence and compatibility policy. Keep reviewed diffs/binding, canonical stored bytes, digest equality, symlink/path checks, rollback and fsync ordering.
+
+Integrator acceptance: run deferred driver on immutable source-bound native artifact (exit2 remains incomplete until true in-flight cancellation probe added), then retained 16x8MiB/count17/next-byte/source+destination alias/materialization rollback checks. No signing/external reclassification of this local performance/cancellation work.

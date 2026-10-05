@@ -16,6 +16,7 @@ import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   HOSTED_AI_DEFAULT_CONFIG,
+  createHostedAiPricingPolicy,
   appendCreditEntry,
   adjustSupportLedger,
   readSupportLedger,
@@ -81,14 +82,32 @@ import { verifyLoginRequestOrigin } from "../../sites/umbrella/src/lib/login-flo
  * a guarantee.
  */
 
+type JsonValue = string | number | boolean | null | undefined | readonly JsonValue[] | JsonObject;
+
+type JsonObject = { readonly [key: string]: JsonValue };
+
+type RefusalOverrideValue = JsonValue | ReturnType<typeof principal> | LedgerState | typeof admin | typeof HOSTED_AI_DEFAULT_CONFIG | (() => never);
+
+type RefusalOverrides = { readonly [key: string]: RefusalOverrideValue };
+
+function isObject(value: unknown): value is object {
+  return typeof value === "object" && value !== null;
+}
+
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+
 const NOW_SECONDS = Math.floor(NOW / 1000);
+
 const clock = () => NOW;
+
 const CAPTAIN_EMAIL = "captain@example.com";
+
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
 });
+
 if (!adminResolution.ok) throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: guards check the identity's runtime provenance,
 // so a structurally identical `{ email, source }` literal is refused.
 const admin = adminResolution.value;
@@ -104,7 +123,9 @@ const verifyBody = (body: string) => {
     secret: SECRET,
     now: NOW,
   });
+
   if (!result.ok) throw new Error(`verify fixture failed: ${result.message}`);
+
   return result.value;
 };
 
@@ -119,6 +140,7 @@ const settlementFor = (intent: CheckoutSessionIntent) => ({
   quantity: 1,
   stripePriceId: intent.stripePriceId,
 });
+
 const SECRET = "whsec_refuse_matrix_fixture";
 
 const observed = new Set<AuthRefuseReason | BillingRefuseReason>();
@@ -135,7 +157,7 @@ const user = (
   userId: string,
   email: string,
   disabled = false,
-): never =>
+) =>
   ({
     schemaVersion: 1,
     kind: "sceneaxi.user",
@@ -144,9 +166,10 @@ const user = (
     emailVerified: true,
     disabled,
     createdAt: "2026-07-25T09:00:00Z",
-  }) as never;
+  }) as const;
 
 const CREW = user("usr_crew", "crew@example.com");
+
 const GONE = user("usr_gone", "gone@example.com", true);
 
 const account = (userId: string): CreditAccount =>
@@ -156,7 +179,7 @@ const account = (userId: string): CreditAccount =>
     accountId: `acc_${userId}`,
     userId,
     createdAt: "2026-07-25T09:00:00Z",
-  }) as CreditAccount;
+  });
 
 const principal = (
   overrides: {
@@ -167,9 +190,10 @@ const principal = (
     disabled?: boolean;
     expiresAt?: string;
   } = {},
-): unknown => {
+) => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
+
   return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
@@ -204,6 +228,7 @@ const principal = (
 
 const funded = (credits: number, forAccount = account("usr_crew")): LedgerState => {
   if (credits === 0) return createLedgerState(forAccount);
+
   const appended = appendCreditEntry(createLedgerState(forAccount), {
     entryId: "ent_fund",
     movement: "grant",
@@ -212,21 +237,28 @@ const funded = (credits: number, forAccount = account("usr_crew")): LedgerState 
     idempotencyKey: "fixture:fund",
     now: NOW,
   });
+
   if (!appended.ok) throw new Error("fixture funding failed");
+
   return appended.value.state;
 };
 
 const packCatalog = () => {
   const loaded = loadCreditPackCatalog();
+
   if (!loaded.ok) throw new Error("catalog load failed");
+
   return loaded.value;
 };
 
 const listing = (listingId: string): CatalogListing => {
   const loaded = loadCatalogListings();
+
   if (!loaded.ok) throw new Error("listing load failed");
   const found = lookupCatalogListing(loaded.value, listingId);
+
   if (!found.ok) throw new Error(`missing fixture listing ${listingId}`);
+
   return found.value;
 };
 
@@ -243,12 +275,15 @@ const listingIntentFor = (
   userId: string,
 ): CheckoutSessionIntent => {
   const held = listing(listingId);
+
   const price = held.moneyPrice ?? {
     unitAmount: 1200,
     currency: "usd",
     stripePriceId: "price_test_unlisted",
   };
+
   const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_case_${listingId}`;
+
   return {
     schemaVersion: 1,
     kind: "sceneaxi.checkout-session-intent",
@@ -273,6 +308,7 @@ const listingCompletion = (
 ) => {
   const listingId = overrides.listingId ?? "harbour-diorama";
   const intent = listingIntentFor(listingId, overrides.userId ?? "usr_crew");
+
   const parsed = parseCheckoutCompletedEvent({
     verified: verifyBody(
       JSON.stringify({
@@ -296,9 +332,11 @@ const listingCompletion = (
     intent,
     settlement: settlementFor(intent),
   });
+
   if (!parsed.ok) {
     throw new Error(`fixture completion failed: ${parsed.message}`);
   }
+
   return parsed.value;
 };
 
@@ -306,6 +344,7 @@ const ADAPTER: IdentityAdapter = Object.freeze({
   authenticate({ email, password }) {
     if (password !== "pw") return undefined;
     const userId = email === "gone@example.com" ? "usr_gone" : "usr_crew";
+
     return {
       user: { id: userId, email, emailVerified: true },
       session: {
@@ -380,6 +419,7 @@ describe("auth refuse matrix", () => {
         }),
       }).signIn(CREDENTIALS),
     );
+    // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
     record(
       await port({
         adapter: Object.freeze({ authenticate: () => ({}) as never }),
@@ -460,6 +500,7 @@ describe("auth refuse matrix", () => {
     const live = port({}, store);
     const signedIn = await live.signIn(CREDENTIALS);
     expect(signedIn.ok).toBe(true);
+
     if (!signedIn.ok) return;
     const sessionId = signedIn.value.principal.session.sessionId;
 
@@ -487,6 +528,7 @@ describe("auth refuse matrix", () => {
       ).verifySession({ surface: "web-shell", sessionId, token: "tok" }),
     );
 
+    // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
     const corrupt: IdentityStore = Object.freeze({
       findUserByEmail: () => undefined,
       findUserById: () => CREW,
@@ -494,6 +536,7 @@ describe("auth refuse matrix", () => {
       findSession: () => ({ sessionId: "ses_bad" }) as never,
       deleteSession: () => true,
     });
+
     record(
       await port({}, corrupt).verifySession({
         surface: "web-shell",
@@ -502,6 +545,7 @@ describe("auth refuse matrix", () => {
       }),
     );
 
+    // SAFETY: The session literal intentionally names the forbidden Kids surface so the real identity port exercises its surface refusal before issuing a principal.
     const kidsStore = createInMemoryIdentityStore({
       users: [CREW],
       sessions: [
@@ -517,6 +561,7 @@ describe("auth refuse matrix", () => {
         } as never,
       ],
     });
+
     record(
       await port({}, kidsStore).verifySession({
         surface: "web-shell",
@@ -525,6 +570,7 @@ describe("auth refuse matrix", () => {
       }),
     );
 
+    // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
     const badUserStore: IdentityStore = Object.freeze({
       findUserByEmail: () => undefined,
       findUserById: () => ({ userId: "usr_crew" }) as never,
@@ -542,6 +588,7 @@ describe("auth refuse matrix", () => {
         }) as never,
       deleteSession: () => true,
     });
+
     record(
       await port({}, badUserStore).verifySession({
         surface: "web-shell",
@@ -554,8 +601,10 @@ describe("auth refuse matrix", () => {
   it("reaches every guard refusal", () => {
     record(requireRole(undefined, "admin", { now: NOW, admin }));
     const issued = principal();
-    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
+
+    if (!isObject(issued)) throw new Error("fixture");
     record(requireRole({ ...issued }, "user", { now: NOW, admin }));
+    // SAFETY: The literal "superadmin" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
     record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
     record(requireRole(principal(), "admin", { now: NOW, admin }));
     record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));
@@ -574,6 +623,7 @@ describe("auth refuse matrix", () => {
     );
     record(requireRole(principal({ surface: "kids" }), "user", { now: NOW, admin }));
     record(requireRole(principal(), "user", { now: Number.NaN, admin }));
+    // SAFETY: This case deliberately injects undefined into a required input; the runtime boundary must return the named refusal recorded below.
     record(
       requireRole(principal(), "user", {
         now: NOW,
@@ -618,6 +668,7 @@ describe("auth refuse matrix", () => {
 describe("billing refuse matrix", () => {
   it("reaches every ledger refusal", () => {
     const state = funded(100);
+
     const base = {
       entryId: "ent_x",
       movement: "grant" as const,
@@ -626,6 +677,7 @@ describe("billing refuse matrix", () => {
       idempotencyKey: "case:1",
       now: NOW,
     };
+
     record(appendCreditEntry(null, base));
     record(appendCreditEntry(state, null));
     record(appendCreditEntry(state, { ...base, now: Number.NaN }));
@@ -648,6 +700,7 @@ describe("billing refuse matrix", () => {
     record(deriveBalance("not an array"));
     record(deriveBalance([{ nope: true }]));
     const first = state.entries[0];
+
     if (first !== undefined) {
       record(deriveBalance([{ ...first, sequence: 9 }]));
     }
@@ -655,11 +708,14 @@ describe("billing refuse matrix", () => {
 
   it("reaches every metering refusal", async () => {
     const state = funded(10);
+
     const store = createInMemoryCreditStore({
       accounts: [state.account],
       entries: state.entries,
     });
-    const meter = async (overrides: Record<string, unknown>) =>
+
+    // SAFETY: The fixture starts with a real principal, admin and funded ledger; the explicit table overrides deliberately invalidate one metering input so meterCredits can record its refusal.
+    const meter = async (overrides: RefusalOverrides) =>
       record(
         await meterCredits({
           principal: principal(),
@@ -673,6 +729,7 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
+
     await meter({ now: Number.NaN, admin });
     await meter({ amount: 0 });
     await meter({ reason: "" });
@@ -683,14 +740,18 @@ describe("billing refuse matrix", () => {
 
   it("reaches every hosted-AI routing refusal", async () => {
     const state = funded(100);
-    const hosted = async (overrides: Record<string, unknown>) =>
+
+    // SAFETY: The fixture starts with a real principal, admin and configured pricing policy; each explicit override exercises runMeteredModelCall runtime refusal without trusting the invalid field.
+    const hosted = async (overrides: RefusalOverrides) =>
       record(
         await runMeteredModelCall({
           route: "hosted",
           capability: "hosted-ai-assistant",
           call: () => ({ text: "case" }),
           now: NOW,
-          hostedAi: { enabled: true },
+          hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: "fixture/model", operation: "complete", capability: "hosted-ai-assistant", credits: 1 }]) },
+        model: "fixture/model",
+        operation: "complete",
           admin,
           principal: principal(),
           state,
@@ -704,6 +765,7 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
+
     await hosted({ route: "not-a-route" });
     await hosted({ hostedAi: HOSTED_AI_DEFAULT_CONFIG });
     await hosted({
@@ -776,6 +838,7 @@ describe("billing refuse matrix", () => {
     record(lookupCreditPack({ packs: [] }, "starter"));
     record(lookupCreditPack(packCatalog(), "platinum"));
     record(resolveCreditPackRevision("starter", "price_test_unknown", 500));
+    // SAFETY: The literal "barter" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
     record(assertModeAuthorized("barter" as never, true));
 
     const request = {
@@ -788,6 +851,7 @@ describe("billing refuse matrix", () => {
       idempotencyKey: "checkout:case",
       now: NOW,
     };
+
     record(createCheckoutSessionIntent({ ...request, now: Number.NaN }));
     record(createCheckoutSessionIntent({ ...request, principal: null }));
     record(
@@ -797,6 +861,7 @@ describe("billing refuse matrix", () => {
       }),
     );
     record(createCheckoutSessionIntent({ ...request, mode: "live" }));
+    // SAFETY: This case deliberately injects null into a required input; the runtime boundary must return the named refusal recorded below.
     record(createCheckoutSessionIntent(null as never));
   });
 
@@ -811,8 +876,11 @@ describe("billing refuse matrix", () => {
       idempotencyKey: "checkout:case",
       now: NOW,
     });
+
     expect(packIntent.ok).toBe(true);
+
     if (!packIntent.ok) return;
+
     const body = JSON.stringify({
       id: "evt_case",
       type: "checkout.session.completed",
@@ -841,6 +909,7 @@ describe("billing refuse matrix", () => {
         },
       },
     });
+
     const header = signStripeWebhookPayload({
       payload: body,
       secret: SECRET,
@@ -919,6 +988,7 @@ describe("billing refuse matrix", () => {
         now: NOW,
       }),
     );
+    // SAFETY: This case deliberately supplies a non-string payload literal to verifyStripeWebhookSignature, which must validate and refuse it rather than interpret it as verified bytes.
     record(
       verifyStripeWebhookSignature({
         payload: { id: "evt" } as never,
@@ -1018,7 +1088,9 @@ describe("billing refuse matrix", () => {
 
     const harbour = listing("harbour-diorama");
     const moneyPrice = harbour.moneyPrice;
+
     if (moneyPrice === undefined) throw new Error("listing price missing");
+
     const listingIntent: CheckoutSessionIntent = {
       schemaVersion: 1,
       kind: "sceneaxi.checkout-session-intent",
@@ -1035,6 +1107,7 @@ describe("billing refuse matrix", () => {
       idempotencyKey: "checkout:listing",
       createdAt: new Date(NOW).toISOString(),
     };
+
     const listingEvent = parseCheckoutCompletedEvent({
       verified: verifyBody(
         JSON.stringify({
@@ -1058,7 +1131,9 @@ describe("billing refuse matrix", () => {
       intent: listingIntent,
       settlement: settlementFor(listingIntent),
     });
+
     expect(listingEvent.ok).toBe(true);
+
     if (listingEvent.ok) {
       // A listing completion grants no credits, so routing it into the grant
       // path must refuse rather than mint credits nobody bought.
@@ -1076,7 +1151,9 @@ describe("billing refuse matrix", () => {
       intent: packIntent.value,
       settlement: settlementFor(packIntent.value),
     });
+
     expect(packEvent.ok).toBe(true);
+
     if (packEvent.ok) {
       record(
         applyCheckoutCompletedGrant({
@@ -1085,6 +1162,7 @@ describe("billing refuse matrix", () => {
           now: NOW,
         }),
       );
+      // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
       record(
         applyCheckoutCompletedGrant({
           state: { entries: [] } as never,
@@ -1094,6 +1172,7 @@ describe("billing refuse matrix", () => {
       );
       // A *copy* of a verified completion is not a verified completion, so the
       // live-mode gate has to be reached with a genuinely parsed live one.
+      // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
       record(
         applyCheckoutCompletedGrant({
           state: funded(0),
@@ -1110,12 +1189,15 @@ describe("billing refuse matrix", () => {
       ...packIntent.value,
       credits: 1_000_000,
     };
+
     const inflatedEvent = parseCheckoutCompletedEvent({
       verified: verifyBody(body),
       intent: inflatedIntent,
       settlement: settlementFor(inflatedIntent),
     });
+
     expect(inflatedEvent.ok).toBe(true);
+
     if (inflatedEvent.ok) {
       record(
         applyCheckoutCompletedGrant({
@@ -1132,6 +1214,7 @@ describe("billing refuse matrix", () => {
       mode: "live",
       idempotencyKey: "checkout:live",
     };
+
     const liveEvent = parseCheckoutCompletedEvent({
       verified: verifyBody(
         JSON.stringify({
@@ -1155,7 +1238,9 @@ describe("billing refuse matrix", () => {
       intent: liveIntent,
       settlement: settlementFor(liveIntent),
     });
+
     expect(liveEvent.ok).toBe(true);
+
     if (liveEvent.ok) {
       record(
         applyCheckoutCompletedGrant({
@@ -1166,6 +1251,7 @@ describe("billing refuse matrix", () => {
       );
     }
 
+    // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
     record(
       applyCheckoutCompletedGrant({
         state: funded(0),
@@ -1173,6 +1259,7 @@ describe("billing refuse matrix", () => {
         now: NOW,
       }),
     );
+    // SAFETY: This deliberately hand-built verified-event lookalike lacks verifier provenance; parseCheckoutCompletedEvent checks that provenance and the test records its refusal.
     record(
       parseCheckoutCompletedEvent({
         verified: { timestamp: NOW_SECONDS, payload: body } as never,
@@ -1187,12 +1274,15 @@ describe("billing refuse matrix", () => {
     // bounded fixture-commerce path (sceneaxi#138).
     record(resolveFixtureCommerceListing("lantern-prop"));
     record(lookupCatalogListing({ listings: [] }, "lantern-prop"));
+    // SAFETY: The literal "barter" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
     record(assertCurrencyListed(listing("lantern-prop"), "barter" as never));
     const loaded = loadCatalogListings();
     expect(loaded.ok).toBe(true);
+
     if (loaded.ok) record(lookupCatalogListing(loaded.value, "nope"));
 
-    const buy = (overrides: Record<string, unknown>) =>
+    // SAFETY: The fixture supplies a resolved listing and funded ledger, with explicit table overrides to exercise the purchase runtime validator; no result is used as a successful purchase.
+    const buy = (overrides: RefusalOverrides) =>
       record(
         purchaseListingWithCredits({
           principal: principal(),
@@ -1204,6 +1294,7 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
+
     buy({ now: Number.NaN, admin });
     buy({ saleId: "" });
     buy({ surface: "kids" });
@@ -1249,6 +1340,7 @@ describe("billing refuse matrix", () => {
         surface: "kids",
       }),
     );
+    // SAFETY: The locally built checkout fixture deliberately overrides an invalid field; createListingCheckoutIntent validates the input before an intent can be accepted.
     record(
       createListingCheckoutIntent({
         principal: principal(),
@@ -1277,6 +1369,7 @@ describe("billing refuse matrix", () => {
         saleId: "sale_case_share",
       }),
     );
+
     const failedStore: CreditStore = Object.freeze({
       ...createInMemoryCreditStore(),
       findAccountByUserId: () => undefined,
@@ -1288,6 +1381,7 @@ describe("billing refuse matrix", () => {
         throw new Error("transaction failed");
       },
     });
+
     record(
       await persistCreditsSale({
         store: failedStore,
@@ -1303,9 +1397,10 @@ describe("billing refuse matrix", () => {
     // Money bookkeeping accepts no listing, gross, buyer, or mode, so each of
     // its refusals is reached by settling a real webhook whose evidence is wrong
     // in exactly one way.
+    // SAFETY: The copied completion intentionally loses runtime issuance provenance; recordMoneySale must refuse it, and the test never treats it as a verified completion.
     record(
       recordMoneySale({
-        completion: { ...(listingCompletion() as object) } as never,
+        completion: { ...listingCompletion() } as never,
         intent: listingIntentFor("harbour-diorama", "usr_crew"),
       }),
     );
@@ -1349,6 +1444,7 @@ describe("billing refuse matrix", () => {
       dashboardConfigured: true,
       secretConfigured: true,
     });
+
     const provider = (
       readinessOverride: Partial<typeof readiness> = {},
       methods: Partial<StripeConnectProvider> = {},
@@ -1388,12 +1484,14 @@ describe("billing refuse matrix", () => {
           },
         }),
       };
+
       return Object.freeze({ ...base, ...methods });
     };
+
     const onboard = (
       store: ReturnType<typeof createInMemoryConnectStore>,
       connectProvider: StripeConnectProvider | undefined,
-      overrides: Record<string, unknown> = {},
+      overrides: RefusalOverrides = {},
     ) =>
       startConnectOnboarding({
         principal: principal(),
@@ -1405,6 +1503,7 @@ describe("billing refuse matrix", () => {
         provider: connectProvider,
         ...overrides,
       });
+
     const moneySplit = Object.freeze({
       schemaVersion: 1 as const,
       kind: "sceneaxi.money-split-record" as const,
@@ -1422,6 +1521,7 @@ describe("billing refuse matrix", () => {
     });
 
     record(await onboard(createInMemoryConnectStore(), undefined));
+    // SAFETY: The literal "live" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
     record(await onboard(createInMemoryConnectStore(), provider({ mode: "live" as never })));
     record(
       await onboard(
@@ -1453,6 +1553,7 @@ describe("billing refuse matrix", () => {
         }),
       ),
     );
+    // SAFETY: This failing provider intentionally returns an empty onboarding value; the real onboarding boundary validates it and the test records refusal.
     record(
       await onboard(
         createInMemoryConnectStore(),
@@ -1460,12 +1561,14 @@ describe("billing refuse matrix", () => {
       ),
     );
     const failedBase = createInMemoryConnectStore();
+
     const failedStore = Object.freeze({
       ...failedBase,
       findOnboardingIntent() {
         throw new Error("store unavailable");
       },
     });
+
     record(await onboard(failedStore, provider()));
 
     const conflictStore = createInMemoryConnectStore();
@@ -1524,6 +1627,7 @@ describe("billing refuse matrix", () => {
         },
       }),
     });
+
     const disabledStore = createInMemoryConnectStore();
     await onboard(disabledStore, disabledProvider);
     await refreshConnectStatus({
@@ -1622,7 +1726,7 @@ describe("administrator support refusal paths", () => {
       const signedIn = await port.signIn({ surface: "site", email, password: "fixture" });
 
       if (!signedIn.ok) throw new Error(signedIn.message);
-      const plane = createUmbrellaIdentityPlane({}, { admin, identityPort: port, creditStore: credits, supportStore: { users, async listCheckoutIntents() { return []; } }, clock, sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}` });
+      const plane = createUmbrellaIdentityPlane({}, { admin, identityPort: port, creditStore: credits, supportStore: { users, async listCheckoutIntents() { return []; } }, deployment: { admin, billingMode: "test", clock, configuration: {}, adminReauthenticate: async (_credential, password) => password === "fixture" }, clock, sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}` });
 
       if (email !== CAPTAIN_EMAIL) {
         expect(await plane.ledgerSupport.lookup({ surface: "site", target: null })).toMatchObject({ ok: false, reason: "ADMIN_ROLE_REQUIRED" });
@@ -1630,9 +1734,9 @@ describe("administrator support refusal paths", () => {
       }
 
       expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "missing" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
-      expect((await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).ok).toBe(true);
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "11" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+      expect((await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields })).ok).toBe(true);
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields: { ...fields, delta: "11" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
     }
   });
 });
@@ -1649,6 +1753,7 @@ describe("the reason maps are honest in both directions", () => {
     const unreached = Object.values(AUTH_REFUSE_REASONS).filter(
       (reason) => !observed.has(reason),
     );
+
     expect(unreached).toEqual([]);
   });
 
@@ -1656,6 +1761,7 @@ describe("the reason maps are honest in both directions", () => {
     const unreached = Object.values(BILLING_REFUSE_REASONS).filter(
       (reason) => !observed.has(reason),
     );
+
     expect(unreached).toEqual([]);
   });
 });

@@ -13,7 +13,7 @@
  * writing to a deployment's intake store.
  *
  * The whole input on both paths is one injection: the TEST provider that would store
- * the record and the submitter's own declaration. This repository ships no catalog
+ * the record and the submitter's own declaration. This deployment has not configured the durable quarantine registry
  * store and no declaration form, so `umbrellaCatalogIntake()` resolves to `null`, the
  * page renders `CATALOG_INTAKE_STORAGE_UNAVAILABLE` without touching a provider, and
  * the action offers no control to press. Nothing here invents a licence, a rights
@@ -105,8 +105,8 @@ export type UmbrellaCatalogIntakePanel =
  * collects the declarations intake requires, so the honest answer is `null` rather
  * than a process-local stand-in pretending to be persistence.
  */
-export function umbrellaCatalogIntake(): UmbrellaCatalogIntakeInjection | null {
-  return null;
+export function umbrellaCatalogIntake(injection: UmbrellaCatalogIntakeInjection | null = null): UmbrellaCatalogIntakeInjection | null {
+  return injection;
 }
 
 /**
@@ -135,26 +135,31 @@ export async function readUmbrellaCatalogIntakePanel(input: {
 }): Promise<UmbrellaCatalogIntakePanel> {
   if (input.injection === null) {
     const absent = refuse("CATALOG_INTAKE_STORAGE_UNAVAILABLE");
+
     return Object.freeze({
       kind: "unavailable" as const,
       reason: absent.reason,
       message: absent.message,
     });
   }
+
   const stored = await readCatalogPipelineItem({
     provider: input.injection.provider,
     itemId: input.injection.declaration.itemId,
   });
+
   if (!stored.ok) {
     // Nothing recorded yet is not a fault: it is the state before the visitor has
     // pressed the one control that submits.
     if (stored.reason === "CATALOG_ITEM_NOT_FOUND") return Object.freeze({ kind: "offered" as const });
+
     return Object.freeze({
       kind: "read-refused" as const,
       reason: stored.reason,
       message: stored.message,
     });
   }
+
   return Object.freeze({
     kind: "recorded" as const,
     record: Object.freeze({
@@ -182,7 +187,8 @@ export function umbrellaEditorStateFields(
 ): ReadonlyArray<{ readonly name: string; readonly value: string }> {
   return Object.entries(params).flatMap(([name, value]) => {
     if (value === undefined) return [];
-    const values = typeof value === "string" ? [value] : value;
+    const values = Array.isArray(value) ? value : [value];
+
     return values.map((entry) => Object.freeze({ name, value: entry }));
   });
 }
@@ -192,12 +198,15 @@ export function umbrellaEditorStateFromFields(
   fields: ReadonlyArray<{ readonly name: string; readonly value: string }>,
 ): SearchParams {
   const params: Record<string, string | string[]> = {};
+
   for (const field of fields) {
     const existing = params[field.name];
+
     if (existing === undefined) params[field.name] = field.value;
-    else if (typeof existing === "string") params[field.name] = [existing, field.value];
+    else if (!Array.isArray(existing)) params[field.name] = [existing, field.value];
     else existing.push(field.value);
   }
+
   return params;
 }
 
@@ -220,6 +229,7 @@ export async function buildUmbrellaCatalogIntakeView(input: {
 }): Promise<SiteResult<UmbrellaCatalogIntakeView>> {
   if (input.injection === null) return refuse("CATALOG_INTAKE_STORAGE_UNAVAILABLE");
   const provider = input.injection.provider;
+
   const submitted = await submitUmbrellaEditorToCatalog({
     access: input.access,
     render: input.render,
@@ -229,12 +239,14 @@ export async function buildUmbrellaCatalogIntakeView(input: {
     idempotencyKey: umbrellaCatalogIntakeKey(input.render),
     provider,
   });
+
   if (!submitted.ok) return submitted;
 
   const stored = await readCatalogPipelineItem({
     provider,
     itemId: submitted.value.record.item.itemId,
   });
+
   if (!stored.ok) return stored;
 
   return ok(

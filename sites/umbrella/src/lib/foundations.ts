@@ -42,7 +42,7 @@ export const UMBRELLA_SURFACE = "umbrella" as const;
 export const UMBRELLA_METRICS = Object.freeze({
   shell: "1280px",
   gutter: "32px",
-  bandPad: "104px",
+  bandPad: "72px",
   mastheadHeight: "60px",
 });
 

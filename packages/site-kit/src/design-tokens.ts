@@ -9,6 +9,12 @@
  * silent, this module is silent too — see `docs/design-foundations.md` for the
  * two recorded gaps (`--fg-3`, storefront hover accents).
  *
+ * Redesign 2026-10: the approved direction (`docs/redesign/DIRECTION.md` §8)
+ * changes a few sheet values on the sites. Each changed value names its
+ * deviation (DV-F1, DV-F2, DV-F3, DV-F7, DV-F8, DV-F9, DV-F11) beside it, and
+ * `docs/design-foundations.md` § "Redesign 2026-10" records old → new → why.
+ * Nothing changes silently.
+ *
  * This is the S-1 seam: three sites currently carry near-identical copies of one
  * stylesheet, and ADR 0018 makes each of them a separate install root, so the one
  * package all three already depend on is where the tokens can live without any
@@ -193,18 +199,33 @@ export const FOUNDATION_FONT_STACKS = Object.freeze({
   mono: "'JetBrains Mono', ui-monospace, monospace",
 });
 
+/**
+ * The ten type roles. `display-xl` and `display-l` keep the sheet's 66/42: they are
+ * the ceiling of the fluid `clamp()` literals sites write on their own selectors
+ * (DV-F10), and are never read for a font size. The other sizes are the sites'
+ * redesign values; the sheet value each one replaced is in the trailing comment.
+ */
 export const FOUNDATION_TYPE_SCALE: readonly FoundationTypeStep[] = freezeAll([
   { token: "display-xl", family: "archivo", weight: 700, sizePx: 66, widthAxis: 104, sample: "Describe the object" },
   { token: "display-l", family: "archivo", weight: 700, sizePx: 42, sample: "One runtime, three profiles" },
   { token: "heading", family: "archivo", weight: 700, sizePx: 24, sample: "Sculpt from a reference" },
   { token: "subhead", family: "archivo", weight: 600, sizePx: 17, sample: "Review before anything changes" },
-  { token: "lead", family: "archivo", weight: 400, sizePx: 16, sample: "Drop a reference image and describe it." },
-  { token: "body", family: "archivo", weight: 400, sizePx: 14, sample: "The editor proposes; you accept or reject." },
-  { token: "ui", family: "archivo", weight: 500, sizePx: 12, sample: "Scene · Properties · Assets" },
-  { token: "ui-sm", family: "archivo", weight: 500, sizePx: 11, sample: "tab · badge · inline label" },
-  { token: "micro", family: "mono", weight: 500, sizePx: 8.5, letterSpacingEm: 0.15, sample: "PANEL HEADER · SECTION LABEL" },
-  { token: "mono", family: "mono", weight: 400, sizePx: 10, maxSizePx: 12, sample: "position.y 1.24  a4f2…9c1e" },
+  // DV-F2: sheet 16px.
+  { token: "lead", family: "archivo", weight: 400, sizePx: 18, sample: "Drop a reference image and describe it." },
+  // DV-F2: sheet 14px (the umbrella editor chrome keeps 14px as a literal).
+  { token: "body", family: "archivo", weight: 400, sizePx: 16, sample: "The editor proposes; you accept or reject." },
+  // DV-F9: sheet 12px.
+  { token: "ui", family: "archivo", weight: 500, sizePx: 13, sample: "Scene · Properties · Assets" },
+  // DV-F9: sheet 11px.
+  { token: "ui-sm", family: "archivo", weight: 500, sizePx: 12, sample: "tab · badge · inline label" },
+  // DV-F1 + DV-F11: sheet 8.5px at 0.15em. Machine values and table column heads only.
+  { token: "micro", family: "mono", weight: 500, sizePx: 11, letterSpacingEm: 0.08, sample: "PANEL HEADER · SECTION LABEL" },
+  // DV-F9: sheet 10–12px.
+  { token: "mono", family: "mono", weight: 400, sizePx: 12, maxSizePx: 13, sample: "position.y 1.24  a4f2…9c1e" },
 ]);
+
+/** No text renders below this size on the sites (DV-F1); aria-hidden marks excepted. */
+export const FOUNDATION_TEXT_FLOOR_PX = 11;
 
 // ---------------------------------------------------------------------------
 // 03 — SPACE, RADIUS, SURFACE
@@ -248,17 +269,85 @@ export type FoundationSurface = {
   readonly shadow: string;
 };
 
-/** base → panel → raised → control → float. Only floating layers cast shadow. */
+/**
+ * base → panel → raised → control → float. Only floating layers cast shadow.
+ *
+ * DV-F3: the float shadow was `0 24px 60px -16px rgba(0,0,0,.9)`. A 1px edge plus a
+ * ≥16px blur is the banned ghost elevation, so it is now a tight 14px blur at the same
+ * ink; the 1px `#2C323B` edge stays and does the separating on near-black.
+ */
 export const FOUNDATION_SURFACES: readonly FoundationSurface[] = freezeAll([
   { id: "base", name: "base — app background", bg: "#07080A", line: "#12161B", radiusPx: 4, shadow: "none" },
   { id: "panel", name: "panel — docked body", bg: "#0D0F12", line: "#1A1F26", radiusPx: 4, shadow: "none" },
   { id: "raised", name: "raised — header, toolbar", bg: "#12151A", line: "#1C2129", radiusPx: 4, shadow: "inset 0 1px 0 rgba(255,255,255,.03)" },
   { id: "control", name: "control — button, chip", bg: "#191D23", line: "#2C323B", radiusPx: 4, shadow: "inset 0 1px 0 rgba(255,255,255,.05)" },
-  { id: "float", name: "float — dialog, menu", bg: "#12151A", line: "#2C323B", radiusPx: 8, shadow: "0 24px 60px -16px rgba(0,0,0,.9)" },
+  { id: "float", name: "float — dialog, menu", bg: "#12151A", line: "#2C323B", radiusPx: 8, shadow: "0 10px 14px -6px rgba(0,0,0,.9)" },
 ]);
 
 export const FOUNDATION_SURFACE_RULE =
   "Only floating layers cast shadow. Docked panels separate by a 1px hairline plus a 1px inset top highlight at 3% white.";
+
+// ---------------------------------------------------------------------------
+// MOTION (redesign 2026-10; DV-F7, DV-F8)
+// ---------------------------------------------------------------------------
+
+/**
+ * One motion token. `desktopKey` is the same value's path in the desktop's frozen
+ * `MOTION` table (`apps/desktop-shell/src/visual-tokens.ts`); `null` means the token
+ * is sites-only (the desktop never scales, `chrome.test.ts:925`).
+ */
+export type FoundationMotionToken = {
+  readonly token: string;
+  readonly value: string;
+  readonly desktopKey: string | null;
+  readonly use: string;
+};
+
+/**
+ * The motion system: "an instrument settling" — a fast start, a long exponential
+ * deceleration, no overshoot (DIRECTION.md §6.1).
+ *
+ * The Foundations sheet states no motion, so every row here is a recorded decision
+ * (DV-F7). Transitions stay inside 120–320ms. The only values outside that band are
+ * `--motion-duration-loop` and `--motion-delay-loading`, which serve indeterminate
+ * progress/pending indicators only (DV-F8, ruling R-1 in `docs/redesign/RULINGS.md`).
+ * Only `transform`, `opacity`, `clip-path` and `filter` animate.
+ */
+export const FOUNDATION_MOTION: readonly FoundationMotionToken[] = freezeAll([
+  { token: "--motion-duration-press", value: "120ms", desktopKey: "duration.press", use: "press-in, focus halo" },
+  { token: "--motion-duration-micro", value: "160ms", desktopKey: "duration.micro", use: "hover state layers, press release, arrows, underline" },
+  { token: "--motion-duration-state", value: "200ms", desktopKey: "duration.state", use: "chip/tone change, status line, number change, toast" },
+  { token: "--motion-duration-panel", value: "280ms", desktopKey: "duration.panel", use: "panel, drawer, dialog, disclosure open; list item enter" },
+  { token: "--motion-duration-panel-exit", value: "200ms", desktopKey: "duration.panelExit", use: "every close/exit (exits are faster)" },
+  { token: "--motion-duration-route", value: "320ms", desktopKey: "duration.route", use: "route entrance, hero aperture, focal resolution" },
+  { token: "--motion-duration-loop", value: "1200ms", desktopKey: "duration.loop", use: "one cycle of an indeterminate progress/pending indicator only (DV-F8, R-1)" },
+  { token: "--motion-delay-loading", value: "300ms", desktopKey: "delay.loading", use: "wait before any loading indicator paints (DV-F8, R-1)" },
+  { token: "--motion-ease-out-quart", value: "cubic-bezier(0.25, 1, 0.5, 1)", desktopKey: "ease.outQuart", use: "micro feedback, exits, loops" },
+  { token: "--motion-ease-out-quint", value: "cubic-bezier(0.22, 1, 0.36, 1)", desktopKey: "ease.outQuint", use: "state and number changes" },
+  { token: "--motion-ease-out-expo", value: "cubic-bezier(0.16, 1, 0.3, 1)", desktopKey: "ease.outExpo", use: "panels, routes, focal moments" },
+  { token: "--motion-stagger-step", value: "40ms", desktopKey: "stagger.step", use: "per-item delay in a list" },
+  { token: "--motion-stagger-max", value: "200ms", desktopKey: "stagger.max", use: "delay cap (item 6+ shares it)" },
+  { token: "--motion-distance-sm", value: "4px", desktopKey: "distance.sm", use: "micro nudges, list items, status lines" },
+  { token: "--motion-distance-md", value: "8px", desktopKey: "distance.md", use: "route content, dialogs" },
+  { token: "--motion-distance-lg", value: "16px", desktopKey: "distance.lg", use: "drawer content, hero copy" },
+  { token: "--motion-scale-press", value: "0.97", desktopKey: null, use: "pressed controls on sites and the web shell" },
+  { token: "--motion-scale-enter", value: "0.98", desktopKey: null, use: "Kids pieces only" },
+]);
+
+/**
+ * What `prefers-reduced-motion: reduce` sets. Every rule is written against these
+ * tokens, so reduced motion removes movement while opacity, colour and state still
+ * change.
+ */
+export const FOUNDATION_MOTION_REDUCED: readonly { readonly token: string; readonly value: string }[] =
+  freezeAll([
+    { token: "--motion-distance-sm", value: "0px" },
+    { token: "--motion-distance-md", value: "0px" },
+    { token: "--motion-distance-lg", value: "0px" },
+    { token: "--motion-scale-press", value: "1" },
+    { token: "--motion-scale-enter", value: "1" },
+    { token: "--motion-stagger-step", value: "0ms" },
+  ]);
 
 // ---------------------------------------------------------------------------
 // 04 — CONTROLS (status vocabulary)
@@ -439,7 +528,11 @@ export function foundationsVariablesCss(options: FoundationsCssOptions = {}): Si
   for (const step of FOUNDATION_TYPE_SCALE) {
     lines.push(`  --type-${step.token}-size: ${`${step.sizePx}px`};`);
     lines.push(`  --type-${step.token}-weight: ${step.weight};`);
+    if (step.letterSpacingEm !== undefined) {
+      lines.push(`  --type-${step.token}-tracking: ${`${step.letterSpacingEm}em`};`);
+    }
   }
+  for (const motion of FOUNDATION_MOTION) lines.push(`  ${motion.token}: ${motion.value};`);
   for (const surface of FOUNDATION_SURFACES) {
     lines.push(`  --surface-${surface.id}-bg: ${surface.bg};`);
     lines.push(`  --surface-${surface.id}-line: ${surface.line};`);
@@ -460,8 +553,17 @@ export function foundationsVariablesCss(options: FoundationsCssOptions = {}): Si
  * Document-level rules transcribed from the sheet's own `<style>` block: the
  * near-black canvas, Archivo body text, the orange selection wash, and the
  * hairline scrollbar.
+ *
+ * Redesign 2026-10 adds the motion layer's two shared parts: the reduced-motion
+ * token overrides (distances 0, scales 1, no stagger) and five one-shot keyframes
+ * and the R-1 progress loop (`sx-progress`, indeterminate indicators only) that a
+ * site's own rules may reference. The keyframes move only `opacity`, `transform`
+ * and `clip-path`, and set no resting style, so content is never hidden before
+ * they run. A site that pins a blanket `animation-duration: .001ms` kill keeps its
+ * own block; this one only removes distance.
  */
 export function foundationsBaseCss(): string {
+  const reduced = FOUNDATION_MOTION_REDUCED.map((entry) => `${entry.token}: ${entry.value};`).join(" ");
   return [
     "html, body { margin: 0; padding: 0; background: var(--bg-base); }",
     "body { font-family: var(--font-ui); color: var(--fg); -webkit-font-smoothing: antialiased; }",
@@ -472,6 +574,13 @@ export function foundationsBaseCss(): string {
     "::-webkit-scrollbar { width: 11px; }",
     "::-webkit-scrollbar-track { background: var(--bg-base); }",
     "::-webkit-scrollbar-thumb { background: #20262E; border: 3px solid var(--bg-base); border-radius: 6px; }",
+    "@keyframes sx-fade { from { opacity: 0; } }",
+    "@keyframes sx-rise-sm { from { opacity: 0; transform: translateY(var(--motion-distance-sm)); } }",
+    "@keyframes sx-rise-md { from { opacity: 0; transform: translateY(var(--motion-distance-md)); } }",
+    "@keyframes sx-rise-lg { from { opacity: 0; transform: translateY(var(--motion-distance-lg)); } }",
+    "@keyframes sx-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }",
+    "@keyframes sx-progress { from { transform: translateX(-100%); } to { transform: translateX(100%); } }",
+    `@media (prefers-reduced-motion: reduce) { :root { ${reduced} } }`,
     "",
   ].join("\n");
 }
@@ -487,7 +596,7 @@ export function foundationsSurfacesCss(): string {
 /** Status chip classes for the published status vocabulary. */
 export function foundationsStatusCss(): string {
   const base =
-    ".sx-status { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); padding: 4px 9px; font-size: 11px; font-weight: 500; }\n" +
+    ".sx-status { display: inline-flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2); font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; line-height: 1.4; }\n" +
     ".sx-status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }\n";
   return `${base}${FOUNDATION_STATUSES.map(
     (status) =>

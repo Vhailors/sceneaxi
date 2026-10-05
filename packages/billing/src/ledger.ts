@@ -30,6 +30,13 @@ import {
   type BillingOutcome,
 } from "./refusals.js";
 
+/** Raw values admitted to the schema parsing boundary; no value is trusted until validated. */
+export type LedgerBoundaryValue = Parameters<typeof validateCreditLedgerEntry>[0];
+
+function isText<Value>(value: Value): value is Value & string { return typeof value === "string"; }
+
+function isNumber<Value>(value: Value): value is Value & number { return typeof value === "number"; }
+
 export type LedgerState = Readonly<{
   account: CreditAccount;
   entries: ReadonlyArray<CreditLedgerEntry>;
@@ -76,10 +83,12 @@ export type AppendOutcome = Readonly<{
  */
 export function deriveEntryId(idempotencyKey: string): string {
   const readable = idempotencyKey.replace(/[^A-Za-z0-9._-]/g, "-").slice(0, 96);
+
   const digest = createHash("sha256")
     .update(idempotencyKey, "utf8")
     .digest("hex")
     .slice(0, 12);
+
   return `ent_${readable}_${digest}`;
 }
 
@@ -98,9 +107,10 @@ export function createLedgerState(account: CreditAccount): LedgerState {
  * would happily total a corrupted list.
  */
 export function deriveBalance(
-  entries: unknown,
+  entries: LedgerBoundaryValue,
 ): BillingOutcome<number> {
   const snapshot = snapshotPlainArray(entries);
+
   if (snapshot === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -111,42 +121,68 @@ export function deriveBalance(
   let balance = 0;
   let expectedSequence = 1;
   const seenKeys = new Set<string>();
+  const seenIds = new Set<string>();
+  let accountId: string | undefined;
 
   for (const candidate of snapshot) {
     const entry = validateCreditLedgerEntry(candidate);
+
     if (!entry.ok) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.entryInvalid,
         `A ledger entry is invalid (${entry.code}): ${entry.message}`,
       );
     }
+
     if (entry.value.sequence !== expectedSequence) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerOrderInvalid,
         `Ledger entry sequence ${entry.value.sequence} breaks the expected order at ${expectedSequence}; the list is gapped, reordered, or reuses a sequence.`,
       );
     }
+
     if (seenKeys.has(entry.value.idempotencyKey)) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerOrderInvalid,
         `Ledger idempotency key "${entry.value.idempotencyKey}" appears more than once.`,
       );
     }
+
+    if (seenIds.has(entry.value.entryId) ||
+      (accountId !== undefined && entry.value.accountId !== accountId)) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerOrderInvalid,
+        "A ledger history reuses an entry ID or mixes accounts.",
+      );
+    }
+
+    accountId = entry.value.accountId;
+    seenIds.add(entry.value.entryId);
     seenKeys.add(entry.value.idempotencyKey);
 
     balance += entry.value.delta;
+
+    if (!Number.isSafeInteger(balance)) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerOrderInvalid,
+        "The derived ledger balance left the safe integer range.",
+      );
+    }
+
     if (balance !== entry.value.balanceAfter) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerOrderInvalid,
         `Ledger entry ${entry.value.entryId} claims balanceAfter ${entry.value.balanceAfter} but the derived balance is ${balance}.`,
       );
     }
+
     if (balance < 0) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerOrderInvalid,
         "A ledger balance went negative; the entry list is not a valid history.",
       );
     }
+
     expectedSequence += 1;
   }
 
@@ -159,29 +195,35 @@ export function deriveBalance(
  */
 export function loadLedgerState(
   account: CreditAccount,
-  entries: unknown,
+  entries: LedgerBoundaryValue,
 ): BillingOutcome<LedgerState> {
   const validatedAccount = validateCreditAccount(account);
+
   if (!validatedAccount.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `The ledger account is invalid (${validatedAccount.code}): ${validatedAccount.message}`,
     );
   }
+
   const snapshot = snapshotPlainArray(entries);
+
   if (snapshot === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "A ledger entry list must be a plain array.",
     );
   }
+
   const foreign = snapshot.find((entry) => {
     const record = snapshotPlainRecord(entry);
+
     return (
       record !== undefined &&
       record["accountId"] !== validatedAccount.value.accountId
     );
   });
+
   if (foreign !== undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -190,17 +232,21 @@ export function loadLedgerState(
   }
 
   const balance = deriveBalance(snapshot);
+
   if (!balance.ok) return balance;
 
   const validated: CreditLedgerEntry[] = [];
+
   for (const candidate of snapshot) {
     const entry = validateCreditLedgerEntry(candidate);
+
     if (!entry.ok) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.entryInvalid,
         `A ledger entry is invalid (${entry.code}): ${entry.message}`,
       );
     }
+
     validated.push(entry.value);
   }
 
@@ -222,31 +268,36 @@ export function loadLedgerState(
  * refused rather than trusted for a charge or a spend.
  */
 export function validateLedgerState(
-  state: unknown,
+  state: LedgerBoundaryValue,
 ): BillingOutcome<LedgerState> {
   const stateRecord = snapshotPlainRecord(state);
   const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   const entries = snapshotPlainArray(stateRecord?.["entries"]);
+
   if (
     stateRecord === undefined ||
     accountRecord === undefined ||
     entries === undefined ||
-    typeof stateRecord["balance"] !== "number"
+    !isNumber(stateRecord["balance"])
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "The ledger state is not a valid ledger state.",
     );
   }
+
   const account = validateCreditAccount(accountRecord);
+
   if (!account.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `The ledger account is invalid (${account.code}): ${account.message}`,
     );
   }
+
   for (const candidate of entries) {
     const entryRecord = snapshotPlainRecord(candidate);
+
     if (
       entryRecord === undefined ||
       entryRecord["accountId"] !== account.value.accountId
@@ -257,30 +308,38 @@ export function validateLedgerState(
       );
     }
   }
+
   const derived = deriveBalance(entries);
+
   if (!derived.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `The ledger history is invalid (${derived.reason}): ${derived.message}`,
     );
   }
+
   if (derived.value !== stateRecord["balance"]) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `The ledger balance ${stateRecord["balance"]} does not match the derived balance ${derived.value}; balance is derived, never stored as a source of truth.`,
     );
   }
+
   const validated: CreditLedgerEntry[] = [];
+
   for (const candidate of entries) {
     const entry = validateCreditLedgerEntry(candidate);
+
     if (!entry.ok) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.entryInvalid,
         `A ledger entry is invalid (${entry.code}): ${entry.message}`,
       );
     }
+
     validated.push(entry.value);
   }
+
   return billingOk(
     Object.freeze({
       account: account.value,
@@ -292,7 +351,7 @@ export function validateLedgerState(
 
 function sameMovement(
   entry: CreditLedgerEntry,
-  request: AppendCreditEntryRequest,
+  request: Pick<AppendCreditEntryRequest, "delta" | "reason"> & { movement: LedgerBoundaryValue },
 ): boolean {
   return (
     entry.movement === request.movement &&
@@ -311,20 +370,23 @@ function sameMovement(
  * top up a balance.
  */
 export function appendCreditEntry(
-  state: unknown,
-  request: unknown,
+  state: LedgerBoundaryValue,
+  request: LedgerBoundaryValue,
 ): BillingOutcome<AppendOutcome> {
   const validatedState = validateLedgerState(state);
+
   if (!validatedState.ok) return validatedState;
   const current = validatedState.value;
 
   const requestRecord = snapshotPlainRecord(request);
+
   if (requestRecord === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A ledger append request must be a plain object.",
     );
   }
+
   const {
     entryId,
     movement,
@@ -340,11 +402,12 @@ export function appendCreditEntry(
       "A ledger append requires valid epoch milliseconds.",
     );
   }
+
   if (
-    typeof entryId !== "string" ||
-    typeof idempotencyKey !== "string" ||
+    !isText(entryId) ||
+    !isText(idempotencyKey) ||
     idempotencyKey.length === 0 ||
-    typeof reason !== "string" ||
+    !isText(reason) ||
     reason.trim().length === 0
   ) {
     return billingRefuse(
@@ -352,18 +415,21 @@ export function appendCreditEntry(
       "A ledger append requires an entryId, a non-empty idempotencyKey, and a non-empty reason.",
     );
   }
-  if (typeof delta !== "number" || !Number.isSafeInteger(delta) || delta === 0) {
+
+  if (!isNumber(delta) || !Number.isSafeInteger(delta) || delta === 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A ledger delta must be a non-zero safe integer.",
     );
   }
+
   if (movement === "grant" && delta < 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.deltaSignMismatch,
       "A grant must carry a positive delta.",
     );
   }
+
   if (movement === "debit" && delta > 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.deltaSignMismatch,
@@ -374,7 +440,9 @@ export function appendCreditEntry(
   const existing = current.entries.find(
     (entry) => entry.idempotencyKey === idempotencyKey,
   );
+
   if (existing !== undefined) {
+    // Only the semantic fields are compared on replay; movement is compared directly without asserting an unchecked enumeration.
     const asRequest = {
       entryId,
       movement,
@@ -382,25 +450,36 @@ export function appendCreditEntry(
       reason,
       idempotencyKey,
       now,
-    } as AppendCreditEntryRequest;
+    };
+
     if (!sameMovement(existing, asRequest)) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.idempotencyConflict,
         `Idempotency key "${idempotencyKey}" was already applied with a different movement; a mutated replay is refused.`,
       );
     }
+
     return billingOk(
       Object.freeze({ state: current, entry: existing, replayed: true }),
     );
   }
 
+  if (current.entries.some((entry) => entry.entryId === entryId)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.entryInvalid,
+      "An entry ID cannot be reused for a different ledger movement.",
+    );
+  }
+
   const balanceAfter = current.balance + delta;
+
   if (balanceAfter < 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.balanceInsufficient,
       `Balance ${current.balance} cannot absorb a ${delta} credit movement; nothing was appended.`,
     );
   }
+
   if (!Number.isSafeInteger(balanceAfter)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
@@ -423,6 +502,7 @@ export function appendCreditEntry(
   };
 
   const entry = validateCreditLedgerEntry(candidate);
+
   if (!entry.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.entryInvalid,

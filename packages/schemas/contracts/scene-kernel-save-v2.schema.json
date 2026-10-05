@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/scene-kernel-save/v2",
+  "title": "SceneAxi matrix-aware scene kernel save v2",
+  "description": "Additive schema-2 save. Replay validates complete scene matrix/evidence/rest bounds, runs artifact-local deterministic drivers, projects live world matrices and bounds and checks the terminal digest. It does not claim world-space rigid-body physics or socket-deformed geometry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "scene", "options", "advances", "terminalDigest"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "kind": { "const": "sceneaxi.scene-kernel-save" },
+    "scene": { "$ref": "scene-composition-v2.schema.json#/$defs/composedScene" },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "gravity", "restitution"],
+      "properties": {
+        "seed": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+        "gravity": { "type": "number", "minimum": -1000000, "maximum": 0 },
+        "restitution": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "advances": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tick", "deltaMs"],
+        "properties": {
+          "tick": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+          "deltaMs": { "type": "integer", "minimum": 0, "maximum": 60000 }
+        }
+      }
+    },
+    "terminalDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

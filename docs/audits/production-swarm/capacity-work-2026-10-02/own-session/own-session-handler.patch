@@ -1,0 +1,64 @@
+diff --git a/sites/umbrella/src/lib/own-session.ts b/sites/umbrella/src/lib/own-session.ts
+new file mode 100644
+--- /dev/null
++++ b/sites/umbrella/src/lib/own-session.ts
+@@ -0,0 +1,59 @@
++// PROPOSAL ONLY: private carried-session read, not a new login/SSO issuer.
++import {
++  refuse,
++  SITE_SESSION_HEADER,
++  type SiteIdentityPort,
++  type SiteResult,
++} from "@sceneaxi/site-kit";
++
++export function createOwnSessionHandler(options: {
++  configuredOrigin: () => SiteResult<string>;
++  identity: SiteIdentityPort;
++}) {
++  const headers = {
++    "cache-control": "no-store",
++    pragma: "no-cache",
++    vary: `Origin, ${SITE_SESSION_HEADER}`,
++  };
++  return async (request: Request): Promise<Response> => {
++    const reply = (body: unknown, status: number) =>
++      Response.json(body, { status, headers });
++    if (request.method !== "GET") {
++      return Response.json({ code: "METHOD_NOT_ALLOWED" }, {
++        status: 405, headers: { ...headers, allow: "GET" },
++      });
++    }
++    // Inject existing resolveUmbrellaOriginConfiguration(env).origin;
++    // never derive approval from Host, request URL or forwarded headers.
++    const configured = options.configuredOrigin();
++    if (!configured.ok) return reply(configured, 503);
++    const declared = request.headers.get("origin");
++    let sameOrigin = false;
++    try {
++      sameOrigin = declared === configured.value &&
++        new URL(request.url).origin === configured.value;
++    } catch { /* fail closed */ }
++    if (!sameOrigin) return reply(refuse("SITE_REQUEST_CROSS_ORIGIN"), 403);
++    // Existing explicit header contract only. Do not read cookies(),
++    // headers(), Authorization, Cookie, Host or any ambient credential.
++    const credential = request.headers.get(SITE_SESSION_HEADER)?.trim();
++    if (!credential) return reply(refuse("IDENTITY_SESSION_ABSENT"), 401);
++    try {
++      const result = await options.identity.resolvePrincipal({
++        surface: "umbrella", sessionToken: credential,
++      });
++      if (!result.ok) return reply(result, 401);
++      const principal = result.value;
++      if (principal.user.userId !== principal.session.userId ||
++          principal.session.surface !== "umbrella" || principal.user.disabled) {
++        return reply(refuse("IDENTITY_ADAPTER_OUTPUT_INVALID"), 401);
++      }
++      return reply(result, 200);
++    } catch {
++      return reply(refuse("IDENTITY_NOT_WIRED"), 503);
++    }
++  };
++}
++
++// Handoff: add app/api/auth/own-session/route.ts binding GET only after
++// source-owned identity/configuration composition and review. No token issuance.

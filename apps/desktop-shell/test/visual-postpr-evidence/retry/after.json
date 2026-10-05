@@ -1,0 +1,7241 @@
+[
+  {
+    "scenario": "empty",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-empty.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "forced-focus",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-forced-focus.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-new",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-open",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-save",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-status",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-diff",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-stage",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-commit-prepare",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-ship-export-web",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-install",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-remove",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-apply",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-reset",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-propose",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-commit",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-recover",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-build",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-extension-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-extension-start",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-profile-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-actions-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-action-rebind",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-actions-reset",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-define",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-instance",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-override",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-refresh",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-viewport-source-set",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-physics-evaluate",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-run-play",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgba(5, 0, 73, 0.8)"
+      }
+    ],
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(255, 255, 255, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".palette-item:focus-visible": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgba(5, 0, 73, 0.8)",
+        "width": 588,
+        "height": 36,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(255, 255, 255, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(255, 255, 255, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(255, 255, 255, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(0, 0, 0)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "long-evidence",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-long-evidence.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-browser-file-select",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-entity-desktop-crate-beside",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-property-stage",
+        "className": "primary-button block-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-translate",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-rotate",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-scale",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-transform-space",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-transform-pivot",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-transform-snap",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-x-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-x-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-y-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-y-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-z-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-z-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-add",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-remove",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-instance-parent",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-instance-policy",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-reparent",
+        "className": "ghost-button block-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-local",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-byo",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".scene-entity-identity": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 242,
+        "height": 179,
+        "visible": true
+      },
+      ".scene-entity-identity code": {
+        "font": "10px",
+        "lineHeight": "16px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 165,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 182.375,
+        "visible": true
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 247.359375,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 649.640625,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "selected",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-selected.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-browser-file-select",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-entity-desktop-crate-beside",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-translation-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-rotation-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-x",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-y",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-property-scale-z",
+        "className": "scene-property-input",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-property-stage",
+        "className": "primary-button block-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-translate",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-rotate",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-mode-scale",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-transform-space",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-transform-pivot",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "INPUT",
+        "id": "scene-transform-snap",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-x-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-x-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-y-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-y-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-z-minus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-transform-nudge-z-plus",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-add",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-remove",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-instance-parent",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-instance-policy",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-instance-reparent",
+        "className": "ghost-button block-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-local",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-byo",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".scene-entity-identity": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(16, 36, 44)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 242,
+        "height": 179,
+        "visible": true
+      },
+      ".scene-entity-identity code": {
+        "font": "10px",
+        "lineHeight": "16px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 165,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 247.359375,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 649.640625,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "byok",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-byok.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-local",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-byo",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 478.140625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 418.859375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".desktop-byo-config button:disabled": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 135,
+        "height": 32,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".desktop-byo-config-message": {
+        "font": "11px",
+        "lineHeight": "17.6px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 278,
+        "height": 68.78125,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 182
+    }
+  },
+  {
+    "scenario": "narrow",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-narrow.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "drawer-left",
+        "className": "ghost-button drawer-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "drawer-inspector",
+        "className": "ghost-button drawer-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-browser-file-select",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "scene-entity-desktop-crate-beside",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".scene-entity-identity": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 242,
+        "height": 76,
+        "visible": true
+      },
+      ".scene-entity-identity code": {
+        "font": "10px",
+        "lineHeight": "16px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "byok-narrow",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-byok-narrow.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "drawer-left",
+        "className": "ghost-button drawer-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "drawer-inspector",
+        "className": "ghost-button drawer-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-local",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-route-byo",
+        "className": "assistant-route",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 375.046875,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 161.953125,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 577,
+        "visible": true
+      },
+      ".desktop-byo-config button:disabled": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 135,
+        "height": 32,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".desktop-byo-config-message": {
+        "font": "11px",
+        "lineHeight": "17.6px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 278,
+        "height": 68.78125,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 182
+    }
+  },
+  {
+    "scenario": "palette",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-palette.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-new",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-open",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-save",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-status",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-diff",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-stage",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-git-commit-prepare",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-ship-export-web",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-install",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-package-remove",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-apply",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-workspace-layout-reset",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-propose",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-commit",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-migration-recover",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-build",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-extension-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-extension-start",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-profile-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-project-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-actions-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-action-rebind",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-input-actions-reset",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-inspect",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-define",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-instance",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-override",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-scene-prefab-refresh",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-viewport-source-set",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-physics-evaluate",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "palette-run-play",
+        "className": "palette-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".palette-item:focus-visible": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(70, 216, 236)",
+        "width": 588,
+        "height": 36,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "refused",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-refused.png",
+    "focusSamples": [],
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "menu-pressed",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-menu-pressed.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-new",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-open",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-save",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-git-status",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-git-diff",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-git-stage",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-git-commit-prepare",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-ship-export-web",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-package-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-package-install",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-package-remove",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-workspace-layout-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-workspace-layout-apply",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-workspace-layout-reset",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-migration-propose",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-migration-commit",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-migration-recover",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-build",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-extension-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-extension-start",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-profile-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-project-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-input-actions-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-input-action-rebind",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-input-actions-reset",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-scene-prefab-inspect",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-scene-prefab-define",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-scene-prefab-instance",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-scene-prefab-override",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-scene-prefab-refresh",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-viewport-source-set",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-command-physics-evaluate",
+        "className": "menu-command",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".menu-item:active": {
+        "font": "12px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 36.09375,
+        "height": 22,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "mobile-refusal",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-mobile-refusal.png",
+    "focusSamples": [],
+    "viewport": {
+      "width": 375,
+      "height": 812
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 375,
+        "height": 255.21875,
+        "visible": true
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "busy",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-busy.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-build",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-sculpt",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-animate",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-run",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "mode-ship",
+        "className": "rail-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "physics-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "physics-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "environment-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "environment-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "material-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "material-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-inspect",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "TEXTAREA",
+        "id": "effect-mutation",
+        "className": "",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "effect-stage",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 68.875,
+        "visible": true
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 304,
+        "height": 44,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 3,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "web",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-web.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "menu-file",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-edit",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "menu-run",
+        "className": "menu-item",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-save",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-toggle",
+        "className": "assistant-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-new-root",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-root",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "SELECT",
+        "id": "project-recent-select",
+        "className": "project-recent-select",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-open-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "project-remove-recent",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "web-stage-html",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "web-inject-asset",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "scene-play",
+        "className": "primary-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-changes",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-assets",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "dock-evidence",
+        "className": "dock-tab",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-close",
+        "className": "icon-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-ask",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-build",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "assistant-mode-agent",
+        "className": "assistant-mode",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(70, 216, 236)"
+      }
+    ],
+    "viewport": {
+      "width": 1680,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 258,
+        "height": 32,
+        "visible": true
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 304,
+        "height": 83.5625,
+        "visible": true
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 146.5625,
+        "visible": true
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 343,
+        "height": 750.4375,
+        "visible": true
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 937,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 304,
+        "height": 75.5,
+        "visible": true
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  },
+  {
+    "scenario": "kids",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-kids.png",
+    "focusSamples": [
+      {
+        "tag": "BUTTON",
+        "id": "profile-game",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-web",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "profile-kids",
+        "className": "profile-chip",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "overlay-open-palette",
+        "className": "ghost-button",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-overlay-palette",
+        "className": "state-shortcut",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "status-refusal-help",
+        "className": "state-shortcut refusal-help-toggle",
+        "visible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(167, 139, 250)"
+      }
+    ],
+    "viewport": {
+      "width": 900,
+      "height": 640
+    },
+    "errors": [],
+    "metrics": {
+      ".panel-head": {
+        "font": "11px",
+        "lineHeight": "normal",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-empty": {
+        "font": "13px",
+        "lineHeight": "21.45px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-result": {
+        "font": "12px",
+        "lineHeight": "19.8px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-prompt": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgb(7, 11, 19)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-composer": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-body": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgb(15, 22, 36)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 344,
+        "height": 577,
+        "visible": true
+      },
+      ".window-refusal": {
+        "font": "13px",
+        "lineHeight": "normal",
+        "color": "rgb(234, 240, 249)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(234, 240, 249)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".assistant-progress": {
+        "font": "11px",
+        "lineHeight": "16.5px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgb(24, 34, 54)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".overlay-refused .overlay-body": {
+        "font": "12px",
+        "lineHeight": "19.2px",
+        "color": "rgb(172, 184, 204)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(172, 184, 204)",
+        "width": 0,
+        "height": 0,
+        "visible": false
+      },
+      ".icon-button": {
+        "font": "13px",
+        "lineHeight": "13px",
+        "color": "rgb(149, 162, 184)",
+        "background": "rgba(0, 0, 0, 0)",
+        "opacity": "1",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(149, 162, 184)",
+        "width": 26,
+        "height": 26,
+        "visible": true
+      },
+      "activeAnimations": 0,
+      "documentOverflow": false,
+      "controlCount": 178
+    }
+  }
+]

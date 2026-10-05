@@ -1,0 +1,884 @@
+{
+  "review": "04-visual-desktop",
+  "verdict": "FAIL",
+  "narrowGoal": "FAIL",
+  "fullProductionGoal": "FAIL",
+  "reviewedAtUtc": "2026-10-02T07:13:59.770717+00:00",
+  "applicationRoot": "/home/devuser/Documents/Projects/sceneaxi",
+  "artifacts": {
+    "publishedPR": {
+      "number": 312,
+      "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+      "state": "OPEN",
+      "headSha": "346933c105305224d575bf9319256301c1eeabfa",
+      "baseSha": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+      "createdAt": "2026-10-01T21:40:09Z",
+      "headCommitLocalTime": "2026-10-01T23:53:32+02:00",
+      "headCommitUtc": "2026-10-01T21:53:32Z"
+    },
+    "dirtyWorktree": {
+      "headSha": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "sourceFingerprints": [
+        {
+          "path": "apps/desktop-shell/src/chrome.ts",
+          "worktreeSha256": "21b038b8eca44d15811b176e30ce7c30957fa299121ab1eb41cc98bb3b02d1e4",
+          "committedSha256": {
+            "a2e41fed1c6f16a19e2dfc2075efa282cab6a173": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178",
+            "f4990b8aac5f5af75a16fe3fbb55b74855f2b636": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178",
+            "346933c105305224d575bf9319256301c1eeabfa": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178"
+          }
+        },
+        {
+          "path": "apps/desktop-shell/src/visual-tokens.ts",
+          "worktreeSha256": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+          "committedSha256": {
+            "a2e41fed1c6f16a19e2dfc2075efa282cab6a173": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+            "f4990b8aac5f5af75a16fe3fbb55b74855f2b636": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+            "346933c105305224d575bf9319256301c1eeabfa": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7"
+          }
+        },
+        {
+          "path": "apps/web-shell/src/inspector-app.ts",
+          "worktreeSha256": "50f26b71434c4463a88981d35eb4b948b5fcc264c449eb128ef967afed474ae6",
+          "committedSha256": {
+            "a2e41fed1c6f16a19e2dfc2075efa282cab6a173": "0e578657e4be8c571b6610a0aec0fec576657dad9b9bc9aaddfcb823040ccd73",
+            "f4990b8aac5f5af75a16fe3fbb55b74855f2b636": "0e578657e4be8c571b6610a0aec0fec576657dad9b9bc9aaddfcb823040ccd73",
+            "346933c105305224d575bf9319256301c1eeabfa": "0e578657e4be8c571b6610a0aec0fec576657dad9b9bc9aaddfcb823040ccd73"
+          }
+        },
+        {
+          "path": "desktop/linux/src/renderer/byo-configuration.ts",
+          "worktreeSha256": "2f8afd7c89e0f07ce8935345a7d92b6df5aec5953d8a7240b3ccdbaaa64bd809",
+          "committedSha256": {
+            "a2e41fed1c6f16a19e2dfc2075efa282cab6a173": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb",
+            "f4990b8aac5f5af75a16fe3fbb55b74855f2b636": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb",
+            "346933c105305224d575bf9319256301c1eeabfa": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb"
+          }
+        }
+      ],
+      "captureSourceHashesMatchCurrent": true
+    }
+  },
+  "findings": [
+    {
+      "id": "VD-01",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifact": "PR and worktree distinction",
+      "evidence": [
+        "git tree 346933c105305224d575bf9319256301c1eeabfa",
+        "docs/audits/production-swarm/finish-visual-postpr-desktop.md:6",
+        "docs/audits/production-swarm/finish-visual-postpr-desktop.json:11-15",
+        "docs/audits/production-swarm/PR-EVIDENCE.md:38-42"
+      ],
+      "expectation": "Genuine subsequent visual improvement included in current PR with its owning regression/evidence.",
+      "observed": "All four reviewed source hashes identical at creation a2e41fed, evidence f4990b8, and current PR346933c. Retry changes three source files locally, but both visual tests, retry summary/screenshots and retry report absent in current PR. Token source unchanged vs PR.",
+      "reproduced": "git show/hash comparison and cat-file existence checks; current gh PR head confirmed.",
+      "acceptance": "Publish intended complete artifact under separate authority; include these actual subsequent visual diffs, owning tests and genuine captures; rerun required checks on that exact new SHA. No publish action performed here."
+    },
+    {
+      "id": "VD-02",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifact": "PR source; worktree narrowly repaired",
+      "evidence": [
+        "apps/web-shell/src/inspector-app.ts:816-825",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs:17-25",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/summary.json:2-10"
+      ],
+      "expectation": "Readable >=4.5:1 normal refusal text and complete wrapped evidence without horizontal document/diff overflow.",
+      "observed": "PR390px long evidence/refusal light and dark live probes overflow document/diff. PR dark refusal rgb179,38,30 ratio2.866:1 on dark18; worktree rgb255,77,94 ratio5.776:1 and no sampled overflow. Light6.536:1 unchanged. Historical ledger before2 document/4 diff cases; after0.",
+      "reproduced": "Fresh Chromium probes from PR/current source in memory; raw ledger independently inspected. Before transparent canvas requires browser dark canvas assumption, separately declared.",
+      "acceptance": "Include local wrapping/dark paint fix in intended PR artifact; assert >=4.5 contrast on resolved background and overflow at relevant widths/state fixtures on exact artifact."
+    },
+    {
+      "id": "VD-03",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifact": "worktree capture evidence and PR source fixture",
+      "evidence": [
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs:77-95",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/after.json",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/summary.json:131-140"
+      ],
+      "expectation": "Refusal screenshot displays actual readable diagnostic and reachable dismissal/return controls.",
+      "observed": "Refused before/after PNG identical5292bytes1280x900. Ledger all measured regions visiblefalse, zero focusSamples. Independently replaying fixture on PR/current yields body.innerText empty and zero visible enabled controls. No-errors/no-overflow are vacuous for this state.",
+      "reproduced": "Fresh in-memory Chromium reproduction of capture fixture plus PNG and ledger inspection.",
+      "acceptance": "Enter refusal through actual renderer action/state; assert visible dialog, diagnostic text, nonzero geometry, and accessible dismissal before capture; replace invalid captures without relabeling blank screen as successful refusal coverage."
+    },
+    {
+      "id": "VD-04",
+      "severity": "P2",
+      "status": "FAIL",
+      "artifact": "PR source focus geometry; worktree bounded repair",
+      "evidence": [
+        "apps/desktop-shell/src/chrome.ts:1147-1159",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs:87-95"
+      ],
+      "expectation": "Focused controls/rings remain visible and unoccluded, not merely styled.",
+      "observed": "At1280x900 PR default and palette effect-mutation focuses with solid2px outline yet rectangle [1048.609375,853.421875,182,51] extends to904.421875; documentOverflowfalse. Current sampled control rectangle remains inside viewport. Capture checks no geometry, clipping ancestry, occlusion, or actual keyboard traversal.",
+      "reproduced": "Fresh Chromium both renderers; programmatic focus loop with bounding boxes. Full ring pixels not independently certified.",
+      "acceptance": "Commit local scroll/focus repair and add real Tab traversal with focus geometry, ancestor clipping and occlusion checks at minimum/compact/window sizes; retain assertion that unavailable controls keep explanatory stops."
+    },
+    {
+      "id": "VD-05",
+      "severity": "P2",
+      "status": "FAIL",
+      "artifact": "worktree assurance metric; full-production goal",
+      "evidence": [
+        "docs/audits/production-swarm/finish-visual-postpr-desktop.md:39-41",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs:94",
+        "apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs:25",
+        "apps/desktop-shell/test/visual-refinement.test.ts:81-105",
+        "apps/web-shell/test/visual-postpr.test.ts:15-35"
+      ],
+      "expectation": "Coverage figures distinguish repeated measurements from independent behavior coverage and include intended inert focus/descriptions.",
+      "observed": "1795 reconstructs exactly as581 focus samples*3(style/pseudo/width)+52 case predicates.557 desktop samples span142 tag/id/class combinations;24 inspector samples four IDs. isEnabled excludes aria-disabled controls; programmatic focus does not establish sequential keyboard stops/describedby resolution/modal trapping. Unit invariants mostly CSS-string assertions. Native provider/error/forced-colors full traversal and screen reader assurance absent.",
+      "reproduced": "Independent ledger recount1795 all pass; harness source inspections prove omissions.",
+      "acceptance": "Report3 focus-style predicates across repeated samples plus52 state checks, not1795 independent requirements. Add inert Tab/activation/description resolution, modal containment/dismissal and visible focus probes; explicitly retain untested native/hardware/provider/assistive-tech goals."
+    }
+  ],
+  "positiveChecks": [
+    {
+      "status": "PASS",
+      "scope": "PNG file integrity only",
+      "pairs": 26,
+      "images": 52,
+      "allHashesAndSignaturesVerified": true,
+      "changedPairs": 23,
+      "unchangedScenarios": [
+        "refused",
+        "mobile-refusal",
+        "kids"
+      ]
+    },
+    {
+      "status": "PASS",
+      "scope": "semantic ARIA repair, not whole interactive editor",
+      "evidence": [
+        "sites/umbrella/src/app/editor/_components/editor-shell.tsx:35-36",
+        "sites/umbrella/src/app/editor/_components/editor-shell.tsx:212-246",
+        "tests/sites/umbrella-visual.test.ts:1182-1191"
+      ],
+      "observed": "Actual ShellButton extracted/transpiled in memory and ReactDOM server-rendered on PR/current: inert aria-disabled=true and describedby=edshell-refusal-TEST_REFUSAL; no native disabled or tabindex=-1; onClick undefined for inert, preserved for live. Literal is used in runtime assignment, not dead oracle-decoy. Expected source literal unchanged in base/PR/current.",
+      "limits": "Does not prove full legend rendering/screen-reader behavior; no fresh full editor integration run."
+    },
+    {
+      "status": "PASS",
+      "scope": "local inspector sampled contrast/overflow only",
+      "darkContrast": 5.776374777745625,
+      "lightContrast": 6.536488984854359,
+      "horizontalOverflow": false
+    }
+  ],
+  "screenshotVerification": [
+    {
+      "scenario": "empty",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-empty.png",
+        "sha256": "da35923ea169bf55978df4b6821de41986a83bcbf8d9ad27284cbba6419df335",
+        "recordedHashMatches": true,
+        "bytes": 231076,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-empty.png",
+        "sha256": "fdcfdd0a25a42e295b2c857db705e799313a0ecd1090aa2b6a1840ed3712f39e",
+        "recordedHashMatches": true,
+        "bytes": 238924,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "forced-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-forced-focus.png",
+        "sha256": "ebea96764fa9fa6c9ec94a31a198e70eb47637240a839766ee852b7bb2c2234a",
+        "recordedHashMatches": true,
+        "bytes": 113034,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-forced-focus.png",
+        "sha256": "ecbb2f5e4cd0d6eb7a545046f5ae8195c0800fb9f531b02bc26712f586482a98",
+        "recordedHashMatches": true,
+        "bytes": 116502,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "long-evidence",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-long-evidence.png",
+        "sha256": "c2117216a0b15f5e3130ed2241fc8be4558dc1081e5b32034380fed8f889e5d2",
+        "recordedHashMatches": true,
+        "bytes": 321990,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-long-evidence.png",
+        "sha256": "f5c1d6d5e2075f1515bd59b8a64089de6f736d260d15da4ba3ce65e2ee43a392",
+        "recordedHashMatches": true,
+        "bytes": 313248,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "selected",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-selected.png",
+        "sha256": "189dfd833b084b4331366ae246015c54a2ffaff18341a92b19ad04f112f8dd86",
+        "recordedHashMatches": true,
+        "bytes": 257866,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-selected.png",
+        "sha256": "5654be546639ec8d79a2296fc8819cf8279a917638fb9b0476a2fb11624b4d59",
+        "recordedHashMatches": true,
+        "bytes": 265175,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "byok",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-byok.png",
+        "sha256": "6530d46e7839387f09f0097b0f8338dd756de21c174ee21f382c841e53ade698",
+        "recordedHashMatches": true,
+        "bytes": 254113,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-byok.png",
+        "sha256": "db15d6fb20d94975e9fae1a990ef66f0ba32dd4f2b8688cf1c22c6b680d914fd",
+        "recordedHashMatches": true,
+        "bytes": 262514,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "narrow",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-narrow.png",
+        "sha256": "7b1aeb6b695431b555ffbd90318addc18beda310c59776f75b33f13e380b24d9",
+        "recordedHashMatches": true,
+        "bytes": 101656,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-narrow.png",
+        "sha256": "a9ff312025dacd1d3958e8f391f18b9625f06b0ba663a140affe0a83614104c2",
+        "recordedHashMatches": true,
+        "bytes": 104142,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "byok-narrow",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-byok-narrow.png",
+        "sha256": "5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784",
+        "recordedHashMatches": true,
+        "bytes": 111694,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-byok-narrow.png",
+        "sha256": "6aeec7f72ab5189e882c31647d96e6a64bf4620428bf1ae3ebc73a9a353e02d4",
+        "recordedHashMatches": true,
+        "bytes": 111443,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "palette",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-palette.png",
+        "sha256": "54050f7fff6ca3643f2d5df22e1d1b84c9e7379547fa33fd7ae68a8fb115a87a",
+        "recordedHashMatches": true,
+        "bytes": 149766,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-palette.png",
+        "sha256": "9f9817efc2fdf069474328cc853efb183e29b1f9e603d14f3069c198b85a7829",
+        "recordedHashMatches": true,
+        "bytes": 151274,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "refused",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-refused.png",
+        "sha256": "9ca518ad54a088a1f189afe27c53c2d6d2d0773f4a4e99faca94e81d410fa67e",
+        "recordedHashMatches": true,
+        "bytes": 5292,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-refused.png",
+        "sha256": "9ca518ad54a088a1f189afe27c53c2d6d2d0773f4a4e99faca94e81d410fa67e",
+        "recordedHashMatches": true,
+        "bytes": 5292,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "changed": false
+    },
+    {
+      "scenario": "menu-pressed",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-menu-pressed.png",
+        "sha256": "e5c5722f67e9730abb3e2310a128de283ea5aa3efb5b9703cf17b33f0e2b7250",
+        "recordedHashMatches": true,
+        "bytes": 183539,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-menu-pressed.png",
+        "sha256": "f5aa8287be92830692f1ac2cd7301912215dd08f0185c5c9642e7405a7fd5ad5",
+        "recordedHashMatches": true,
+        "bytes": 188687,
+        "dimensions": [
+          1280,
+          900
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "mobile-refusal",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-mobile-refusal.png",
+        "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+        "recordedHashMatches": true,
+        "bytes": 17367,
+        "dimensions": [
+          375,
+          812
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-mobile-refusal.png",
+        "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+        "recordedHashMatches": true,
+        "bytes": 17367,
+        "dimensions": [
+          375,
+          812
+        ],
+        "signatureValid": true
+      },
+      "changed": false
+    },
+    {
+      "scenario": "busy",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-busy.png",
+        "sha256": "e7456e1952a73a9ead9140f86d335bb6a0b7672d67b157c8367a8db132f133ca",
+        "recordedHashMatches": true,
+        "bytes": 230870,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-busy.png",
+        "sha256": "78f3edbe01fc43fbcfffa0da35b9c11d546d9527d0e3663b048422490b514377",
+        "recordedHashMatches": true,
+        "bytes": 239146,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "web",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-web.png",
+        "sha256": "01d87acc68149d5570003757d118df10d6926a89f660fa9d6d3e422602b5e63f",
+        "recordedHashMatches": true,
+        "bytes": 199460,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-web.png",
+        "sha256": "664b4eff207d8e84f25138161c62d29f2018a00a624a7a8160ea85848073716f",
+        "recordedHashMatches": true,
+        "bytes": 203588,
+        "dimensions": [
+          1680,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "kids",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-kids.png",
+        "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+        "recordedHashMatches": true,
+        "bytes": 111306,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-kids.png",
+        "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+        "recordedHashMatches": true,
+        "bytes": 111306,
+        "dimensions": [
+          900,
+          640
+        ],
+        "signatureValid": true
+      },
+      "changed": false
+    },
+    {
+      "scenario": "inspector-idle-light",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-light.png",
+        "sha256": "6371c84c7266f190f725431da1681f8060a7248316f2493cf414ec9593f8ac72",
+        "recordedHashMatches": true,
+        "bytes": 54032,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-idle-light.png",
+        "sha256": "e84bad504b221fb03d5e5347c01d7ee6d050c9740c894f0851add99be33987bd",
+        "recordedHashMatches": true,
+        "bytes": 55429,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-idle-light-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-light-focus.png",
+        "sha256": "5aafe99ec46f1568ed8c9cb15f76e4c867d1c4449c0d248bab6dd89e1b73eb5a",
+        "recordedHashMatches": true,
+        "bytes": 54088,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-idle-light-focus.png",
+        "sha256": "5de4270b7f4e7ab4cbf445711bbfc9d8f13f997f358eb3f5985ece4f2092c4f4",
+        "recordedHashMatches": true,
+        "bytes": 55885,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-long-diff-light",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-light.png",
+        "sha256": "1416cda826e6418a5db51b4b42203108d9bb087cd5cfd36c4deac6b8207d79b6",
+        "recordedHashMatches": true,
+        "bytes": 51076,
+        "dimensions": [
+          390,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-long-diff-light.png",
+        "sha256": "5c0fc91015fa706bcedd5362b676d5cb41eea2fce800d673a576d5e2fa82292d",
+        "recordedHashMatches": true,
+        "bytes": 74410,
+        "dimensions": [
+          390,
+          1229
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-long-diff-light-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-light-focus.png",
+        "sha256": "c1d6e990af186ab4cf4f5ede58342338bc2a229210f15c2cb505bf9ea4d64648",
+        "recordedHashMatches": true,
+        "bytes": 51125,
+        "dimensions": [
+          390,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-long-diff-light-focus.png",
+        "sha256": "bc9c54e88b78b86c9308454155ad11a790c75aca0aefb9ee44c51b1d96a7b280",
+        "recordedHashMatches": true,
+        "bytes": 74784,
+        "dimensions": [
+          390,
+          1229
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-refusal-light",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-light.png",
+        "sha256": "4bdd9ea170a236f56173a07613491fcdde779b4bfda8c7d48dd101b5b0c654ae",
+        "recordedHashMatches": true,
+        "bytes": 75990,
+        "dimensions": [
+          1103,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-refusal-light.png",
+        "sha256": "42169708aab4142fa6379006c145dd4d2eb6bc00d42b1fbd2b68d0bb29e13782",
+        "recordedHashMatches": true,
+        "bytes": 59759,
+        "dimensions": [
+          390,
+          1008
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-refusal-light-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-light-focus.png",
+        "sha256": "1d0cacb0e032f3c3fd2161ae9bb1b25deeabdd03e8d3a939e888c4d3b25672b9",
+        "recordedHashMatches": true,
+        "bytes": 76041,
+        "dimensions": [
+          1103,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-refusal-light-focus.png",
+        "sha256": "c67d999efb080ceb8d5c48711a12c1fb31bdd2d25016315558ef064c20dccb80",
+        "recordedHashMatches": true,
+        "bytes": 60129,
+        "dimensions": [
+          390,
+          1008
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-idle-dark",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-dark.png",
+        "sha256": "b24ea318e955c5748ba627c9dc053aaa4b8f7dee26727751e5517296a9eea738",
+        "recordedHashMatches": true,
+        "bytes": 53658,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-idle-dark.png",
+        "sha256": "cbbb13e26d9968794108743467c5ee2d4db9a9d6fcc89ab48ca4b33ea4fa0fb6",
+        "recordedHashMatches": true,
+        "bytes": 55530,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-idle-dark-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-dark-focus.png",
+        "sha256": "e0409379bf3fc0a8e056d2debd0ae4e119a4e2b5981dfccf4965c5eb32996ba0",
+        "recordedHashMatches": true,
+        "bytes": 53762,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-idle-dark-focus.png",
+        "sha256": "d26ffa2d949eb3dbbd8022d25b341bc64bd2cb936df2a7793883cbc698c28463",
+        "recordedHashMatches": true,
+        "bytes": 56019,
+        "dimensions": [
+          1440,
+          1000
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-long-diff-dark",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-dark.png",
+        "sha256": "b4f99b36af82f75ad3334b27790390695a46b0b205b21473bef8f52c36a9a841",
+        "recordedHashMatches": true,
+        "bytes": 51385,
+        "dimensions": [
+          390,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-long-diff-dark.png",
+        "sha256": "9fe66f3e9deb4fdaf7e74c4663b4c5c4deab26bb8b138d5c08baed93c46d29a3",
+        "recordedHashMatches": true,
+        "bytes": 74859,
+        "dimensions": [
+          390,
+          1229
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-long-diff-dark-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-dark-focus.png",
+        "sha256": "2d66c20a500631f0387743df341d34236ec7365d97c63f53cfc802f709645888",
+        "recordedHashMatches": true,
+        "bytes": 51483,
+        "dimensions": [
+          390,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-long-diff-dark-focus.png",
+        "sha256": "288c3e686da29d29b5ac9159ff2e3aaa2f71fe2411b6556a61dc1ef13a4899d4",
+        "recordedHashMatches": true,
+        "bytes": 75289,
+        "dimensions": [
+          390,
+          1229
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-refusal-dark",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-dark.png",
+        "sha256": "bd79093c44a8b065df0ac1b4fbef638c7aa0886615313d77a23161f1c8235358",
+        "recordedHashMatches": true,
+        "bytes": 74552,
+        "dimensions": [
+          1103,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-refusal-dark.png",
+        "sha256": "198996b1b0416cc173c0d462fe86c39c89e6e0cdb4f57edad84951a9936aeaf2",
+        "recordedHashMatches": true,
+        "bytes": 60315,
+        "dimensions": [
+          390,
+          1008
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    },
+    {
+      "scenario": "inspector-refusal-dark-focus",
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-dark-focus.png",
+        "sha256": "acd579c1f817fbb32e084b321ecd0abc13dab5ade3d4fbf149256bc8583e828d",
+        "recordedHashMatches": true,
+        "bytes": 74656,
+        "dimensions": [
+          1103,
+          844
+        ],
+        "signatureValid": true
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-refusal-dark-focus.png",
+        "sha256": "fbf11b95f2cf7aaa85bf34b5ecc08486377c247f9c01bf088e867715654d3db6",
+        "recordedHashMatches": true,
+        "bytes": 60745,
+        "dimensions": [
+          390,
+          1008
+        ],
+        "signatureValid": true
+      },
+      "changed": true
+    }
+  ],
+  "browserPredicateReconstruction": {
+    "desktopCases": 14,
+    "inspectorCases": 6,
+    "desktopFocusSamples": 557,
+    "inspectorFocusSamples": 24,
+    "focusSamples": 581,
+    "focusPredicatesPerSample": 3,
+    "focusPredicates": 1743,
+    "casePredicates": 52,
+    "totalPredicates": 1795,
+    "desktopDistinctTagIdClassCombinations": 142,
+    "inspectorDistinctIds": 4
+  },
+  "verification": {
+    "shellCommandsBeforeReportWrite": 7,
+    "timeoutMsPerCommandMax": 120000,
+    "wholeRepositoryBuildRun": false,
+    "wholeRepositoryGateRun": false,
+    "unitSuitesRerunByReviewer": false,
+    "freshBrowserProbes": "Chromium existing executable, esbuild write:false bundles; no server/build/capture output writes. PR renderer source isolated but imported shared current dependencies/visual state; this is exact-source visual comparison, not standalone PR runtime certification.",
+    "sourceEdits": false,
+    "commitPushPRMutation": false,
+    "installsOrSpend": false,
+    "priorGreenTransfer": false,
+    "limits": [
+      "Whole-repo build and focused owning test execution belong to assigned build reviewer; no fresh suite green asserted here.",
+      "No manual PNG content review tool was available; refusal content failure independently reproduced through DOM/geometry.",
+      "PNG dimensions/hash integrity do not by themselves establish perceptual improvement.",
+      "No real provider, hardware GPU, Electron runtime or assistive-technology acceptance.",
+      "No complete intended artifact/CI safety certification; other reviewer owns remote tree and checks."
+    ]
+  }
+}

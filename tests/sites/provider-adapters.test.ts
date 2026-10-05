@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
 import {
   AUTH_REFUSE_REASONS,
   createIdentityPort,
@@ -37,7 +38,64 @@ import {
   type StripeClientLike,
 } from "../../sites/umbrella/src/index.ts";
 import { createDeploymentPlaneHandles } from "../../sites/umbrella/src/lib/identity-plane.ts";
+import { createNeonHostedCallStore } from "../../sites/umbrella/src/lib/provider-adapters.ts";
 import { logWebhookOutcome, serverLog } from "../../sites/umbrella/src/lib/server-logger.ts";
+
+describe("raw SQL deployment boundary compatibility", () => {
+  it("compiles the formerly supported unknown-column SDK consumer without assertions", () => {
+    const file = fileURLToPath(new URL("./provider-sdk-consumer.ts", import.meta.url));
+    const source = `import type { NeonDatabase } from "../../sites/umbrella/src/lib/provider-adapters.js";
+      const sdk = {
+        async query(): Promise<ReadonlyArray<Record<string, unknown>>> { return []; },
+        async transaction(): Promise<ReadonlyArray<ReadonlyArray<Record<string, unknown>>>> { return []; }
+      };
+      const database: NeonDatabase = sdk;
+      void database;`;
+    const options: ts.CompilerOptions = {
+      strict: true, noEmit: true, target: ts.ScriptTarget.ES2023,
+      module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      types: ["node"],
+    };
+    const host = ts.createCompilerHost(options);
+    const read = host.readFile;
+    const exists = host.fileExists;
+    host.readFile = path => path === file ? source : read(path);
+    host.fileExists = path => path === file || exists(path);
+    const program = ts.createProgram([file], options, host);
+    const consumer = program.getSourceFile(file);
+    expect(consumer).toBeDefined();
+    if (consumer === undefined) throw new Error("consumer was not compiled");
+    const diagnostics = [...program.getSyntacticDiagnostics(consumer), ...program.getSemanticDiagnostics(consumer)];
+    expect(diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"))).toEqual([]);
+  });
+
+  it.each([
+    { user_id: 7 }, { email_verified: "true" }, { disabled: 0 },
+    { created_at: "not-a-date" }, { email: new Map() },
+  ])("refuses invalid identity columns before constructing a trusted user: %j", async invalid => {
+    const database = {
+      async query(): Promise<ReadonlyArray<Record<string, unknown>>> {
+        return [{ user_id: "raw-user", email: "raw@example.test", email_verified: true,
+          disabled: false, created_at: "2026-10-01T00:00:00Z", ...invalid }];
+      },
+    };
+    const store = createNeonIdentityStore(database);
+    await expect(store.findUserById("raw-user")).rejects.toThrow(/provider row is missing/);
+  });
+
+  it("decodes real SQL bigint and timestamp columns while rejecting unsafe integer values", async () => {
+    const fixture = createDatabase();
+    fixture.entries.push({ entry_id: "entry-raw", account_id: accountRow.account_id,
+      sequence: "1", movement: "grant", delta: 100n, balance_after: "100",
+      reason: "fixture grant", idempotency_key: "raw:grant", occurred_at: new Date(iso(0)) });
+    const store = createNeonCreditStore(fixture.database);
+    expect(await store.listEntries(accountRow.account_id)).toMatchObject([
+      { sequence: 1, delta: 100, balanceAfter: 100, occurredAt: iso(0) },
+    ]);
+    fixture.entries[0] = { ...fixture.entries[0], delta: "9007199254740992" };
+    await expect(store.listEntries(accountRow.account_id)).rejects.toThrow(/safe integer/);
+  });
+});
 
 describe("umbrella server logging", () => {
   it("emits stable JSON events and redacts secrets, tokens, emails, URLs, and unapproved fields", () => {
@@ -1184,7 +1242,7 @@ function saleSettlement(
       kind: "sceneaxi.credit-ledger-entry",
       entryId: "entry-sale-buyer",
       accountId: "acct_member_1",
-      sequence: 1,
+      sequence: 2,
       movement: "debit",
       delta: -100,
       balanceAfter: 0,
@@ -1223,6 +1281,12 @@ function saleSettlement(
 
 function creditsFixture() {
   const fixture = createDatabase();
+  // Real domain chain: a buyer must hold 100 credits before the sale's debit.
+  fixture.entries.push({
+    entry_id: "entry-buyer-grant", account_id: "acct_member_1", sequence: 1,
+    movement: "grant", delta: 100, balance_after: 100, reason: "fixture grant",
+    idempotency_key: "fixture:buyer:grant", occurred_at: iso(-1_000),
+  });
   fixture.accounts.push({
     account_id: CREATOR_ACCOUNT,
     user_id: "creator-1",
@@ -1239,8 +1303,11 @@ describe("umbrella Neon credit settlement", () => {
     await expect(store.settleCreditsSale(saleSettlement())).resolves.toEqual({
       replayed: false,
     });
-    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.entries).toHaveLength(3);
     expect(fixture.shares).toHaveLength(1);
+    const account = await store.findAccountByUserId("member-1");
+    if (account === undefined) throw new Error("missing buyer account");
+    expect(loadLedgerState(account, await store.listEntries(account.accountId))).toMatchObject({ ok: true, value: { balance: 0 } });
     expect(fixture.shares[0]).toMatchObject({
       sale_id: SALE_ID,
       buyer_user_id: "member-1",
@@ -1260,7 +1327,7 @@ describe("umbrella Neon credit settlement", () => {
     await expect(store.settleCreditsSale(saleSettlement())).resolves.toEqual({
       replayed: true,
     });
-    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.entries).toHaveLength(3);
     expect(fixture.shares).toHaveLength(1);
   });
 
@@ -1272,7 +1339,7 @@ describe("umbrella Neon credit settlement", () => {
     await expect(
       store.settleCreditsSale(saleSettlement({ shareOccurredAt: iso(1_000) })),
     ).rejects.toThrow(/different settlement evidence/);
-    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.entries).toHaveLength(3);
     expect(fixture.shares).toHaveLength(1);
   });
 
@@ -1283,7 +1350,7 @@ describe("umbrella Neon credit settlement", () => {
     await expect(
       store.settleCreditsSale(saleSettlement({ creatorAccountId: "acct_member_1" })),
     ).rejects.toThrow(/does not belong to its settlement party/);
-    expect(fixture.entries).toHaveLength(0);
+    expect(fixture.entries).toHaveLength(1);
     expect(fixture.shares).toHaveLength(0);
   });
 
@@ -1297,7 +1364,7 @@ describe("umbrella Neon credit settlement", () => {
     await expect(store.settleCreditsSale(saleSettlement())).rejects.toThrow(
       /requires a Neon transaction/,
     );
-    expect(fixture.entries).toHaveLength(0);
+    expect(fixture.entries).toHaveLength(1);
     expect(fixture.shares).toHaveLength(0);
   });
 
@@ -1311,7 +1378,7 @@ describe("umbrella Neon credit settlement", () => {
     // The boundary guard runs synchronously, exactly as a constraint rejects
     // before the write, so this is a throw and never a rejected promise.
     expect(() => store.appendEntry(buyerEntry)).toThrow(/requires atomic settlement/);
-    expect(fixture.entries).toHaveLength(0);
+    expect(fixture.entries).toHaveLength(1);
   });
 });
 
@@ -1663,5 +1730,51 @@ describe("umbrella Better Auth HTTP client", () => {
     expect(
       mapBetterAuthAuthentication({ authentication, surface: "site", issuedAt: NOW }),
     ).toBeUndefined();
+  });
+});
+
+
+describe("Neon durable response codec boundary", () => {
+  const operation = { accountId: "acct_member_1", idempotencyKey: "turn:response", amount: 1, reason: "fixture hosted call", model: "fixture-model", operation: "generate", now: NOW };
+
+  it.each([new Map([["answer", "charged answer"]]), new Date(0), 1n])("rejects unsupported JS instances before persistence: %s", async response => {
+    const calls: string[] = [];
+    const store = createNeonHostedCallStore({ query: async text => { calls.push(text); return [{ idempotency_key: operation.idempotencyKey }]; } });
+    await expect(store.saveResponse(operation, response)).rejects.toThrow(/bounded JSON/);
+    expect(calls).toEqual([]);
+  });
+
+  it("does not invoke accessors or toJSON hooks before rejecting a supplied response", async () => {
+    let invoked = 0;
+    const getter = Object.defineProperty({}, "answer", { enumerable: true, get() { invoked++; return "changed"; } });
+    const hook = { answer: "original", toJSON() { invoked++; return { answer: "changed" }; } };
+    const calls: string[] = [];
+    const store = createNeonHostedCallStore({ query: async text => { calls.push(text); return [{ idempotency_key: operation.idempotencyKey }]; } });
+    for (const response of [getter, hook]) await expect(store.saveResponse(operation, response)).rejects.toThrow(/bounded JSON/);
+    expect(invoked).toBe(0); expect(calls).toEqual([]);
+  });
+
+  it("preserves a JSON answer through persisted response-ready restart with an owned frozen snapshot", async () => {
+    let persisted: unknown;
+    const database: NeonDatabase = { async query(text, values) {
+      if (text.includes("UPDATE hosted_model_operations")) {
+        const json = values?.[6];
+        if (typeof json !== "string") throw new Error("missing response JSON");
+        persisted = JSON.parse(json);
+        return [{ idempotency_key: operation.idempotencyKey }];
+      }
+      return [{ status: "response-ready", response: persisted }];
+    } };
+    const response = { answer: "charged answer", nested: [1, { valid: true }] };
+    await createNeonHostedCallStore(database).saveResponse(operation, response);
+    response.answer = "later mutation";
+    const restored = await createNeonHostedCallStore(database).reserve(operation);
+    expect(restored).toEqual({ status: "response-ready", response: { answer: "charged answer", nested: [1, { valid: true }] } });
+    expect(Object.isFrozen(restored.response)).toBe(true);
+  });
+
+  it("rejects malformed response-ready output rather than returning it as trusted recovery", async () => {
+    const store = createNeonHostedCallStore({ query: async () => [{ status: "response-ready", response: new Map() }] });
+    await expect(store.reserve(operation)).rejects.toThrow(/bounded JSON/);
   });
 });

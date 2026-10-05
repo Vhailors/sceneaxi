@@ -24,3 +24,6 @@ export function windowsReleasePreflight(
 export function requireWindowsReleaseEnvironment(
   options?: WindowsReleasePreflightOptions,
 ): void;
+
+export function requireEmptyWindowsOutput(directory?: string): void;
+export function windowsCheckoutProvenance(env?: Readonly<Record<string, string | undefined>>): string;

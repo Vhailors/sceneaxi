@@ -5,7 +5,6 @@
 
 import {
   closeSync,
-  copyFileSync,
   existsSync,
   fsyncSync,
   linkSync,
@@ -21,8 +20,32 @@ import {
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash } from "./content-hash.js";
+import type { JsonValue } from "@sceneaxi/schemas";
+
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number";
+}
+
+function readLockToken(path: string): string | null {
+  // SAFETY: JSON.parse produces a JSON value; object and token contracts are checked below.
+  const value = JSON.parse(readFileSync(path, "utf8")) as JsonValue;
+
+  return isJsonObject(value) && isString(value["token"]) ? value["token"] : null;
+}
+
+type MutableAtomicWritePlan = { -readonly [Key in keyof AtomicWritePlan]: AtomicWritePlan[Key] };
 
 export type AtomicWritePlan = {
   readonly path: string;
@@ -81,6 +104,7 @@ type LockSetState = {
 };
 
 declare const atomicWriteLockSetBrand: unique symbol;
+
 export type AtomicWriteLockSet = {
   readonly [atomicWriteLockSetBrand]: true;
 };
@@ -89,6 +113,7 @@ const lockSetStates = new WeakMap<object, LockSetState>();
 
 function syncDirectory(path: string): void {
   const fd = openSync(path, "r");
+
   try {
     fsyncSync(fd);
   } finally {
@@ -99,22 +124,28 @@ function syncDirectory(path: string): void {
 function ensureDirectory(path: string): void {
   const missing: string[] = [];
   let cursor = resolve(path);
+
   while (!existsSync(cursor)) {
     missing.push(cursor);
     const parent = dirname(cursor);
+
     if (parent === cursor) break;
     cursor = parent;
   }
+
   mkdirSync(path, { recursive: true });
+
   for (const created of missing.reverse()) {
     syncDirectory(dirname(created));
     syncDirectory(created);
   }
 }
 
-function writeDurableFile(path: string, contents: string): void {
-  const fd = openSync(path, "w");
+function writeDurableFile(path: string, contents: string | Uint8Array, onCreated?: () => void): void {
+  const fd = openSync(path, "wx");
+
   try {
+    onCreated?.();
     writeFileSync(fd, contents, { encoding: "utf8" });
     fsyncSync(fd);
   } finally {
@@ -122,25 +153,46 @@ function writeDurableFile(path: string, contents: string): void {
   }
 }
 
-function syncFile(path: string): void {
-  const fd = openSync(path, "r");
-  try {
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
-}
 
 export function canonicalPath(path: string): string {
   let cursor = resolve(path);
   const suffix: string[] = [];
+
   while (!existsSync(cursor)) {
     const parent = dirname(cursor);
+
     if (parent === cursor) break;
     suffix.unshift(basename(cursor));
     cursor = parent;
   }
+
   return resolve(realpathSync.native(cursor), ...suffix);
+}
+
+/** A project path must be contained both lexically and after symlink resolution. */
+export class ProjectPathEscapeError extends Error {
+  constructor(readonly documentPath: string) {
+    super("Project path must remain inside its authoritative canonical root.");
+    this.name = "ProjectPathEscapeError";
+  }
+}
+
+export function containedProjectPath(cwd: string, path: string): string {
+  const root = canonicalPath(cwd);
+  const lexical = resolve(root, path);
+
+  const inside = (candidate: string): boolean => {
+    const rel = relative(root, candidate);
+
+    return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  };
+
+  if (!inside(lexical)) throw new ProjectPathEscapeError(path);
+  const canonical = canonicalPath(lexical);
+
+  if (!inside(canonical)) throw new ProjectPathEscapeError(path);
+
+  return canonical;
 }
 
 function artifactStem(path: string): string {
@@ -157,12 +209,13 @@ function lockPathFor(path: string): string {
 function processIsAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return true;
   } catch (error) {
     return !(
       error instanceof Error &&
       "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ESRCH"
+      (error).code === "ESRCH"
     );
   }
 }
@@ -174,6 +227,7 @@ function processIdentity(
   method?: ProcessIdentityMethod,
 ): string | null {
   if (!Number.isInteger(pid) || pid <= 0) return null;
+
   if (
     (method === undefined || method === "linux-proc") &&
     process.platform === "linux"
@@ -183,9 +237,11 @@ function processIdentity(
         "/proc/sys/kernel/random/boot_id",
         "utf8",
       ).trim();
+
       const stat = readFileSync(`/proc/${String(pid)}/stat`, "utf8");
       const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
       const startTicks = fields[19];
+
       if (startTicks !== undefined && bootId.length > 0) {
         return `linux-proc:${bootId}:${String(pid)}:${startTicks}`;
       }
@@ -193,6 +249,7 @@ function processIdentity(
       if (method === "linux-proc") return null;
     }
   }
+
   if (
     (method === undefined || method === "windows-cim") &&
     process.platform === "win32"
@@ -208,6 +265,7 @@ function processIdentity(
         ],
         { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
       ).trim();
+
       return createdAt.length === 0
         ? null
         : `windows-cim:${String(pid)}:${createdAt}`;
@@ -215,6 +273,7 @@ function processIdentity(
       return null;
     }
   }
+
   if (method === undefined || method === "posix-ps") {
     try {
       const createdAt = execFileSync(
@@ -222,6 +281,7 @@ function processIdentity(
         ["-o", "lstart=", "-p", String(pid)],
         { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
       ).trim();
+
       return createdAt.length === 0
         ? null
         : `posix-ps:${String(pid)}:${createdAt}`;
@@ -229,6 +289,7 @@ function processIdentity(
       return null;
     }
   }
+
   return null;
 }
 
@@ -261,22 +322,27 @@ type LockOwner = {
 
 function readLockOwner(lockPath: string): LockOwner | null {
   try {
-    const value = JSON.parse(readFileSync(lockPath, "utf8")) as unknown;
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    // SAFETY: JSON.parse produces a JSON value; readLockOwner validates every owner field below.
+    const value = JSON.parse(readFileSync(lockPath, "utf8")) as JsonValue;
+
+    if (!isJsonObject(value)) {
       return null;
     }
-    const owner = value as Record<string, unknown>;
+
+    const owner = value;
+
     if (
-      typeof owner["pid"] !== "number" ||
+      !isNumber(owner["pid"]) ||
       !Number.isInteger(owner["pid"]) ||
       owner["pid"] <= 0 ||
-      typeof owner["identity"] !== "string" ||
+      !isString(owner["identity"]) ||
       owner["identity"].length === 0 ||
-      typeof owner["token"] !== "string" ||
+      !isString(owner["token"]) ||
       owner["token"].length === 0
     ) {
       return null;
     }
+
     return {
       pid: owner["pid"],
       identity: owner["identity"],
@@ -291,10 +357,13 @@ function lockOwnerIsStale(owner: LockOwner): boolean {
   if (owner.pid === process.pid) {
     return owner.identity !== CURRENT_PROCESS_IDENTITY;
   }
+
   if (!processIsAlive(owner.pid)) return true;
   const method = processIdentityMethod(owner.identity);
+
   if (method === undefined) return false;
   const liveIdentity = processIdentity(owner.pid, method);
+
   return liveIdentity !== null && liveIdentity !== owner.identity;
 }
 
@@ -303,6 +372,7 @@ function reclaimWorkPrefix(lockPath: string): string {
     .update(lockPath, "utf8")
     .digest("hex")
     .slice(0, 16);
+
   return `.sceneaxi-reclaim-working-${digest}-`;
 }
 
@@ -333,14 +403,21 @@ function reclaimWorkOwner(
   name: string,
 ): ReclaimWorkOwner | null {
   const prefix = reclaimWorkPrefix(lockPath);
+
   if (!name.startsWith(prefix)) return null;
+
   const match = /^(\d+)-([lpw])-([0-9a-f]{16})-([0-9a-f]{32})$/.exec(
     name.slice(prefix.length),
   );
+
   if (match === null) return null;
   const pid = Number(match[1]);
+  // SAFETY: the successful anchored regex requires the second capture to be l, p, or w.
   const method = reclaimMethodFromCode(match[2] as string);
+
   if (!Number.isInteger(pid) || pid <= 0 || method === undefined) return null;
+
+  // SAFETY: the successful anchored regex requires a 16-hex-character third capture.
   return {
     pid,
     method,
@@ -356,8 +433,10 @@ function reclaimWorkOwnerIsStale(owner: ReclaimWorkOwner): boolean {
         owner.identityFingerprint
     );
   }
+
   if (!processIsAlive(owner.pid)) return true;
   const liveIdentity = processIdentity(owner.pid, owner.method);
+
   return (
     liveIdentity !== null &&
     identityFingerprint(liveIdentity) !== owner.identityFingerprint
@@ -368,26 +447,33 @@ function clearStaleReclaimWork(lockPath: string): boolean {
   const directory = dirname(lockPath);
   const prefix = reclaimWorkPrefix(lockPath);
   let names: readonly string[];
+
   try {
     names = readdirSync(directory).filter((name) => name.startsWith(prefix));
   } catch {
     return false;
   }
+
   let removed = false;
+
   for (const name of names) {
     const owner = reclaimWorkOwner(lockPath, name);
+
     if (owner === null || !reclaimWorkOwnerIsStale(owner)) return false;
+
     try {
       unlinkSync(join(directory, name));
       removed = true;
     } catch (error) {
       const code =
         error instanceof Error && "code" in error
-          ? (error as NodeJS.ErrnoException).code
+          ? (error).code
           : undefined;
+
       if (code !== "ENOENT") return false;
     }
   }
+
   if (removed) {
     try {
       syncDirectory(directory);
@@ -395,6 +481,7 @@ function clearStaleReclaimWork(lockPath: string): boolean {
       return false;
     }
   }
+
   return true;
 }
 
@@ -418,9 +505,12 @@ function removeStaleLock(lockPath: string): boolean {
   ) {
     return false;
   }
+
   const currentMethod = processIdentityMethod(CURRENT_PROCESS_IDENTITY);
+
   if (currentMethod === undefined) return false;
   const claimPath = `${lockPath}.reclaim`;
+
   if (!existsSync(claimPath)) {
     try {
       linkSync(lockPath, claimPath);
@@ -428,11 +518,13 @@ function removeStaleLock(lockPath: string): boolean {
     } catch (error) {
       const code =
         error instanceof Error && "code" in error
-          ? (error as NodeJS.ErrnoException).code
+          ? (error).code
           : undefined;
+
       if (code !== "EEXIST") return false;
     }
   }
+
   const workPath = join(
     dirname(lockPath),
     `${reclaimWorkPrefix(lockPath)}${String(process.pid)}-${reclaimMethodCode(
@@ -440,31 +532,39 @@ function removeStaleLock(lockPath: string): boolean {
     )}-${identityFingerprint(CURRENT_PROCESS_IDENTITY)}-${randomBytes(16)
       .toString("hex")}`,
   );
+
   try {
     renameSync(claimPath, workPath);
     syncDirectory(dirname(lockPath));
   } catch {
     return false;
   }
+
   let removed = false;
+
   try {
     const claimed = statSync(workPath);
     let current: ReturnType<typeof statSync>;
+
     try {
       current = statSync(lockPath);
     } catch (error) {
       const code =
         error instanceof Error && "code" in error
-          ? (error as NodeJS.ErrnoException).code
+          ? (error).code
           : undefined;
+
       return code === "ENOENT";
     }
+
     if (claimed.dev !== current.dev || claimed.ino !== current.ino) return true;
     const owner = readLockOwner(workPath);
+
     if (owner === null || !lockOwnerIsStale(owner)) return false;
     unlinkSync(lockPath);
     syncDirectory(dirname(lockPath));
     removed = true;
+
     return true;
   } catch {
     return false;
@@ -489,11 +589,13 @@ function cleanLockCandidate(
 function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
   const held: HeldLock[] = [];
   const token = randomBytes(16).toString("hex");
+
   try {
     for (const path of [...new Set(paths)].sort()) {
       if (CURRENT_PROCESS_IDENTITY === null) {
         throw new AtomicWriteLockError(path);
       }
+
       const lockPath = lockPathFor(path);
       const claimPath = `${lockPath}.reclaim`;
       const candidatePath = `${lockPath}.candidate-${token}`;
@@ -508,26 +610,32 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
       );
       syncDirectory(dirname(lockPath));
       let acquired = false;
+
       try {
         for (let attempt = 0; attempt < 2 && !acquired; attempt += 1) {
           if (!clearStaleReclaimWork(lockPath)) {
             throw new AtomicWriteLockError(path);
           }
+
           if (existsSync(claimPath) && !removeStaleLock(lockPath)) {
             throw new AtomicWriteLockError(path);
           }
+
           try {
             linkSync(candidatePath, lockPath);
           } catch (error) {
             const code =
               error instanceof Error && "code" in error
-                ? (error as NodeJS.ErrnoException).code
+                ? (error).code
                 : undefined;
+
             if (code !== "EEXIST" || !removeStaleLock(lockPath)) {
               throw new AtomicWriteLockError(path);
             }
+
             continue;
           }
+
           held.push({ path: lockPath, token });
           syncDirectory(dirname(lockPath));
           acquired = true;
@@ -535,8 +643,10 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
       } finally {
         cleanLockCandidate(candidatePath, path, acquired);
       }
+
       if (!acquired) throw new AtomicWriteLockError(path);
     }
+
     return held;
   } catch (error) {
     releaseLocks(held, false);
@@ -548,20 +658,24 @@ export function acquireAtomicWriteLocks(
   paths: readonly string[],
 ): AtomicWriteLockSet {
   const targets = new Set(paths.map((path) => canonicalPath(path)));
+  // SAFETY: this opaque capability is registered in lockSetStates below; every consumer verifies that registration and liveness.
   const lockSet = Object.freeze({}) as AtomicWriteLockSet;
   lockSetStates.set(lockSet, {
     targets,
     held: acquireLocks([...targets]),
     active: true,
   });
+
   return lockSet;
 }
 
 export function releaseAtomicWriteLocks(lockSet: AtomicWriteLockSet): void {
   const state = lockSetStates.get(lockSet);
+
   if (state === undefined || !state.active) {
     throw new AtomicWriteLockError("lock capability");
   }
+
   state.active = false;
   releaseLocks(state.held, false);
 }
@@ -570,17 +684,23 @@ export function releaseAtomicWriteLocksChecked(
   lockSet: AtomicWriteLockSet,
 ): readonly string[] {
   const state = lockSetStates.get(lockSet);
+
   if (state === undefined || !state.active) {
     throw new AtomicWriteLockError("lock capability");
   }
+
   const failures = releaseLocks(state.held, true);
+
   const remaining = state.held
     .map((lock) => lock.path)
     .filter((path) => existsSync(path));
+
   if (failures.length === 0 && remaining.length === 0) {
     state.active = false;
+
     return Object.freeze([]);
   }
+
   return Object.freeze([...new Set([...failures, ...remaining])].sort());
 }
 
@@ -588,9 +708,11 @@ export function atomicWriteLockArtifactPaths(
   lockSet: AtomicWriteLockSet,
 ): readonly string[] {
   const state = lockSetStates.get(lockSet);
+
   if (state === undefined || !state.active) {
     throw new AtomicWriteLockError("lock capability");
   }
+
   return Object.freeze(state.held.map((lock) => lock.path));
 }
 
@@ -600,16 +722,17 @@ function releaseLocks(
 ): readonly string[] {
   const syncedDirectories = new Set<string>();
   const failures = new Set<string>();
+
   for (const lock of [...held].reverse()) {
-    let owner: { token?: unknown };
+    let ownerToken: string | null;
+
     try {
-      owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
-        token?: unknown;
-      };
+      ownerToken = readLockToken(lock.path);
     } catch (error) {
       const code = error instanceof Error && "code" in error
-        ? (error as NodeJS.ErrnoException).code
+        ? (error).code
         : undefined;
+
       if (code === "ENOENT") syncedDirectories.add(dirname(lock.path));
       else if (verifyOwnership) failures.add(lock.path);
       else {
@@ -620,23 +743,28 @@ function releaseLocks(
           failures.add(lock.path);
         }
       }
+
       continue;
     }
-    if (owner.token !== lock.token) {
+
+    if (ownerToken !== lock.token) {
       failures.add(lock.path);
       continue;
     }
+
     try {
       unlinkSync(lock.path);
       syncedDirectories.add(dirname(lock.path));
     } catch (error) {
       const code = error instanceof Error && "code" in error
-        ? (error as NodeJS.ErrnoException).code
+        ? (error).code
         : undefined;
+
       if (code === "ENOENT") syncedDirectories.add(dirname(lock.path));
       else failures.add(lock.path);
     }
   }
+
   for (const directory of syncedDirectories) {
     try {
       syncDirectory(directory);
@@ -645,6 +773,7 @@ function releaseLocks(
       continue;
     }
   }
+
   return Object.freeze([...failures].sort());
 }
 
@@ -657,23 +786,26 @@ function requireActiveLockSet(
   targets: ReadonlySet<string>,
 ): LockSetState {
   const state = lockSetStates.get(lockSet);
+
   if (state === undefined || !state.active) {
     throw new AtomicWriteLockError("lock capability");
   }
+
   for (const target of targets) {
     if (!state.targets.has(target)) throw new AtomicWriteLockError(target);
   }
+
   for (const lock of state.held) {
     try {
-      const owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
-        token?: unknown;
-      };
-      if (owner.token !== lock.token) throw new AtomicWriteLockError(lock.path);
+      const ownerToken = readLockToken(lock.path);
+
+      if (ownerToken !== lock.token) throw new AtomicWriteLockError(lock.path);
     } catch (error) {
       if (error instanceof AtomicWriteLockError) throw error;
       throw new AtomicWriteLockError(lock.path);
     }
   }
+
   return state;
 }
 
@@ -685,13 +817,18 @@ export function verifyAtomicWritePreconditions(
     ...plan,
     path: canonicalPath(plan.path),
   }));
+
   requireActiveLockSet(lockSet, new Set(normalized.map((plan) => plan.path)));
+
   for (const plan of normalized) {
     const actual = currentHash(plan.path);
+
     if (plan.mustBeAbsent === true && actual !== null) {
       throw new AtomicWriteConflictError(plan.path, "absent", actual);
     }
+
     if (plan.expectedContentHash === undefined) continue;
+
     if (actual !== plan.expectedContentHash) {
       throw new AtomicWriteConflictError(
         plan.path,
@@ -712,21 +849,12 @@ export function atomicWriteFile(
     readonly lockSet?: AtomicWriteLockSet;
   } = {},
 ): void {
-  atomicWriteAll(
-    [
-      {
-        path,
-        contents,
-        ...(options.expectedContentHash === undefined
-          ? {}
-          : { expectedContentHash: options.expectedContentHash }),
-        ...(options.mustBeAbsent === undefined
-          ? {}
-          : { mustBeAbsent: options.mustBeAbsent }),
-      },
-    ],
-    options,
-  );
+  const plan: MutableAtomicWritePlan = { path, contents };
+
+  if (options.expectedContentHash !== undefined) plan.expectedContentHash = options.expectedContentHash;
+
+  if (options.mustBeAbsent !== undefined) plan.mustBeAbsent = options.mustBeAbsent;
+  atomicWriteAll([plan], options);
 }
 
 export function atomicWriteAll(
@@ -742,7 +870,9 @@ export function atomicWriteAll(
     ...plan,
     path: canonicalPath(plan.path),
   }));
+
   const targets = new Set<string>();
+
   for (const plan of normalized) {
     if (targets.has(plan.path)) {
       throw new AtomicWriteError(
@@ -751,26 +881,36 @@ export function atomicWriteAll(
         undefined,
       );
     }
+
     targets.add(plan.path);
   }
 
-  const token = options.token ?? randomBytes(8).toString("hex");
-  if (!/^[a-zA-Z0-9-]+$/.test(token)) {
+  const tokenPrefix = options.token ?? "write";
+
+  if (!/^[a-zA-Z0-9-]+$/.test(tokenPrefix)) {
     throw new Error(
       "Atomic write token must contain only letters, digits, or hyphens.",
     );
   }
 
+  // A journal transaction may be retried after process death. Do not reuse its
+  // scratch names: durable orphan files are data, never overwrite authority.
+  const token = `${tokenPrefix}-${randomBytes(16).toString("hex")}`;
+
   const lockSet =
     options.lockSet ??
     acquireAtomicWriteLocks(normalized.map((plan) => plan.path));
+
   const ownsLockSet = options.lockSet === undefined;
+
   const staged: Array<{
     path: string;
     tmp: string;
+    ownsTmp: boolean;
     bak: string | null;
     hadOriginal: boolean;
   }> = [];
+
   let committed = 0;
 
   try {
@@ -781,23 +921,27 @@ export function atomicWriteAll(
       ensureDirectory(dir);
       const tmp = join(dir, `.sceneaxi-tmp-${token}-${artifactStem(plan.path)}`);
       const hadOriginal = existsSync(plan.path);
-      const item = {
+
+      const item: (typeof staged)[number] = {
         path: plan.path,
         tmp,
-        bak: null as string | null,
+        ownsTmp: false,
+        bak: null,
         hadOriginal,
       };
+
       staged.push(item);
-      writeDurableFile(tmp, plan.contents);
+      writeDurableFile(tmp, plan.contents, () => { item.ownsTmp = true; });
 
       if (hadOriginal) {
-        item.bak = join(
+        const backup = join(
           dir,
           `.sceneaxi-bak-${token}-${artifactStem(plan.path)}`,
         );
-        copyFileSync(plan.path, item.bak);
-        syncFile(item.bak);
+
+        writeDurableFile(backup, readFileSync(plan.path), () => { item.bak = backup; });
       }
+
       syncDirectory(dir);
     }
 
@@ -805,6 +949,7 @@ export function atomicWriteAll(
       renameSync(item.tmp, item.path);
       committed += 1;
     }
+
     for (const directory of new Set(staged.map((item) => dirname(item.path)))) {
       syncDirectory(directory);
     }
@@ -812,11 +957,13 @@ export function atomicWriteAll(
     for (const item of staged) {
       try {
         if (item.bak !== null && existsSync(item.bak)) unlinkSync(item.bak);
-        if (existsSync(item.tmp)) unlinkSync(item.tmp);
+
+        if (item.ownsTmp && existsSync(item.tmp)) unlinkSync(item.tmp);
       } catch {
         continue;
       }
     }
+
     for (const directory of new Set(staged.map((item) => dirname(item.path)))) {
       try {
         syncDirectory(directory);
@@ -833,9 +980,12 @@ export function atomicWriteAll(
     }
 
     let rollbackComplete = true;
+
     for (let index = committed - 1; index >= 0; index -= 1) {
       const item = staged[index];
+
       if (item === undefined) continue;
+
       try {
         if (item.bak !== null && existsSync(item.bak)) {
           renameSync(item.bak, item.path);
@@ -844,6 +994,7 @@ export function atomicWriteAll(
         } else {
           rollbackComplete = false;
         }
+
         syncDirectory(dirname(item.path));
       } catch {
         rollbackComplete = false;
@@ -852,7 +1003,8 @@ export function atomicWriteAll(
 
     for (const item of staged) {
       try {
-        if (existsSync(item.tmp)) unlinkSync(item.tmp);
+        if (item.ownsTmp && existsSync(item.tmp)) unlinkSync(item.tmp);
+
         if (rollbackComplete && item.bak !== null && existsSync(item.bak)) {
           unlinkSync(item.bak);
         }

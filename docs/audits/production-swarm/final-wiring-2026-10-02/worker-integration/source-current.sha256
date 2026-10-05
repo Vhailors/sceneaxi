@@ -1,0 +1,5 @@
+be6b53f334f5efd84de4bbfb7a76532257f427c5569d6665804be129a56ecc2c  packages/importers/src/contained-gltf.ts
+a4f32435a1f123705a5a1c865c2d05a2733c798afce07e2fb4b0b5bfc4b37624  packages/importers/src/asset-preparation-worker.ts
+74e641405aa8131a11284932dd845d3d87c1fd3e5e37ba3671e0273f8b7abad1  packages/importers/src/index.ts
+76d7ee8403ed106a9bee1d095acb2ad95fd4f58c99440f8035b291f0ad132118  desktop/linux/src/electron/main.ts
+6c57d8217bac3ce43bb91963bf58cb6965e994de4fc489c4236cdb133a9d9aa8  packages/importers/test/asset-preparation-bounds.test.ts

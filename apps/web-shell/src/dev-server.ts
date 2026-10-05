@@ -24,10 +24,12 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { canonicalPath } from "@sceneaxi/authoring-core";
 import {
   createInspectorApp,
+  inspectorPageHtml,
   INSPECTOR_ACTIONS,
   MAX_REQUEST_BODY_BYTES,
   WEB_SHELL_APP,
@@ -277,6 +279,21 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
   });
 }
 
+// Only renderer-owned bytes mint CSP authorization, never an app response or
+// request. The project root is escaped outside these two static blocks.
+const CHROME_INTEGRITY_REFUSAL = "WEB_SHELL_CHROME_INTEGRITY_INVALID";
+function chromeBlockHash(html: string, tag: "script" | "style"): string {
+  const blocks = [...html.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"))];
+  const bytes = blocks[0]?.[1];
+  if (blocks.length !== 1 || bytes === undefined || bytes.length === 0) {
+    throw new Error(CHROME_INTEGRITY_REFUSAL);
+  }
+  return `'sha256-${createHash("sha256").update(bytes, "utf8").digest("base64")}'`;
+}
+const STATIC_CHROME = inspectorPageHtml("");
+const CHROME_SCRIPT_HASH = chromeBlockHash(STATIC_CHROME, "script");
+const CHROME_STYLE_HASH = chromeBlockHash(STATIC_CHROME, "style");
+
 /**
  * Headers every response carries, whatever it is answering.
  *
@@ -289,15 +306,17 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
  * structurally cannot refuse it. Denied twice on purpose: `frame-ancestors` is
  * the rule, `x-frame-options` is what a browser that ignores CSP reads.
  *
- * The rest of the policy matches the page as served — inline style and inline
- * script, same-origin `fetch`, no external asset of any kind — so the surface
- * cannot grow a remote dependency without this line changing first.
+ * Only exact deterministic renderer-owned script/style bytes are authorized.
+ * Attribute handlers/styles and external assets remain forbidden; same-origin
+ * fetch is the sole network permission. Changed response HTML refuses below.
  */
 const RESPONSE_SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
   "content-security-policy": [
     "default-src 'none'",
-    "style-src 'unsafe-inline'",
-    "script-src 'unsafe-inline'",
+    `style-src ${CHROME_STYLE_HASH}`,
+    `script-src ${CHROME_SCRIPT_HASH}`,
+    "style-src-attr 'none'",
+    "script-src-attr 'none'",
     "connect-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
@@ -423,6 +442,13 @@ export function startInspectorDevServer(
     ...(options.assistant === undefined ? {} : { assistant: options.assistant }),
   });
 
+  const expectedPage = inspectorPageHtml(app.projectRoot);
+  // A future root-dependent script/style must not silently gain authorization.
+  if (chromeBlockHash(expectedPage, "script") !== CHROME_SCRIPT_HASH ||
+      chromeBlockHash(expectedPage, "style") !== CHROME_STYLE_HASH) {
+    return Promise.reject(new Error(CHROME_INTEGRITY_REFUSAL));
+  }
+
   // Resolved in `onListening`, which is the only place the bound port is known.
   // Null until then, and a request cannot be accepted before the socket listens.
   let authority: BoundAuthority | null = null;
@@ -505,6 +531,18 @@ export function startInspectorDevServer(
         url,
         ...(body === undefined ? {} : { body }),
       });
+      // This server serves one owned HTML page. Refuse all byte drift (including
+      // attributes or extra tags), rather than hashing and blessing returned HTML.
+      if (result.contentType.split(";", 1)[0]?.trim().toLowerCase() === "text/html" && result.body !== expectedPage) {
+        writeResponse(response, 500, "application/json; charset=utf-8", `${JSON.stringify({
+          app: WEB_SHELL_APP,
+          ok: false,
+          action: "unknown",
+          reason: CHROME_INTEGRITY_REFUSAL,
+          message: "Inspector chrome differs from the trusted renderer-owned page.",
+        })}\n`, headOnly);
+        return;
+      }
       writeResponse(response, result.status, result.contentType, result.body, headOnly);
     })().catch(() => {
       // `app.handle` already turns a routing throw into a named refusal, so

@@ -1,0 +1,75 @@
+{
+  "loopStartTimestamp": "2026-10-01T21:46:40Z",
+  "loopEndTimestamp": "2026-10-01T22:11:07Z",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "visualStatus": "PASS_BOUNDED_SECOND_PASS",
+  "owningTestsStatus": "PASS",
+  "verificationStatus": "CONCURRENT_CATALOG_TYPECHECK_FAILURES",
+  "productionReady": false,
+  "pullRequest": {
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+    "createdAt": "2026-10-01T21:40:09Z",
+    "headAtStart": "f4990b8aac5f5af75a16fe3fbb55b74855f2b636",
+    "headAtFinalRemoteVerification": "346933c105305224d575bf9319256301c1eeabfa",
+    "proof": "All four remote CSS files downloaded at BOTH heads are byte-identical to the fresh before-capture local sources; all four differ from the edited sources. Before captures are genuine new captures, not renamed first-loop PNGs. Latest-head unified diffs are retained under sites/catalog-game/test/visual-evidence/postpr/."
+  },
+  "changes": [
+    {"locations": ["sites/umbrella/src/app/globals.css:62", "sites/umbrella/src/app/globals.css:2675", "sites/umbrella/src/app/globals.css:4650"], "improved": "Consistent accent-hi focus rings; editor and table-scrollport rings inset", "why": "Preserve visible keyboard focus inside clipped dark panels and beat the inline token cascade."},
+    {"locations": ["sites/umbrella/src/app/globals.css:1350"], "improved": "Named refusal/state containers shrink safely and wrap complete machine strings", "why": "Long keys must remain readable rather than push explanatory state text beyond the panel."},
+    {"locations": ["sites/umbrella/src/app/globals.css:1557", "sites/umbrella/src/app/globals.css:3111", "sites/umbrella/src/app/globals.css:3124", "sites/umbrella/src/app/globals.css:3471"], "improved": "Tabular numeric tables, even dense-list padding, legible wrapping metadata, top-aligned evidence cells", "why": "Improve row tracking and keep full hashes/JSON selectable without a single cell widening the dock."},
+    {"locations": ["sites/umbrella/src/app/globals.css:3542"], "improved": "Previous diff values use fg-2 while retaining strike-through", "why": "Address QA's recorded 3.42:1 stale-value exception without obscuring which value is previous."},
+    {"locations": ["sites/umbrella/src/app/globals.css:4594", "sites/umbrella/src/app/globals.css:4602"], "improved": "Quiet hover surface and inset pressed confirmation; nonshrinking inline SVGs", "why": "Confirm enabled controls without ambient animation, motion or false feedback on inert controls."},
+    {"locations": ["sites/umbrella/src/app/globals.css:4492", "sites/umbrella/src/app/globals.css:4607", "sites/umbrella/src/app/globals.css:4613", "sites/umbrella/src/app/globals.css:4626"], "improved": "Bounded checkpoint disclosure, framed disabled controls, stable pending/empty/refused message space", "why": "Long checkpoint feedback stays readable; disabled actions no longer hover like enabled ones; no loading state is fabricated."},
+    {"locations": ["sites/umbrella/src/app/globals.css:4633", "sites/umbrella/src/app/globals.css:4639"], "improved": "Purchase-history IDs get their own full-width line and dates use tabular numerals", "why": "Separate machine identity from dense receipt facts without changing data or adding truncation. Authenticated branch is not provider-browser attested."},
+    {"locations": ["sites/catalog-game/src/app/globals.css:1697", "sites/catalog-web/src/app/globals.css:1697"], "improved": "Identical global keyboard rings and inset sticky-scrollport rings; dark scrollbar surfaces", "why": "Every interactive element gets one predictable focus treatment, including scrollable non-button containers."},
+    {"locations": ["sites/catalog-game/src/app/globals.css:1711", "sites/catalog-web/src/app/globals.css:1711", "sites/catalog-game/src/app/globals.css:1730", "sites/catalog-web/src/app/globals.css:1730", "sites/catalog-game/src/app/globals.css:1747", "sites/catalog-web/src/app/globals.css:1747"], "improved": "Left-aligned readable hash values, separated spec/list rows, aligned check icons", "why": "Dense metadata scans consistently instead of ragged right-aligned hash fragments; complete 384-character fixture hashes wrap without clipping."},
+    {"locations": ["sites/catalog-game/src/app/globals.css:1756", "sites/catalog-web/src/app/globals.css:1756", "sites/catalog-game/src/app/globals.css:1762", "sites/catalog-web/src/app/globals.css:1762"], "improved": "Wrapping refusal states and a quiet solid empty-result frame with semantic accent edge", "why": "Make empty results look deliberately handled rather than an unfinished dashed placeholder."},
+    {"locations": ["sites/catalog-game/src/app/globals.css:1772", "sites/catalog-web/src/app/globals.css:1772", "sites/catalog-game/src/app/globals.css:1789", "sites/catalog-web/src/app/globals.css:1789"], "improved": "Visible filter hover, card hover/focus boundary, inset action feedback instead of stacked outer glows", "why": "Confirm the target without competing halos; disabled commerce remains inert. Existing stray animation indentation corrected in both sheets."},
+    {"locations": ["sites/kids/src/app/globals.css:57", "sites/kids/src/app/globals.css:241", "sites/kids/src/app/globals.css:297", "sites/kids/src/app/globals.css:314", "sites/kids/src/app/globals.css:339"], "improved": "Universal focus ring, stable live-message space, aligned emoji cells, tabular counts, 44px disclosure with quiet hover/open feedback", "why": "Prevent activity-message layout jumps, align choices and distinguish selected/pressed/focused states without changing isolation or reducers."}
+  ],
+  "screenshots": {
+    "tool": "Existing installed Playwright driving /usr/bin/chromium against fresh Next production builds on loopback only",
+    "viewports": ["1440x1000", "390x844"],
+    "beforeCount": 42,
+    "afterCount": 42,
+    "changedPairs": 36,
+    "extendedAuditCount": 68,
+    "allBeforeReceipts": {"file": "sites/catalog-game/test/visual-evidence/postpr/before.json", "sha256": "822d409d1ca4b18d7e5a9089ac1537b06106aa5879232ba9aab5ecc60896f039"},
+    "allAfterReceipts": {"file": "sites/catalog-game/test/visual-evidence/postpr/after.json", "sha256": "da162b64944425f0c833259998f783eb12cbcc0c23310f99658ce1709646eb05"},
+    "allAuditReceipts": {"file": "sites/catalog-game/test/visual-evidence/postpr/audit.json", "sha256": "069e5f759096986f1b3a142b9f680817d01b0cb28ef9fcbef61429b823f55228"},
+    "representativePairs": [
+      {"surface": "umbrella editor desktop", "before": {"file": "sites/catalog-game/test/visual-evidence/postpr/before-umbrella-editor-desktop.png", "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804"}, "after": {"file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-desktop.png", "sha256": "cda2472aa524a5d1a10b81b16ad21ed2e04763954505f1ba46665d3fb710dc44"}},
+      {"surface": "Forge detail mobile", "before": {"file": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-game-detail-mobile.png", "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6"}, "after": {"file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-detail-mobile.png", "sha256": "eb73b71fda5613b7c48afb850ffabb611daac0dc2b40cb2464f55395b306c1fc"}},
+      {"surface": "Vitrine empty mobile", "before": {"file": "sites/catalog-game/test/visual-evidence/postpr/before-catalog-web-empty-mobile.png", "sha256": "df32d3585e3601ace88482e6cb480a08bcc9791a2cb2f41505eb1c144c52f05e"}, "after": {"file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-empty-mobile.png", "sha256": "96c021a773b977b01c9301ad7e8442dbf2ed90569bc787903f674efa8aca346f"}},
+      {"surface": "Kids empty mobile", "before": {"file": "sites/catalog-game/test/visual-evidence/postpr/before-kids-empty-mobile.png", "sha256": "86e0b3b7c43fa8649958420b8e2b30564c6ef000cdabd11fe7d090b12e5bbbce"}, "after": {"file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-mobile.png", "sha256": "f54beda2284c106d15fd52f3389c012f82342c3ce1f235b19bde84c5347d1be3"}}
+    ]
+  },
+  "tests": {
+    "owningVitest": {"files": 8, "passed": 543, "failed": 0, "log": "sites/catalog-game/test/visual-evidence/postpr/owning-tests-final.log"},
+    "umbrellaProvider": {"passed": 24, "failed": 0},
+    "umbrellaIntegration": {"passed": 7, "failed": 0},
+    "kidsExistingProductionNodeBrowser": {"passed": 1, "failed": 0, "requests": 14, "externalConnections": 0, "cookiesOrStorage": 0, "log": "sites/catalog-game/test/visual-evidence/postpr/kids-activity-corrected.log"},
+    "disjointOwningTestsPassed": 575,
+    "beforeBrowserAssertions": 112,
+    "afterBrowserAssertions": 261,
+    "extendedBrowserAssertions": 683,
+    "extendedKeyboardFocusSamples": 562,
+    "browserCountsAreSeparateOverlappingRuns": true,
+    "allCapturedCases": "HTTP200, no document overflow/page errors. 149 after focused controls and all562 extended actual focus-visible samples have solid rings >=2px. Mobile minimum-refusal editor legitimately has zero visible interactive controls.",
+    "longHashFixtures": "13 actual machine-value nodes per catalog populated with 384-character fixture hashes, no clipping/overflow; fixture text never persisted or presented as provider data.",
+    "builds": {"umbrella": 0, "catalog-game": 0, "catalog-web": 0, "kids": 0},
+    "standaloneTypechecks": {"umbrella": 0, "kids": 0, "catalog-game": 2, "catalog-web": 2},
+    "typecheckFailureOutput": "Both catalogs src/app/page.tsx(115,106),(117,80),(121,78): TS2345 string | readonly string[] | undefined is not assignable to string | string[] | undefined. Concurrent readonly SearchProps change occurred after successful production builds; reported to parent, pages untouched by this lane.",
+    "scopedDiffCheck": 0,
+    "fullRepositoryGate": "Not rerun by this lane."
+  },
+  "sourceSha256After": {
+    "sites/umbrella/src/app/globals.css": "37ff7ca533d6ea48037f258b60c2937a95644929c197c24190fc7387f11f2009",
+    "sites/catalog-game/src/app/globals.css": "c12f47aba173b6e3f02b740404b6f8e9af698737a7266ec7c88804c1286b5eb0",
+    "sites/catalog-web/src/app/globals.css": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3",
+    "sites/kids/src/app/globals.css": "120f68a9e0763f8d04f3df76ca3484fa562724b39101dcf8c04d6e4d274260f0"
+  },
+  "scope": "Only the four owned UI stylesheets, evidence under owned catalog-game/test/visual-evidence/postpr/, and this report pair. No new dependencies, commits, pushes, palette tokens, TS assertions, lint disables, reducer/API/contract changes. Parent owns editor-shell.tsx and its aria-disabled literal.",
+  "recoveredHarnessFailures": ["Capture initially demanded a focus sample on the correctly noninteractive mobile minimum-refusal editor; corrected harness, product unchanged.", "Kids suite initially invoked with Playwright CLI: error unknown command 'test'. Its documented Node command subsequently passed unchanged."],
+  "limitations": ["No human image-viewer aesthetic certification or exhaustive accessibility certification.", "Authenticated purchase history unavailable without configured providers; CSS branch is not provider-browser attested.", "No decorative skeleton or loading spinner fabricated on synchronous catalogs/Kids. Existing checkpoint pending/empty/refused message presentation improved.", "CSS parser/build and owning token/source/browser checks pass; no standalone CSS formatter was available in the first loop and none was installed here.", "Production authorization/readiness and parent integration gate are not claimed."]
+}

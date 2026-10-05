@@ -1,0 +1,212 @@
+{
+  "status": "OWNED_SOURCE_HANDBACK_COMPLETE_PUBLIC_EXPORT_DEPENDENCY_BLOCKED",
+  "sourceHandback": true,
+  "sourcePaths": [
+    "packages/engine-kernel/src/scene-session.ts",
+    "packages/engine-presentation/src/three-sculpt.ts",
+    "packages/engine-presentation/src/scene-transforms.ts",
+    "packages/engine-presentation/test/scene-runtime-v2.test.ts",
+    "packages/engine-presentation/test/browser-scene-v2-proof.mjs",
+    "packages/schemas/contracts/scene-composition-v2.schema.json",
+    "packages/schemas/contracts/scene-kernel-save-v2.schema.json"
+  ],
+  "beforeSha256": {
+    "packages/engine-kernel/src/scene-session.ts": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-presentation/src/three-sculpt.ts": "fd9c8d3f57d6142a440705f88ef56a80b434064b672fec3222fbef237d7c7098",
+    "packages/engine-presentation/src/three-runtime.ts": "988f51cddce17b5ed0f58015e607de75a838f92d7b4d1a8c20701f173679caf0",
+    "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04"
+  },
+  "redBefore": {
+    "command": "pnpm exec vitest run packages/engine-presentation/test/scene-runtime-v2.test.ts --maxWorkers=1 --reporter=dot",
+    "exit": 1,
+    "passed": 0,
+    "failed": 1,
+    "log": "red-before.log",
+    "output": "expected public kernel namespace to include openSceneKernelSessionV2 and replaySceneKernelSessionV2; both missing"
+  },
+  "greenAfter": {
+    "sourceImplementationOnly": true,
+    "publicConsumerGreen": false,
+    "sourceProbe": {
+      "exit": 0,
+      "passed": 11,
+      "failed": 0,
+      "log": "source-probe-after.log",
+      "method": "Temporary own test copy changed ONLY kernel import from public namespace to actual scene-session module; no export aliases, no fallback, not public acceptance. Removed after proof; permanent test stays public."
+    },
+    "regressions": {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/scene-session.test.ts packages/engine-presentation/test/three-presentation.test.ts packages/engine-presentation/test/sculpt-mount.test.ts packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts tests/e2e/scene-composition-golden.test.ts --maxWorkers=1 --reporter=dot",
+      "exit": 0,
+      "files": 6,
+      "passed": 83,
+      "failed": 0,
+      "log": "regression.log"
+    },
+    "sourceTypecheck": {
+      "exit": 0,
+      "log": "source-typecheck-after.log",
+      "method": "tsc --noEmit on actual source dependency graph with tsconfig.base strict/nodenext/es2023/verbatim/isolated/noUncheckedIndexedAccess/noImplicitOverride/noFallthrough/exactOptional/skipLibCheck flags unchanged; no package reference stale-dist redirect and no custom paths/aliases"
+    },
+    "sourceProbeTypecheck": {
+      "exit": 0,
+      "log": "probe-typecheck-after.log"
+    },
+    "lint": {
+      "exit": 0,
+      "log": "lint-after.log"
+    },
+    "browserDriverSyntax": {
+      "command": "node --check packages/engine-presentation/test/browser-scene-v2-proof.mjs",
+      "exit": 0
+    }
+  },
+  "assertions": [
+    "Public authoring composition creates schema2 rotated/nonuniform/sheared hierarchy without artifact evidence rewriting",
+    "Existing public Three backend has mountSceneV2/presentSceneV2; v2 is explicit opt-in and v1 functions/saves unchanged",
+    "Artifact-local SculptNodeSimulation remains authoritative; candidate root translations and full world matrices/bounds preflight across every instance before any simulation commit",
+    "Live parent*child matrices use existing multiplySceneMatricesV2/sceneMatrixFromSculptTransformV2, retaining shear and exact cardinal TRS",
+    "All instance roots and local artifact nodes use matrixAutoUpdate=false; node absolute world matrices are NOT applied under an already world-matrix parent",
+    "Save carries complete validated scene/evidence; JSON reopen and replay reproduce exact terminal snapshots/digests; corrupt majors/clocks/digests refuse",
+    "Duplicate/finite/cyclic/matrix/bounds/accessor presentation batch refuses without changing any already-mounted object; getters zero-read",
+    "Controlled final-instance allocation failure disposes all four candidate geometries and preserves prior scene; disposed backend refuses reuse",
+    "Headless recording frames explicitly pixelsDrawn=false/capture=null; no pixels claimed"
+  ],
+  "cleanup": "No persistent processes started",
+  "deferredChecks": [
+    {
+      "owner": "serial integrator",
+      "command": "Wire exact kernel index exports above, then pnpm exec vitest run packages/engine-presentation/test/scene-runtime-v2.test.ts --maxWorkers=1 --reporter=dot",
+      "status": "REQUIRED_CURRENT_DEFAULT_RED"
+    },
+    {
+      "owner": "serial integrator",
+      "command": "Full unchanged workspace build/gate/contracts/declarations once all source handbacks are stable",
+      "status": "UNRUN_BY_SCOPE"
+    },
+    {
+      "owner": "serial integrator",
+      "command": "node --loader ./scripts/workspace-dist-resolver.mjs packages/engine-presentation/test/browser-scene-v2-proof.mjs docs/audits/production-swarm/final-wiring-2026-10-02/scene-runtime/browser-scene-v2.png",
+      "status": "UNRUN_REQUIRES_STABLE_BUILD_EXPORTS",
+      "assertions": [
+        "real WebGL frame",
+        "rotated/sheared composition pixel diff",
+        "root-driver advance pixel diff",
+        "save/replay exact pixels",
+        "corrupt bounds refusal leaves pixels unchanged",
+        "10 remount allocation plateau",
+        "terminal texture/buffer/program handles zero",
+        "PNG bytes/SHA256 and pageErrors"
+      ]
+    },
+    {
+      "owner": "SDK/export inventory owner",
+      "command": "Add additive v2 scene composition/save JSON contracts to relevant SDK/contracts inventory; no new runtime source beyond already-pinned scene-transforms",
+      "status": "REQUESTED_OUTSIDE_SCOPE"
+    }
+  ],
+  "semanticRemainingRisk": [
+    "Public/default new kernel consumer is currently FAIL until parent-owned kernel index exports are wired; source proof is not alias/public green",
+    "Scene instance parent defines static placement; each artifact-local toy body simulates independently. No world-space rigid body collision, moving-instance attachment, or Rapier v2 admission is claimed",
+    "Live bounds cover procedural geometry transformed by simulated nodes; animation socket values remain scalar snapshot metadata, not skin/socket-deformed geometry or triangle-asset v2 playback",
+    "Runtime local hierarchy depth256 and local driver 1e9 bound may refuse schema-valid larger/deeper artifacts; refusals occur before state commits. Full capacity walltime/RSS not measured",
+    "Preflight root-translation prediction mirrors inherited SculptNodeSimulation rounding/gravity/ground clamp; future driver changes must update this preflight and preserve transaction oracles",
+    "Actual browser pixels and terminal GL cleanup for new v2 feature remain UNRUN; prepared browser driver may reveal additional device/host issues",
+    "Package-project noEmit attempt saw stale dependency declarations (kernel-typecheck-first.log); actual source strict checks pass, serialized workspace declaration build still required"
+  ],
+  "constraints": "No v1 schema/golden edits; no casts/matrix widening/check weakening/install/live provider",
+  "temporarySourceProbeSha256": "aac7a83e2e077ddbd27ea760b7ac7ded0c6391664bbed02b66135b4c7065992d",
+  "sourceFrozen": true,
+  "afterSha256": {
+    "packages/engine-kernel/src/scene-session.ts": "420983f70a9a16aba5dcd5ce7fcc8f03fc68bd8e3b6302018738bd93d513b294",
+    "packages/engine-presentation/src/three-sculpt.ts": "7b2a73bb61b22d1fcf171acdce521279257e66447e3eb77ba30f85035c995f03",
+    "packages/engine-presentation/src/scene-transforms.ts": "897136ce433d2750a7817481dab87319e2d0b077ff25cfe3b6097bad31079634",
+    "packages/engine-presentation/test/scene-runtime-v2.test.ts": "d32d0e7ee0f34cc616404ece8a3970d94d934f905335191446d8ead50159899b",
+    "packages/engine-presentation/test/browser-scene-v2-proof.mjs": "1275aba8c6d17ea9ed12b28598a7d42ac7f1a448a979949b010d6d707f300c91",
+    "packages/schemas/contracts/scene-composition-v2.schema.json": "9dd10953042b14dab454137f814f6b07c1722632aed683e1af6d9b69e8a346e3",
+    "packages/schemas/contracts/scene-kernel-save-v2.schema.json": "3b079987414ea375d9508c97cbf7410da5841779c7f4d7cad97c3a42468d483c"
+  },
+  "unchangedOwnedPaths": {
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-presentation/src/three-runtime.ts": "988f51cddce17b5ed0f58015e607de75a838f92d7b4d1a8c20701f173679caf0"
+  },
+  "defaultPublicConsumerAfter": {
+    "exit": 1,
+    "passed": 1,
+    "failed": 10,
+    "log": "public-consumer-after.log",
+    "output": "openSceneKernelSessionV2 is not a function; public kernel index exports absent, not hidden or weakened",
+    "requiredParentEdit": {
+      "path": "packages/engine-kernel/src/index.ts",
+      "from": "./scene-session.js",
+      "values": [
+        "openSceneKernelSessionV2",
+        "replaySceneKernelSessionV2"
+      ],
+      "types": [
+        "SceneInstanceSnapshotV2",
+        "SceneKernelSnapshotV2",
+        "SceneKernelSaveArtifactV2",
+        "SceneKernelSessionV2"
+      ],
+      "authority": "Outside exclusive source ownership; exact requests sent; ASK timed out with no response. No index edit or authority assumed."
+    }
+  },
+  "implementationDetails": {
+    "kernel": "Additive explicit V2 APIs avoid changing v1 return types or introducing false TRS fields. Session.ts deliberately unchanged; generic 2D kernel not used for sculpt matrices.",
+    "presentation": "Scene uses existing public Sculpt Three backend, not the generic 2D entity-marker runtime; three-runtime.ts deliberately unchanged. Runtime admission and target lookup are map-based O(total nodes) rather than quadratic searches.",
+    "caps": {
+      "sceneInstances": 32,
+      "scenePlacementDepth": 8,
+      "perArtifactNodes": 4096,
+      "runtimeArtifactLocalDepth": 256,
+      "saveAdvances": 100000,
+      "worldComponentMagnitude": 9007199254,
+      "localDriverNumericDomain": 1000000000
+    },
+    "contract": "scene-composition-v2.schema.json copied byte-for-byte from handed-back proposal; additive scene-kernel-save-v2 schema describes replay shape and semantic limits."
+  },
+  "resources": {
+    "maximumProjectedSceneMeshes": 131072,
+    "geometryAndPoseWorstCase": "Static cap projection only; not measured peak RSS or frame timing",
+    "processesStarted": [
+      "bounded Vitest/ESLint/tsc/node --check commands only"
+    ],
+    "cleanup": "All focused subprocesses exited; pgrep scene-runtime-v2 found only its own inspection shell. Temporary own source-probe test removed; no browser/server/container/process intentionally retained. Candidate geometry disposal is explicitly asserted."
+  },
+  "failuresRetained": [
+    "Initial default-worker test command timed out after20s before an assertion; serial maxWorkers=1 reproduced real missing-export RED",
+    "source-probe.log:10pass/1fail because cycle fixture targeted sorted child whose parent was already root; corrected to mutate the actual root parent, refusal assertions retained",
+    "source-typecheck.log:source possibly undefined in nested function; fixed by captured validated placementMatrix",
+    "probe-typecheck.log:base-array intersection lost worldMatrix node type and mock this implicit-any; fixed Omit(nodes) and explicit this:Matrix4, no casts",
+    "lint-first.log preserve-caught-error corrected cause; browser no-undef errors corrected globalThis references",
+    "consumer-first.log/public-consumer-after.log genuine missing-index failures retained"
+  ],
+  "publication": {
+    "commit": false,
+    "push": false,
+    "merge": false,
+    "deploy": false,
+    "install": false,
+    "liveProvider": false,
+    "productionPass": false
+  },
+  "v1SceneSessionReconstructedSha256": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+  "v1SceneSessionBytesUnchanged": true,
+  "logSha256": {
+    "source-probe.log": "d4f5d864eed55ddde0382235e8b46f9149aeb2be73dd86f1fb4307ff253b8f2f",
+    "source-probe-after.log": "97200eeb08681919abe6969169630dda58e408cc2dddbe891617ce65a68b022b",
+    "probe-typecheck-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lint-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "consumer-first.log": "c61f624e258094930730e9a27fb85b2b639395c7675424e0cdd2e2b984c52756",
+    "source-typecheck-after.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "red-before.log": "eb4fa9968921207a5b3f20eee4cf61ae9e33c4c65e948464bb07d826f7d4dda7",
+    "source-typecheck.log": "46d73b4eb231c6ce590e8c4a082341cddb546cc9bc212a9417d5d2fe042eb747",
+    "regression.log": "94067390e2d52c653bc9dc602469454f41f324322adbacefe2338a1cfb779670",
+    "lint-first.log": "36704fa182dd31f5fec9e4f61238caf574fbd21b8156828dd231ac4f392558e7",
+    "test-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probe-typecheck.log": "39967eb8cf5c45ad287f628503e1b05d16f27fa9d682b23018553273f92eddb5",
+    "kernel-typecheck-first.log": "c5ec9f4eb2e8edda661105de36824a8679c34f7c81b42cdfa9c46e6aceed04bd",
+    "public-consumer-after.log": "9fe6ba09ebc058ebe2fd5d372733eab4854c5c83150b5bba7a0872c07f38ceea"
+  }
+}

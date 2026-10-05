@@ -1,5 +1,6 @@
 /** Editor -> TEST catalog intake -> explicit curation -> listed read-model proof. */
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync, writeFileSync, readdirSync, mkdirSync, symlinkSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +9,7 @@ import {
   catalogSubmissionScopeKey,
   catalogTestPipelineDemo,
   createInMemoryCatalogTestPipelineProvider,
+  createDurableCatalogTestPipelineProvider,
   ok,
   readCatalogPipelineItem,
   readEditorState,
@@ -29,6 +31,14 @@ import {
   umbrellaEditorStateFromFields,
 } from "../../sites/umbrella/src/lib/catalog-submission.ts";
 
+type JsonValue = string | number | boolean | null | undefined | readonly JsonValue[] | JsonObject;
+
+type JsonObject = { readonly [key: string]: JsonValue };
+
+function isObject(value: JsonValue): value is JsonObject {
+  return typeof value === "object" && value !== null;
+}
+
 const NOW = "2026-08-06T10:00:00.000Z";
 
 function entitledAccess(userId = "user-editor-218"): EditorSessionAccess {
@@ -48,6 +58,7 @@ function entitledAccess(userId = "user-editor-218"): EditorSessionAccess {
       expiresAt: "2026-08-06T11:00:00.000Z",
     },
   };
+
   return {
     access: {
       principal,
@@ -62,11 +73,14 @@ function entitledAccess(userId = "user-editor-218"): EditorSessionAccess {
 
 function editorRender(): EditorRender {
   const state = readEditorState({ profile: "web" });
+
   if (!state.ok) throw new Error(state.message);
   const rendered = renderEditorState(state.value);
+
   if (!rendered.ok) throw new Error(rendered.message);
   expect(rendered.value.save.ok).toBe(true);
   expect(rendered.value.composition.ok).toBe(true);
+
   return rendered.value;
 }
 
@@ -124,6 +138,7 @@ describe("editor catalog intake", () => {
         },
       },
     });
+
     if (!result.ok) return;
     expect(result.value.record.documentDigest).toBe(render.documentDigest);
     expect(result.value.record.item.provenance.sourceDigest).toBe(render.documentDigest);
@@ -135,6 +150,7 @@ describe("editor catalog intake", () => {
     const provider = createInMemoryCatalogTestPipelineProvider();
     const first = await submit(provider);
     const replay = await submit(provider);
+
     const conflict = await submit(provider, {
       metadata: metadata({ itemId: "different-editor-item" }),
     });
@@ -142,10 +158,12 @@ describe("editor catalog intake", () => {
     expect(first).toMatchObject({ ok: true, value: { replayed: false } });
     expect(replay).toMatchObject({ ok: true, value: { replayed: true } });
     expect(conflict).toMatchObject({ ok: false, reason: "CATALOG_SUBMISSION_RETRY_CONFLICT" });
+
     const untouched = await readCatalogPipelineItem({
       provider,
       itemId: "web-editor-submission-218",
     });
+
     expect(untouched).toMatchObject({
       ok: true,
       value: { pipelineState: "intake", history: [], listing: null },
@@ -171,6 +189,7 @@ describe("editor catalog intake", () => {
         recordedAt: NOW,
       },
     });
+
     expect(skipped).toMatchObject({
       ok: false,
       reason: "CATALOG_PIPELINE_TRANSITION_INVALID",
@@ -184,6 +203,7 @@ describe("editor catalog intake", () => {
       reason: "TEST screening complete.",
       at: "2026-08-06T10:01:00.000Z",
     });
+
     const curation = await transitionTestCatalogItem({
       provider,
       itemId: "web-editor-submission-218",
@@ -191,6 +211,7 @@ describe("editor catalog intake", () => {
       reason: "TEST curation opened.",
       at: "2026-08-06T10:02:00.000Z",
     });
+
     expect(screening.ok).toBe(true);
     expect(curation.ok).toBe(true);
 
@@ -208,6 +229,7 @@ describe("editor catalog intake", () => {
         recordedAt: "2026-08-06T10:03:00.000Z",
       },
     });
+
     expect(rejected).toMatchObject({
       ok: false,
       reason: "CATALOG_PIPELINE_TRANSITION_INVALID",
@@ -232,6 +254,7 @@ describe("editor catalog intake", () => {
         recordedAt: "2026-08-06T10:04:00.000Z",
       },
     });
+
     expect(approved.ok).toBe(true);
     const listed = await readCatalogPipelineItem({ provider, itemId: "web-editor-submission-218" });
     expect(listed).toMatchObject({
@@ -266,16 +289,20 @@ describe("editor catalog intake", () => {
   it("refuses anonymous, preview, Kids, unsupported, malformed, and unavailable inputs before writes", async () => {
     let writes = 0;
     const backing = createInMemoryCatalogTestPipelineProvider();
+
     const counting: CatalogTestPipelineProvider = {
       mode: "test",
       async submit(input) {
         writes += 1;
+
         return backing.submit(input);
       },
       read: (itemId) => backing.read(itemId),
       commitTransition: (input) => backing.commitTransition(input),
     };
+
     const anonymous = entitledAccess();
+
     const anonymousAccess: EditorSessionAccess = {
       ...anonymous,
       access: { ...anonymous.access, principal: null },
@@ -285,9 +312,11 @@ describe("editor catalog intake", () => {
         message: "anonymous",
       },
     };
+
     expect(await submit(counting, { access: anonymousAccess })).toMatchObject({
       reason: "EDITOR_ENTITLEMENT_ANONYMOUS",
     });
+
     const noCredits: EditorSessionAccess = {
       ...entitledAccess(),
       decision: {
@@ -296,14 +325,17 @@ describe("editor catalog intake", () => {
         message: "no credits",
       },
     };
+
     expect(await submit(counting, { access: noCredits })).toMatchObject({
       reason: "EDITOR_ENTITLEMENT_NO_CREDITS",
     });
+
     const preview: EditorSessionAccess = {
       ...entitledAccess(),
       decision: { granted: true, mode: "preview", basis: "preview-flag" },
       previewEnabled: true,
     };
+
     expect(await submit(counting, { access: preview })).toMatchObject({
       reason: "CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED",
     });
@@ -336,6 +368,7 @@ describe("editor catalog intake", () => {
         return { ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE", message: "offline" };
       },
     };
+
     expect(await submit(unavailable)).toMatchObject({
       reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE",
     });
@@ -346,6 +379,7 @@ describe("editor catalog intake", () => {
         throw new Error("provider failed");
       },
     };
+
     expect(await submit(failed)).toMatchObject({ reason: "CATALOG_PIPELINE_PROVIDER_FAILED" });
   });
 
@@ -359,18 +393,23 @@ describe("editor catalog intake", () => {
   ])("refuses incomplete %s metadata without writing", async (_label, malformed) => {
     let writes = 0;
     const backing = createInMemoryCatalogTestPipelineProvider();
+
     const provider: CatalogTestPipelineProvider = {
       mode: "test",
       async submit(input) {
         writes += 1;
+
         return backing.submit(input);
       },
       read: (itemId) => backing.read(itemId),
       commitTransition: (input) => backing.commitTransition(input),
     };
+
+    // SAFETY: The table above constructs metadata-only overrides, including deliberately incomplete nested metadata; the submission boundary validates and refuses them before any provider write.
     const result = await submit(provider, {
       metadata: metadata(malformed as Partial<CatalogSubmissionMetadata>),
     });
+
     expect(result).toMatchObject({
       ok: false,
       reason: "CATALOG_SUBMISSION_METADATA_INVALID",
@@ -381,6 +420,7 @@ describe("editor catalog intake", () => {
   it("refuses a failed transition commit without partially mutating the record", async () => {
     const backing = createInMemoryCatalogTestPipelineProvider();
     expect((await submit(backing)).ok).toBe(true);
+
     const refusingCommit: CatalogTestPipelineProvider = {
       mode: "test",
       submit: (input) => backing.submit(input),
@@ -393,6 +433,7 @@ describe("editor catalog intake", () => {
         };
       },
     };
+
     expect(
       await transitionTestCatalogItem({
         provider: refusingCommit,
@@ -411,6 +452,7 @@ describe("editor catalog intake", () => {
   it("refuses by name when the commit boundary throws instead of refusing", async () => {
     const backing = createInMemoryCatalogTestPipelineProvider();
     expect((await submit(backing)).ok).toBe(true);
+
     const throwingCommit: CatalogTestPipelineProvider = {
       mode: "test",
       submit: (input) => backing.submit(input),
@@ -419,6 +461,7 @@ describe("editor catalog intake", () => {
         throw new Error("commit boundary unavailable");
       },
     };
+
     expect(
       await transitionTestCatalogItem({
         provider: throwingCommit,
@@ -436,17 +479,20 @@ describe("editor catalog intake", () => {
   it("refuses a commit that returns anything but the transition it was asked to commit", async () => {
     const backing = createInMemoryCatalogTestPipelineProvider();
     expect((await submit(backing)).ok).toBe(true);
+
     const driftingCommit: CatalogTestPipelineProvider = {
       mode: "test",
       submit: (input) => backing.submit(input),
       read: (itemId) => backing.read(itemId),
       async commitTransition(input) {
         const committed = await backing.commitTransition(input);
+
         return committed.ok
           ? ok({ ...committed.value, documentDigest: `sha256:${"f".repeat(64)}` })
           : committed;
       },
     };
+
     expect(
       await transitionTestCatalogItem({
         provider: driftingCommit,
@@ -459,20 +505,26 @@ describe("editor catalog intake", () => {
   });
 
   it("accepts a provider that rebuilds the same record with a different key order", async () => {
-    const reorder = (value: unknown): unknown => {
+    const reorder = (value: JsonValue): JsonValue => {
       if (Array.isArray(value)) return value.map(reorder);
-      if (value === null || typeof value !== "object") return value;
+
+      if (!isObject(value)) return value;
+
       return Object.fromEntries(
-        Object.entries(value as Record<string, unknown>)
+        Object.entries(value)
           .reverse()
           .map(([key, inner]) => [key, reorder(inner)]),
       );
     };
+
     const backing = createInMemoryCatalogTestPipelineProvider();
+
     const roundTripping: CatalogTestPipelineProvider = {
       mode: "test",
       async submit(input) {
         const result = await backing.submit(input);
+
+        // SAFETY: reorder recursively copies the validated backing-provider record and reverses object key order only; all field names, primitive values, and array ordering are preserved.
         return result.ok
           ? ok({
               ...result.value,
@@ -482,12 +534,16 @@ describe("editor catalog intake", () => {
       },
       async read(itemId) {
         const found = await backing.read(itemId);
+
+        // SAFETY: reorder recursively copies the validated backing-provider record and reverses object key order only; all field names, primitive values, and array ordering are preserved.
         return found.ok && found.value !== null
           ? ok(reorder(found.value) as CatalogIntakeRecord)
           : found;
       },
       async commitTransition(input) {
         const committed = await backing.commitTransition(input);
+
+        // SAFETY: reorder recursively copies the validated backing-provider record and reverses object key order only; all field names, primitive values, and array ordering are preserved.
         return committed.ok ? ok(reorder(committed.value) as CatalogIntakeRecord) : committed;
       },
     };
@@ -508,6 +564,7 @@ describe("editor catalog intake", () => {
   it("scopes one idempotency key to the authenticated submitter", async () => {
     const provider = createInMemoryCatalogTestPipelineProvider();
     const mine = { access: entitledAccess("user-editor-218") };
+
     const theirs = {
       access: entitledAccess("user-editor-999"),
       metadata: metadata({ itemId: "web-editor-submission-999" }),
@@ -541,21 +598,25 @@ describe("editor catalog intake", () => {
   it("refuses unusable or inconsistent principal evidence before any write", async () => {
     let writes = 0;
     const backing = createInMemoryCatalogTestPipelineProvider();
+
     const counting: CatalogTestPipelineProvider = {
       mode: "test",
       async submit(input) {
         writes += 1;
+
         return backing.submit(input);
       },
       read: (itemId) => backing.read(itemId),
       commitTransition: (input) => backing.commitTransition(input),
     };
+
     const base = entitledAccess();
 
     const mismatched: EditorSessionAccess = {
       ...base,
       access: { ...base.access, identity: entitledAccess("user-editor-other").access.identity },
     };
+
     expect(await submit(counting, { access: mismatched })).toMatchObject({
       ok: false,
       reason: "CATALOG_SUBMISSION_PRINCIPAL_INVALID",
@@ -577,6 +638,7 @@ describe("editor catalog intake", () => {
         },
       },
     };
+
     expect(await submit(counting, { access: unavailableIdentity })).toMatchObject({
       ok: false,
       reason: "IDENTITY_PLANE_UNAVAILABLE",
@@ -587,6 +649,7 @@ describe("editor catalog intake", () => {
     // it directly cannot store a record under another principal's scope.
     const submitted = await submit(backing);
     expect(submitted.ok).toBe(true);
+
     if (!submitted.ok) return;
     expect(
       await backing.submit({
@@ -605,6 +668,7 @@ describe("editor catalog intake", () => {
   it("keeps the lower-level seam typed and provider-injected", async () => {
     const provider = createInMemoryCatalogTestPipelineProvider();
     const render = editorRender();
+
     const result = await submitEditorCatalogItem({
       access: entitledAccess(),
       profile: "web",
@@ -617,6 +681,7 @@ describe("editor catalog intake", () => {
       idempotencyKey: "direct-seam-218",
       provider,
     });
+
     expect(result.ok).toBe(true);
   });
 
@@ -627,6 +692,7 @@ describe("editor catalog intake", () => {
         return { ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE", message: "unused" };
       },
       async read() {
+        // SAFETY: This provider deliberately returns the malformed literal record constructed here; readCatalogPipelineItem validates it and the test asserts its named refusal, never consumes it as a valid record.
         return ok({
           mode: "test",
           surface: "catalog-web",
@@ -640,6 +706,7 @@ describe("editor catalog intake", () => {
         return { ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE", message: "unused" };
       },
     };
+
     expect(
       await readCatalogPipelineItem({ provider: invalidProvider, itemId: "bad" }),
     ).toMatchObject({ reason: "CATALOG_PIPELINE_READ_MODEL_INVALID" });
@@ -666,13 +733,16 @@ describe("editor catalog intake", () => {
 
   it("shows digests the demo computed from a real editor render, not constants", async () => {
     const state = readEditorState({});
+
     if (!state.ok) throw new Error(state.message);
     const rendered = renderEditorState(state.value);
+
     if (!rendered.ok) throw new Error(rendered.message);
 
     for (const surface of ["catalog-game", "catalog-web"] as const) {
       const demo = await catalogTestPipelineDemo(surface);
       expect(demo.ok).toBe(true);
+
       if (!demo.ok) return;
       const listing = demo.value.listed.listing;
       expect(listing).not.toBeNull();
@@ -689,6 +759,7 @@ describe("editor catalog intake", () => {
     // render its refusal branch rather than failing the whole page.
     const previous = process.env["TMPDIR"];
     process.env["TMPDIR"] = join(previous ?? tmpdir(), "sceneaxi-absent-temporary-root");
+
     try {
       for (const surface of ["catalog-game", "catalog-web"] as const) {
         await expect(catalogTestPipelineDemo(surface)).resolves.toMatchObject({
@@ -708,6 +779,7 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
     new URL("../../sites/umbrella/src/app/editor/page.tsx", import.meta.url),
     "utf8",
   );
+
   const ACTION = readFileSync(
     new URL("../../sites/umbrella/src/app/api/editor/catalog-intake/route.ts", import.meta.url),
     "utf8",
@@ -761,6 +833,7 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
     const provider = createInMemoryCatalogTestPipelineProvider();
     const injection = { provider, declaration: metadata() };
     const render = editorRender();
+
     const request = {
       access: entitledAccess(),
       render,
@@ -786,6 +859,7 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
         listing: null,
       },
     });
+
     if (!first.ok) return;
     expect(first.value.documentDigest).toBe(render.documentDigest);
     expect(first.value.artifactDigest).toBe(render.artifactDigest);
@@ -824,7 +898,7 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
   });
 
   it("reports a refused read as a refusal rather than as nothing submitted", async () => {
-    const failing = {
+    const failing: CatalogTestPipelineProvider = {
       mode: "test",
       submit: async () => ({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED", message: "x" }),
       read: async () => ({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED", message: "x" }),
@@ -833,7 +907,7 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
         reason: "CATALOG_PIPELINE_PROVIDER_FAILED",
         message: "x",
       }),
-    } as unknown as CatalogTestPipelineProvider;
+    };
 
     expect(
       await readUmbrellaCatalogIntakePanel({
@@ -880,4 +954,63 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
       await readCatalogPipelineItem({ provider, itemId: "web-editor-submission-218" }),
     ).toMatchObject({ ok: false, reason: "CATALOG_ITEM_NOT_FOUND" });
   });
+});
+
+
+describe("durable quarantine intake", () => {
+  it("refuses an empty registry configuration without creating repository artifacts", async () => {
+    expect(await createDurableCatalogTestPipelineProvider("").read("missing")).toMatchObject({ ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE" });
+  });
+
+  async function withRegistry(run: (root: string) => Promise<void>) {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-intake-"));
+
+    try { await run(root); } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+
+  it("survives provider recreation, replays identically and never auto-lists", async () => withRegistry(async root => {
+    const first = await submit(createDurableCatalogTestPipelineProvider(root));
+    expect(first.ok).toBe(true);
+
+ if (!first.ok) throw new Error(first.message);
+
+    const child = spawnSync(process.execPath, ["--input-type=module", "--loader", "./scripts/workspace-dist-resolver.mjs", "-e",
+      `import {createDurableCatalogTestPipelineProvider} from "@sceneaxi/site-kit"; console.log(JSON.stringify(await createDurableCatalogTestPipelineProvider(${JSON.stringify(root)}).read(${JSON.stringify(first.value.record.item.itemId)})));`], { cwd: process.cwd(), encoding: "utf8", timeout: 10000 });
+
+    expect(child.status).toBe(0);
+    expect(JSON.parse(child.stdout)).toEqual({ ok: true, value: first.value.record });
+    const second = createDurableCatalogTestPipelineProvider(root);
+    expect((await submit(second))).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(await second.read(first.value.record.item.itemId)).toEqual({ ok: true, value: first.value.record });
+    expect(await transitionTestCatalogItem({ provider: second, itemId: first.value.record.item.itemId, to: "screening", reason: "unauthorized", at: NOW })).toMatchObject({ ok: false, reason: "CATALOG_PIPELINE_TRANSITION_INVALID" });
+    expect((await readCatalogPipelineItem({ provider: second, itemId: first.value.record.item.itemId }))).toMatchObject({ ok: true, value: { pipelineState: "intake", listing: null } });
+  }));
+  it("refuses conflicting replay without modifying the durable bytes", async () => withRegistry(async root => {
+    expect((await submit(createDurableCatalogTestPipelineProvider(root))).ok).toBe(true);
+    const bytes = readFileSync(join(root, "intake-registry.json"));
+    expect(await submit(createDurableCatalogTestPipelineProvider(root), { metadata: metadata({ packageId: "different" }) })).toMatchObject({ ok: false, reason: "CATALOG_SUBMISSION_RETRY_CONFLICT" });
+    expect(readFileSync(join(root, "intake-registry.json"))).toEqual(bytes);
+  }));
+  it("quarantines corrupt evidence once and never treats corruption as an empty registry", async () => withRegistry(async root => {
+    writeFileSync(join(root, "intake-registry.json"), "corrupt");
+    const provider = createDurableCatalogTestPipelineProvider(root);
+
+    for (let index = 0; index < 3; index++) expect(await provider.read("missing")).toMatchObject({ ok: false, reason: "CATALOG_PIPELINE_READ_MODEL_INVALID" });
+    expect(readFileSync(join(root, "quarantine-invalid.json"), "utf8")).toBe("corrupt");
+    expect(readFileSync(join(root, "intake-registry.json"), "utf8")).toBe("corrupt");
+    expect(readdirSync(root).filter(name => name.startsWith("quarantine"))).toHaveLength(1);
+  }));
+  it("refuses stale locks, oversized registries and symlinked authority without victim mutation", async () => withRegistry(async root => {
+    const provider = createDurableCatalogTestPipelineProvider(root);
+    mkdirSync(join(root, ".intake-registry.lock"));
+    expect((await submit(provider))).toMatchObject({ ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE" });
+    rmSync(join(root, ".intake-registry.lock"), { recursive: true });
+    writeFileSync(join(root, "intake-registry.json"), Buffer.alloc(4 * 1024 * 1024 + 1));
+    expect(await provider.read("missing")).toMatchObject({ ok: false, reason: "CATALOG_PIPELINE_READ_MODEL_INVALID" });
+    rmSync(join(root, "intake-registry.json"));
+    writeFileSync(join(root, "victim"), "unchanged");
+    symlinkSync(join(root, "victim"), join(root, "intake-registry.json"));
+    expect((await submit(provider)).ok).toBe(false);
+    expect(readFileSync(join(root, "victim"), "utf8")).toBe("unchanged");
+  }));
 });

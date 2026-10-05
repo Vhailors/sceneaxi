@@ -1,0 +1,32 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/home/devuser/Documents/Projects/sceneaxi[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/scene-runtime-v2.source-probe.test.ts[2m > [22mmatrix-preserving live scene driver[2m > [22mvalidates entire cycle snapshot batch before changing any renderable
+[31m[1mAssertionError[22m: expected [Function] to throw an error[39m
+
+[32m- Expected:[39m
+null
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m packages/engine-presentation/test/scene-runtime-v2.source-probe.test.ts:[2m149:51[22m[39m
+    [90m147|[39m       if (mode === "cycle") last.snapshot.nodes[0].parentId = last.sna…
+    [90m148|[39m       if (mode === "accessor") Object.defineProperty(last.snapshot.nod…
+    [90m149|[39m       expect(() => backend.presentSceneV2(value)).toThrow("scene-v2 ru…
+    [90m   |[39m                                                   [31m^[39m
+    [90m150|[39m       backend[33m.[39m[34mrender[39m([[32m"root"[39m[33m,[39m [32m"child"[39m])[33m;[39m
+    [90m151|[39m       [34mexpect[39m([34mmatrices[39m(recorded[33m.[39m[34mscene[39m()))[33m.[39m[34mtoEqual[39m(before)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m10 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 17:12:06
+[2m   Duration [22m 6.97s[2m (transform 5.40s, setup 0ms, import 6.20s, tests 350ms, environment 0ms)[22m
+

@@ -1,0 +1,151 @@
+{
+  "owner": "bg-117",
+  "status": "IMPLEMENTED_SHARED_EXPORT_BLOCKED",
+  "sourceHandback": true,
+  "files": [
+    {
+      "path": "packages/importers/src/contained-gltf.ts",
+      "sha256": "72c8b5a140f0252ee2bad11b2b367c6ecc7c7c8b476f9eb1d9e8bd6c0e8b46a1",
+      "baseSha256": "a1dd9f305203851ca4141cdf066c8f08b356192689c055b057ea952c1e6cea1b",
+      "lines": 2762
+    },
+    {
+      "path": "packages/importers/src/asset-preparation-worker.ts",
+      "sha256": "4d05057f457ac0a76510e270163285d480f18510362c8a6b65fcd61d41a42746",
+      "baseSha256": null,
+      "lines": 152
+    },
+    {
+      "path": "packages/importers/test/asset-preparation-bounds.test.ts",
+      "sha256": "8f88d2a91bba560733a117bcf094e8571e17deb457dd71f8f04332e0ff21ef4d",
+      "baseSha256": null,
+      "lines": 217
+    }
+  ],
+  "ids": [
+    "AP-PERF",
+    "DL-PERF-08",
+    "06-04"
+  ],
+  "measuredBefore": [
+    {
+      "name": "propose",
+      "ms": 304.7017169999999,
+      "ok": true
+    },
+    {
+      "name": "apply",
+      "ms": 640.4099450000003,
+      "ok": true
+    },
+    {
+      "name": "materialize",
+      "ms": 418.6314739999998,
+      "ok": true
+    },
+    {
+      "name": "parseDocument",
+      "ms": 66.01628199999959,
+      "ok": true
+    },
+    {
+      "name": "replayProposal",
+      "ms": 633.267777,
+      "ok": true
+    }
+  ],
+  "nativeStallRootCause": "NOT PROVEN: only synchronous >100ms importer preparation confirmed; historical native120s propagation remains unmeasured",
+  "changedSymbols": [
+    "verifyPreparedProjectAssetImport",
+    "projectAssetPreparationBaseHash",
+    "startProjectAssetPreparation",
+    "ASSET_PREPARATION_REFUSALS",
+    "ASSET_PREPARATION_DEADLINE_MS",
+    "ProjectAssetPreparationInput",
+    "ProjectAssetPreparationOutcome",
+    "ProjectAssetPreparationJob"
+  ],
+  "currentOwnedTests": {
+    "numPassedTests": 5,
+    "numFailedTests": 5,
+    "numPendingTests": 0,
+    "numTotalTests": 10
+  },
+  "testsReceipt": "worker-current.json",
+  "previousExistingImporterSuite": {
+    "passed": 18,
+    "failed": 0,
+    "capacity16x8MiBCount17Ms": 8327,
+    "maxRssKiB": 849472,
+    "limitation": "Unexpected high-memory capacity case in focused existing suite; not repeated."
+  },
+  "typecheck": {
+    "status": "PASS",
+    "command": "pnpm exec tsc --noEmit --composite false --incremental false --rootDir packages/importers -p packages/importers/tsconfig.json"
+  },
+  "lint": {
+    "status": "PASS",
+    "command": "pnpm exec eslint packages/importers/src/contained-gltf.ts packages/importers/src/asset-preparation-worker.ts packages/importers/test/asset-preparation-bounds.test.ts"
+  },
+  "blocker": "Actual Node ESM fails authoring-core scene-composition import SCENE_COMPOSITION_SCHEMA_VERSION_V2 absent schemas public index; serialowner must apply bg115 export requests. No fake source/root export shim used.",
+  "exportRequest": {
+    "from": "./asset-preparation-worker.js",
+    "values": [
+      "startProjectAssetPreparation",
+      "ASSET_PREPARATION_REFUSALS",
+      "ASSET_PREPARATION_DEADLINE_MS"
+    ],
+    "types": [
+      "ProjectAssetPreparationInput",
+      "ProjectAssetPreparationOutcome",
+      "ProjectAssetPreparationJob"
+    ],
+    "packageManifest": "No new subpath required. Helpers in contained-gltf.ts are internal sibling exports; do not add to root API unless desired."
+  },
+  "desktopIntegrationRequests": [
+    "Retain existing native picker/profile/Kids/project-root/document/lease admission; begin exactly one startProjectAssetPreparation job rather than sync assetImport; retain generation and cancel capability per active bridge/project.",
+    "Await job.result; refuse named !ok; for successful result install the exact prepared E1 proposal/diff into existing authoring review without re-running synchronous importer/propose; recheck current project/lease/profile and job generation before publication.",
+    "Cancel on explicit in-flight cancel, project switch, bridge close; await cancel() for terminal acknowledgment; ignore all retired generation results; no cancelling atomic apply mid-write.",
+    "Add typed generation-bound cancel command/control through serialowned schemas/maps/bridge/preload. Picker cancel/review rejection are not in-flight acknowledgement.",
+    "Ship dist/src/asset-preparation-worker.js beside importer dist/src/contained-gltf.js; preserve workspace resolver inheritance in Worker and include sibling entry in native packaging.",
+    "Profile accept/materialization/canonical reload and IPC separately. Worker implementation addresses preparation only; no canonical base64 compaction/version change. Instrument bytes/generation/timings only, never bodies/credentials."
+  ],
+  "deferred": [
+    "source-bound built Worker acceptance and fullgate",
+    "native8MiB import/apply/reload+changed-source hotreload <=4000ms each",
+    "main/renderer heartbeat <=100ms",
+    "cancel terminal acknowledgement <=500ms",
+    "RSS growth <=256MiB and postwarmup finalgrowth <=32MiB across3 reloads",
+    "GUI16x8MiB/count17 and rollback/path containment",
+    "historical120s native propagation causal diagnosis"
+  ],
+  "resourceBounds": {
+    "workersPerProcess": 1,
+    "deadlineMs": 4000,
+    "workerOldGenSafetyLimitMiB": 512,
+    "stackMiB": 4,
+    "note": "Worker isolate safety limit is not acceptance RSS budget or cap increase; unchanged native RSS predicate remains deferred."
+  },
+  "cleanup": "All own temporary fixtures/source-loader directories/Node workers removed; one prior timed-out test-bundler directory explicitly removed in cleanup.json. No browser/native/provider/database/install/port jobs.",
+  "preserved": [
+    "original source byte hash and canonical base64",
+    "stable asset identity",
+    "publicv1/schema serialization/proposal diff bytes",
+    "8MiB/count16/nextbyte/count17 admission",
+    "source/destination containment and copy rollback",
+    "held-key/Kids/LIVE policy"
+  ],
+  "sourceHandbackOwner": "bg-109",
+  "sourceHandbackDisposition": "Files released as-is; no further bg117 source changes. NOT READY until pending v2/public exports, exact worker tests and native acceptance execute on integrated source.",
+  "failBeforePassAfter": {
+    "before": "Actual synchronous8MiB proposal304.702ms violates <=100ms main-loop heartbeat",
+    "after": "5 terminal/refusal/cleanup worker tests pass;5 real-worker publication cases FAIL on pending schemas v2 export. No worker preparation latency PASS or native GUI success claimed."
+  },
+  "acceptanceStatus": "NOT_READY",
+  "receiptHashes": {
+    "before-profile.json": "f0a549235f205ec5f9650db13bd5a255ee5c4789468e9543cee0bd38cab8dcf6",
+    "worker-current.json": "b6ef3f564474ec6ae4c518f87e27cc41b274cf1e84895913b7e7da3334dbad8f",
+    "worker-current.log": "25bcc424c573331cd19f7c8443e681f2ea87e685dd7e909c21a0c0b880c821f6",
+    "cleanup.json": "9f9f9363bead1d2294809eac3cf57be94a55296e286126a8e08886ebef8db54b"
+  }
+}

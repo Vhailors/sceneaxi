@@ -1,0 +1,1 @@
+{"command": "pnpm exec tsc --noEmit --incremental false -p /home/devuser/Documents/Projects/sceneaxi/sites/umbrella/tsconfig.json", "exit": 0, "timeoutSeconds": 24}

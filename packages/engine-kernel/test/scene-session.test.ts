@@ -24,6 +24,7 @@ import {
 } from "@sceneaxi/schemas/testing/scene-composition";
 
 const crateArtifact = artifactFixture("crate-artifact");
+
 const droneArtifact = artifactFixture("drone-artifact");
 
 function sceneFixture(sceneId = "bay"): ComposedScene {
@@ -53,16 +54,22 @@ function sceneFixture(sceneId = "bay"): ComposedScene {
       },
     ],
   });
+
   if (!resolved.ok) throw new Error("scene fixture refused");
+
   const artifacts = new Map([
     ["crate-artifact", crateArtifact],
     ["drone-artifact", droneArtifact],
   ]);
+
   const instances = resolved.value.map((placement): ComposedSceneInstance => {
     const artifact = artifacts.get(placement.artifactId);
+
     if (artifact === undefined) throw new Error("fixture artifact missing");
+
     return { ...placement, artifact };
   });
+
   const draft = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: COMPOSED_SCENE_KIND,
@@ -79,6 +86,7 @@ function sceneFixture(sceneId = "bay"): ComposedScene {
       sceneDigest: digest("0"),
     },
   } satisfies ComposedScene;
+
   return {
     ...draft,
     evidence: { ...draft.evidence, sceneDigest: digestComposedScene(draft) },
@@ -88,9 +96,11 @@ function sceneFixture(sceneId = "bay"): ComposedScene {
 function advanced(seed = 4242, ticks = 8) {
   const session = openSceneKernelSession(sceneFixture(), { seed });
   const initial = session.observe();
+
   for (let tick = 1; tick <= ticks; tick += 1) {
     session.advance({ tick, deltaMs: 100 });
   }
+
   return { session, initial, terminal: session.observe() };
 }
 
@@ -114,15 +124,19 @@ describe("scene kernel sessions", () => {
 
   it("places every instance at its scene world transform, not the artifact origin", () => {
     const snapshot = openSceneKernelSession(sceneFixture(), { seed: 7 }).observe();
+
     const rootTranslationOf = (instanceId: string) => {
       const instance = snapshot.instances.find(
         (candidate) => candidate.instanceId === instanceId,
       );
+
       const rootNode = instance?.snapshot.nodes.find(
         (node) => node.parentId === null,
       );
+
       return rootNode?.transform.translation;
     };
+
     expect(rootTranslationOf("bay-floor-crate")).toEqual([1, 0, 2]);
     expect(rootTranslationOf("bay-stacked-crate")).toEqual([1, 2, 2]);
     expect(rootTranslationOf("bay-drone")).toEqual([1, 6, 2]);
@@ -131,6 +145,7 @@ describe("scene kernel sessions", () => {
     const child = snapshot.instances[0]?.snapshot.nodes.find(
       (node) => node.parentId !== null,
     );
+
     expect(child?.transform.translation).toEqual([0, 1.5, 0]);
 
     // The embedded artifacts are untouched.
@@ -149,10 +164,12 @@ describe("scene kernel sessions", () => {
         0,
       ),
     );
+
     for (const instance of terminal.instances) {
       const before = initial.instances.find(
         (candidate) => candidate.instanceId === instance.instanceId,
       );
+
       const socket = instance.snapshot.sockets[0];
       const socketBefore = before?.snapshot.sockets[0];
       expect(socket).toBeDefined();
@@ -162,12 +179,15 @@ describe("scene kernel sessions", () => {
 
   it("gives instances of the same artifact independent derived seeds", () => {
     const { terminal } = advanced();
+
     const floor = terminal.instances.find(
       (instance) => instance.instanceId === "bay-floor-crate",
     );
+
     const stacked = terminal.instances.find(
       (instance) => instance.instanceId === "bay-stacked-crate",
     );
+
     expect(floor?.artifactId).toBe(stacked?.artifactId);
     expect(floor?.snapshot.seed).not.toBe(stacked?.snapshot.seed);
     expect(deriveSceneInstanceSeed(4242, "bay-floor-crate")).toBe(
@@ -194,9 +214,11 @@ describe("scene kernel sessions", () => {
     expect(() =>
       replaySceneKernelSession({ ...save, terminalDigest: digest("f") }),
     ).toThrow(/scene replay digest mismatch/);
+    // SAFETY: The invalid artifact kind is confined to a replay call whose kind-mismatch rejection is asserted.
     expect(() =>
       replaySceneKernelSession({ ...save, kind: "sceneaxi.other" as never }),
     ).toThrow(/invalid scene save artifact kind/);
+    // SAFETY: The unsupported schema major is confined to a replay call whose major-mismatch rejection is asserted.
     expect(() =>
       replaySceneKernelSession({ ...save, schemaVersion: 2 as never }),
     ).toThrow(/scene save schema major mismatch/);
@@ -232,4 +254,37 @@ describe("scene kernel sessions", () => {
       /deltaMs must be a non-negative integer/,
     );
   });
+});
+
+
+it("rolls back all scene instances when a later numeric candidate fails and retries a smaller clock", () => {
+  const original = sceneFixture("rollback");
+  const draft: ComposedScene = { ...original, instances: original.instances.map((instance, i) => i === 1 ? { ...instance, localTransform: { ...instance.localTransform, translation: [0, -100_000_000, 0] }, worldTransform: { ...instance.worldTransform, translation: [1, -200_000_000, 2] } } : instance) };
+  const scene: ComposedScene = { ...draft, evidence: { ...draft.evidence, placementDigest: digestScenePlacements(draft.instances), sceneDigest: digestComposedScene({ ...draft, evidence: { ...draft.evidence, placementDigest: digestScenePlacements(draft.instances) } }) } };
+  const session = openSceneKernelSession(scene, { seed: 7, gravity: -250_000 });
+  const before = session.observe();
+
+  for (let i = 0; i < 2; i++) {
+    expect(() => session.advance({ tick: 1, deltaMs: 60_000 })).toThrow(/numeric range/);
+    expect(session.observe()).toEqual(before);
+    expect(session.save().advances).toHaveLength(0);
+  }
+
+  session.advance({ tick: 1, deltaMs: 16 });
+  expect(replaySceneKernelSession(JSON.parse(JSON.stringify(session.save()))).observe()).toEqual(session.observe());
+});
+
+it("accepts unknown scene/save boundaries with explicit validation and refuses replay accessors without invoking them", () => {
+  const scene: unknown = sceneFixture("unknown-boundary");
+  const session = openSceneKernelSession(scene, { seed: 7 });
+  session.advance({ tick: 1, deltaMs: 16 });
+  const saved: unknown = JSON.parse(JSON.stringify(session.save()));
+  expect(replaySceneKernelSession(saved).observe()).toEqual(session.observe());
+  let reads = 0;
+  const accessor = { ...session.save(), get schemaVersion() { reads += 1; throw Error("private"); } };
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  for (const bad of [accessor, revoked.proxy, { ...session.save(), options: null }]) {
+    expect(() => replaySceneKernelSession(bad)).toThrow(/invalid scene save/);
+  }
+  expect(reads).toBe(0);
 });

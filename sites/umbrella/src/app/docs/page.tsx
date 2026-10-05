@@ -95,6 +95,7 @@ const SECTIONS = [
   { id: "free-path", name: "The free path" },
   { id: "refusals", name: "Why a sculpt is refused" },
   { id: "assets", name: "Asset policy" },
+    { id: "service-status", name: "Service status and support" },
 ] as const;
 
 export default function DocsPage() {
@@ -104,11 +105,11 @@ export default function DocsPage() {
         {RAIL_GROUPS.map((group) => (
           <div className="docs-rail-group" key={group}>
             <p className="docs-rail-title">{group}</p>
-            {CONTRACTS.filter((entry) => entry.group === group).map((entry) => (
+            {CONTRACTS.flatMap((entry) => entry.group === group ? [(
               <a key={entry.id} href={`#${entry.id}`}>
                 {entry.title}
               </a>
-            ))}
+            )] : [])}
           </div>
         ))}
       </nav>
@@ -122,15 +123,22 @@ export default function DocsPage() {
 
         <h1>SceneAxi help</h1>
         <p className="lede">Practical guides for installing, opening scenes, credits, and the command line.</p>
-        <nav aria-label="Help topics" className="grid grid-2">
+        <nav aria-label="Help topics" className="guide-list">
           {HELP_DOCS.map((doc) => (
-            <a className="panel card-link" href={`/docs/${doc.slug}`} key={doc.slug}>
+            <a className="guide-link" href={`/docs/${doc.slug}`} key={doc.slug}>
               <h2>{doc.title}</h2>
               <p>{doc.sections[0]?.body}</p>
+              <code className="guide-route">/docs/{doc.slug}</code>
             </a>
           ))}
         </nav>
-        <h2>Engine contracts</h2>
+        <section aria-labelledby="service-status">
+                    <h2 id="service-status">Service status and support</h2>
+                    <p>Live service status is not available here. These local help pages are not an uptime report or confirmation that sign-in, checkout, or hosted AI is operational.</p>
+                    <p>No verified support contact is published yet. Do not send passwords, provider keys, payment details, or private project files to an unverified address.</p>
+                    <p>Reviewed terms, privacy, refund, and legal contact information are not yet published. This notice is not a legal policy or approval for a public paid launch.</p>
+                  </section>
+                  <h2>Engine contracts</h2>
         <p className="lede">
           SceneAxi is specified before it is implemented. These are the documents that
           govern the engine, the CLI, and the profiles — the code follows them, not the
@@ -138,7 +146,10 @@ export default function DocsPage() {
         </p>
 
         <div className="rule-card">
-          <p className="eyebrow">Rule</p>
+          <span className="chip chip-experimental">
+            <span className="dot" aria-hidden="true" />
+            Rule
+          </span>
           <p>
             Where a page and a contract disagree, the contract wins. Nothing on this site
             restates a rule it does not own; it points at the document that does.
@@ -229,16 +240,16 @@ export default function DocsPage() {
           .
         </p>
 
-        <div className="grid grid-2">
-          <a className="panel card-link" href="/engine">
-            <p className="meta">Download</p>
+        <nav className="guide-list guide-list-compact" aria-label="Next steps">
+          <a className="guide-link" href="/engine">
             <h3>The engine SDK archive</h3>
+            <code className="guide-route">/engine</code>
           </a>
-          <a className="panel card-link" href="/pricing">
-            <p className="meta">Next</p>
+          <a className="guide-link" href="/pricing">
             <h3>Credit packs and pricing</h3>
+            <code className="guide-route">/pricing</code>
           </a>
-        </div>
+        </nav>
       </article>
 
       <nav className="toc" aria-label="On this page">

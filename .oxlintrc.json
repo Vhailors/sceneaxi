@@ -22,7 +22,10 @@
     "desktop/*/dist-build/**"
   ],
   "jsPlugins": [
-    { "name": "anti-slop", "specifier": "./tools/oxlint/anti-slop/index.ts" }
+    {
+      "name": "anti-slop",
+      "specifier": "./tools/oxlint/anti-slop/index.ts"
+    }
   ],
   "rules": {
     "oxc/no-accumulating-spread": "error",

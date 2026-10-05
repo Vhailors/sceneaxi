@@ -8,14 +8,19 @@ const read = (relative: string): string => readFileSync(join(REPO_ROOT, relative
 
 describe("D2 shared site component layer", () => {
   it.each(["catalog-game", "catalog-web"])(
-    "removes the redundant %s identity-plane re-export",
+    "keeps %s server identity composition thin and shared",
     (site) => {
-      expect(existsSync(join(REPO_ROOT, `sites/${site}/src/lib/identity-plane.ts`))).toBe(false);
+      expect(existsSync(join(REPO_ROOT, `sites/${site}/src/lib/identity-plane.ts`))).toBe(true);
+        const adapter = read(`sites/${site}/src/lib/identity-plane.ts`);
+        expect(adapter).toContain('from "@sceneaxi/site-kit/catalog-server-fetch"');
+        expect(adapter).toContain("return createCatalogServerIdentityPlane(options)");
+        expect(adapter).not.toMatch(/process\.env|fetch\(|@sceneaxi\/(auth|billing)/);
+        expect(adapter).toBe(read(`sites/${site === "catalog-game" ? "catalog-web" : "catalog-game"}/src/lib/identity-plane.ts`));
       expect(read(`sites/${site}/src/index.ts`)).toContain(
         'from "@sceneaxi/site-kit/catalog-identity"',
       );
       expect(read(`sites/${site}/src/app/item/[itemId]/page.tsx`)).toContain(
-        'from "@sceneaxi/site-kit/catalog-identity"',
+        'from "../../../lib/identity-plane.js"',
       );
     },
   );

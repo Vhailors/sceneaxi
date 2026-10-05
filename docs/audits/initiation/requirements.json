@@ -320,7 +320,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -509,10 +510,13 @@
           "resolved": [
             "packages/cli/test/__snapshots__/envelope.snapshot.test.ts.snap",
             "packages/cli/test/bin-smoke.test.ts",
+            "packages/cli/test/capabilities.test.ts",
             "packages/cli/test/desktop-bridge.test.ts",
             "packages/cli/test/desktop-socket-worker-lockstep.test.ts",
+            "packages/cli/test/distribution.test.ts",
             "packages/cli/test/envelope.snapshot.test.ts",
             "packages/cli/test/exit-codes.golden.test.ts",
+            "packages/cli/test/final-acceptance.test.ts",
             "packages/cli/test/fixtures/held-keys/firstmate-export.epoch2.json",
             "packages/cli/test/fixtures/held-keys/firstmate-export.epoch3.all-resolved.json",
             "packages/cli/test/fixtures/held-keys/firstmate-export.markdown-source.json",
@@ -719,11 +723,15 @@
           "kind": "test",
           "resolved": [
             "packages/authoring-core/test/assistant-sculpt.test.ts",
+            "packages/authoring-core/test/diff-capacity.test.ts",
+            "packages/authoring-core/test/final-acceptance.test.ts",
             "packages/authoring-core/test/journal-recovery.test.ts",
+            "packages/authoring-core/test/local-project-build.test.ts",
             "packages/authoring-core/test/model-provider-port.test.ts",
             "packages/authoring-core/test/project-git.test.ts",
             "packages/authoring-core/test/project-model.test.ts",
             "packages/authoring-core/test/scene-composition.test.ts",
+            "packages/authoring-core/test/scene-transform-v2.test.ts",
             "packages/authoring-core/test/sculpt-reconstruction.test.ts",
             "packages/authoring-core/test/seam.test.ts",
             "packages/authoring-core/test/transaction-history.test.ts"
@@ -751,12 +759,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -776,6 +787,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -830,8 +842,7 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts"
           ],
           "present": true
         }
@@ -891,10 +902,13 @@
           "resolved": [
             "packages/cli/test/__snapshots__/envelope.snapshot.test.ts.snap",
             "packages/cli/test/bin-smoke.test.ts",
+            "packages/cli/test/capabilities.test.ts",
             "packages/cli/test/desktop-bridge.test.ts",
             "packages/cli/test/desktop-socket-worker-lockstep.test.ts",
+            "packages/cli/test/distribution.test.ts",
             "packages/cli/test/envelope.snapshot.test.ts",
             "packages/cli/test/exit-codes.golden.test.ts",
+            "packages/cli/test/final-acceptance.test.ts",
             "packages/cli/test/fixtures/held-keys/firstmate-export.epoch2.json",
             "packages/cli/test/fixtures/held-keys/firstmate-export.epoch3.all-resolved.json",
             "packages/cli/test/fixtures/held-keys/firstmate-export.markdown-source.json",
@@ -993,12 +1007,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -1018,6 +1035,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -1072,8 +1090,7 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts"
           ],
           "present": true
         }
@@ -1628,7 +1645,17 @@
           "ref": "packages/engine-presentation/test/",
           "kind": "test",
           "resolved": [
+            "packages/engine-presentation/test/.finish-results.json",
+            "packages/engine-presentation/test/audio-playback.test.ts",
+            "packages/engine-presentation/test/browser-engine-frontdoors.mjs",
+            "packages/engine-presentation/test/browser-production-proof.mjs",
+            "packages/engine-presentation/test/browser-scene-v2-proof.mjs",
+            "packages/engine-presentation/test/completion.test.ts",
+            "packages/engine-presentation/test/contained-image.test.ts",
+            "packages/engine-presentation/test/declaration-consumer.test.ts",
+            "packages/engine-presentation/test/production-hardening.test.ts",
             "packages/engine-presentation/test/runtime.test.ts",
+            "packages/engine-presentation/test/scene-runtime-v2.test.ts",
             "packages/engine-presentation/test/sculpt-mount.test.ts",
             "packages/engine-presentation/test/seam.test.ts",
             "packages/engine-presentation/test/three-presentation.test.ts",
@@ -1696,12 +1723,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -1721,6 +1751,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -1775,8 +1806,7 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts"
           ],
           "present": true
         }
@@ -1786,7 +1816,17 @@
           "ref": "packages/engine-presentation/test/",
           "kind": "test",
           "resolved": [
+            "packages/engine-presentation/test/.finish-results.json",
+            "packages/engine-presentation/test/audio-playback.test.ts",
+            "packages/engine-presentation/test/browser-engine-frontdoors.mjs",
+            "packages/engine-presentation/test/browser-production-proof.mjs",
+            "packages/engine-presentation/test/browser-scene-v2-proof.mjs",
+            "packages/engine-presentation/test/completion.test.ts",
+            "packages/engine-presentation/test/contained-image.test.ts",
+            "packages/engine-presentation/test/declaration-consumer.test.ts",
+            "packages/engine-presentation/test/production-hardening.test.ts",
             "packages/engine-presentation/test/runtime.test.ts",
+            "packages/engine-presentation/test/scene-runtime-v2.test.ts",
             "packages/engine-presentation/test/sculpt-mount.test.ts",
             "packages/engine-presentation/test/seam.test.ts",
             "packages/engine-presentation/test/three-presentation.test.ts",
@@ -2330,7 +2370,7 @@
     },
     {
       "id": "CORE-017",
-      "statement": "Physics commands author deterministic bodies, shapes, materials, constraints, gravity, and a fixed 1–32ms step; animation precedes physics when both affect an object.",
+      "statement": "Physics commands author deterministic bodies, shapes, materials, constraints, gravity, and a fixed 1\u201332ms step; animation precedes physics when both affect an object.",
       "owner": {
         "path": "docs/adr/0027-physics-world-host.md",
         "anchor": "#decision"
@@ -2906,12 +2946,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -2931,6 +2974,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -2985,8 +3029,7 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts"
           ],
           "present": true
         }
@@ -3437,7 +3480,7 @@
     },
     {
       "id": "IDENT-005",
-      "statement": "Hosted AI is default-off, follows the documented Kids → route → opt-in → ledger → replay → entitlement → metering → provider → debit order, and BYO remains free.",
+      "statement": "Hosted AI is default-off, follows the documented Kids \u2192 route \u2192 opt-in \u2192 ledger \u2192 replay \u2192 entitlement \u2192 metering \u2192 provider \u2192 debit order, and BYO remains free.",
       "owner": {
         "path": "docs/auth-credits.md",
         "anchor": "#hosted-ai-sceneaxi139"
@@ -3616,6 +3659,7 @@
             "packages/billing/test/entitlements.test.ts",
             "packages/billing/test/fixture-commerce.test.ts",
             "packages/billing/test/hosted-ai.test.ts",
+            "packages/billing/test/hosted-response.test.ts",
             "packages/billing/test/ledger.test.ts",
             "packages/billing/test/live-mode.test.ts",
             "packages/billing/test/metering.test.ts",
@@ -4024,7 +4068,7 @@
     },
     {
       "id": "DESK-007",
-      "statement": "Ship → Export Web writes a contained content-addressed static viewer and Delivery Handoff without deploying.",
+      "statement": "Ship \u2192 Export Web writes a contained content-addressed static viewer and Delivery Handoff without deploying.",
       "owner": {
         "path": "docs/desktop-linux.md",
         "anchor": "#ship--export-web"
@@ -4479,6 +4523,7 @@
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
             "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts",
             "tests/contracts/injected-credit-pack-drift.test.ts",
             "tests/contracts/injected-entitlement-drift.test.ts",
             "tests/contracts/injected-listing-drift.test.ts",
@@ -4514,12 +4559,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -4539,6 +4587,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -4596,16 +4645,19 @@
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/helpers/electron-runtime-stub.ts",
             "tests/helpers/fixture.ts",
+            "tests/helpers/scoped-tmpdir.ts",
             "tests/helpers/traceability-runtime.ts",
             "tests/parity/editor-shell-parity.test.ts",
             "tests/parity/open-path-policy-parity.test.ts",
             "tests/parity/shell-cli-parity.test.ts",
             "tests/publish/injected-publish-violations.test.ts",
             "tests/sdk/engine-sdk.test.ts",
+            "tests/sites/billing-final-acceptance.test.ts",
             "tests/sites/catalog-storefronts.test.ts",
             "tests/sites/credit-pack-purchase-ux.test.ts",
             "tests/sites/desktop-download.test.ts",
             "tests/sites/desktop-offer-lockstep.test.ts",
+            "tests/sites/finish-catalog-history.test.ts",
             "tests/sites/identity-plane-wiring.test.ts",
             "tests/sites/kids-surface.test.ts",
             "tests/sites/provider-adapters.test.ts",
@@ -4618,8 +4670,7 @@
             "tests/sites/umbrella-visual.test.ts",
             "tests/sites/vercel-package.test.ts",
             "tests/sites/web-experience-editor.test.ts",
-            "tests/syntax/check-syntax.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/syntax/check-syntax.test.ts"
           ],
           "present": true
         },
@@ -4755,12 +4806,15 @@
             "tests/e2e/cli-golden-path.test.ts",
             "tests/e2e/contained-git-golden.test.ts",
             "tests/e2e/desktop-animation-golden.test.ts",
+            "tests/e2e/desktop-asset-import-order-golden.test.ts",
             "tests/e2e/desktop-assistant-ask-golden.test.ts",
             "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
             "tests/e2e/desktop-capability-matrix-audit.test.ts",
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -4780,6 +4834,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -4834,8 +4889,7 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts"
           ],
           "present": true
         },
@@ -4843,10 +4897,12 @@
           "ref": "tests/sites/",
           "kind": "source",
           "resolved": [
+            "tests/sites/billing-final-acceptance.test.ts",
             "tests/sites/catalog-storefronts.test.ts",
             "tests/sites/credit-pack-purchase-ux.test.ts",
             "tests/sites/desktop-download.test.ts",
             "tests/sites/desktop-offer-lockstep.test.ts",
+            "tests/sites/finish-catalog-history.test.ts",
             "tests/sites/identity-plane-wiring.test.ts",
             "tests/sites/kids-surface.test.ts",
             "tests/sites/provider-adapters.test.ts",
@@ -5038,7 +5094,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5099,7 +5156,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5160,7 +5218,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5222,7 +5281,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5284,7 +5344,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5345,7 +5406,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         },
@@ -5652,7 +5714,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -5713,7 +5776,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -5833,7 +5897,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -5894,7 +5959,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -5955,7 +6021,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -6075,7 +6142,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -6196,7 +6264,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -6552,7 +6621,8 @@
           "resolved": [
             "tests/boundary/injected-desktop-violations.test.ts",
             "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "tests/boundary/injected-violations.test.ts",
+            "tests/boundary/kids-evidence-scan.test.ts"
           ],
           "present": true
         }
@@ -7790,6 +7860,10 @@
             "./src/catalog-identity.ts"
           ],
           [
+            "./catalog-server-fetch",
+            "./src/catalog-server-fetch.ts"
+          ],
+          [
             "./commerce-notice",
             "./src/commerce-notice.ts"
           ],
@@ -7834,62 +7908,43 @@
       }
     ],
     "cli": {
-      "verbCount": 21,
+      "verbCount": 30,
       "verbs": [
-        "project new",
-        "project dev",
-        "project test",
-        "project capture",
-        "project report",
-        "project propose",
-        "project apply",
-        "scene compose",
-        "asset list",
         "asset import",
+        "asset list",
         "asset reload",
-        "profile list",
-        "profile open-path",
         "catalog list",
-        "evidence list",
+        "catalog submit",
+        "demo gated",
         "desktop bridge call",
         "desktop bridge status",
         "desktop bridge tools",
-        "demo gated",
+        "desktop build",
+        "desktop play",
+        "evidence list",
+        "evidence show",
+        "evidence verify",
+        "plugin list",
+        "plugin validate",
+        "profile list",
+        "profile open-path",
+        "project apply",
+        "project capture",
+        "project dev",
+        "project init",
+        "project migrate",
+        "project new",
+        "project propose",
+        "project report",
+        "project test",
+        "protocol inspect",
         "protocol version",
-        "protocol inspect"
+        "scene compose"
       ],
       "heldKeyMapPath": "packages/cli/src/held-keys/shipped.ts",
       "heldKeyEntries": [
         {
-          "command": "project new",
-          "heldKeys": []
-        },
-        {
-          "command": "project dev",
-          "heldKeys": []
-        },
-        {
-          "command": "project test",
-          "heldKeys": []
-        },
-        {
-          "command": "project capture",
-          "heldKeys": []
-        },
-        {
-          "command": "project report",
-          "heldKeys": []
-        },
-        {
-          "command": "project propose",
-          "heldKeys": []
-        },
-        {
-          "command": "project apply",
-          "heldKeys": []
-        },
-        {
-          "command": "scene compose",
+          "command": "asset import",
           "heldKeys": []
         },
         {
@@ -7897,19 +7952,7 @@
           "heldKeys": []
         },
         {
-          "command": "asset import",
-          "heldKeys": []
-        },
-        {
           "command": "asset reload",
-          "heldKeys": []
-        },
-        {
-          "command": "profile list",
-          "heldKeys": []
-        },
-        {
-          "command": "profile open-path",
           "heldKeys": []
         },
         {
@@ -7917,8 +7960,15 @@
           "heldKeys": []
         },
         {
-          "command": "evidence list",
+          "command": "catalog submit",
           "heldKeys": []
+        },
+        {
+          "command": "demo gated",
+          "heldKeys": [
+            "synthetic-demo-alpha",
+            "synthetic-demo-beta"
+          ]
         },
         {
           "command": "desktop bridge call",
@@ -7933,18 +7983,87 @@
           "heldKeys": []
         },
         {
-          "command": "demo gated",
-          "heldKeys": [
-            "synthetic-demo-alpha",
-            "synthetic-demo-beta"
-          ]
+          "command": "desktop build",
+          "heldKeys": []
+        },
+        {
+          "command": "desktop play",
+          "heldKeys": []
+        },
+        {
+          "command": "evidence list",
+          "heldKeys": []
+        },
+        {
+          "command": "evidence show",
+          "heldKeys": []
+        },
+        {
+          "command": "evidence verify",
+          "heldKeys": []
+        },
+        {
+          "command": "plugin list",
+          "heldKeys": []
+        },
+        {
+          "command": "plugin validate",
+          "heldKeys": []
+        },
+        {
+          "command": "profile list",
+          "heldKeys": []
+        },
+        {
+          "command": "profile open-path",
+          "heldKeys": []
+        },
+        {
+          "command": "project apply",
+          "heldKeys": []
+        },
+        {
+          "command": "project capture",
+          "heldKeys": []
+        },
+        {
+          "command": "project dev",
+          "heldKeys": []
+        },
+        {
+          "command": "project init",
+          "heldKeys": []
+        },
+        {
+          "command": "project migrate",
+          "heldKeys": []
+        },
+        {
+          "command": "project new",
+          "heldKeys": []
+        },
+        {
+          "command": "project propose",
+          "heldKeys": []
+        },
+        {
+          "command": "project report",
+          "heldKeys": []
+        },
+        {
+          "command": "project test",
+          "heldKeys": []
+        },
+        {
+          "command": "protocol inspect",
+          "heldKeys": []
         },
         {
           "command": "protocol version",
           "heldKeys": []
         },
         {
-          "command": "protocol inspect",
+          "command": "scene compose",
           "heldKeys": []
         }
       ]
@@ -8021,7 +8140,7 @@
         "assistant-cancel"
       ],
       "controlRegistryPath": "apps/desktop-shell/src/chrome.ts",
-      "controlCount": 163,
+      "controlCount": 179,
       "controls": [
         "assistant-close",
         "assistant-manipulator-move-x",
@@ -8061,10 +8180,12 @@
         "menu-command-extension-inspect",
         "menu-command-extension-start",
         "menu-command-input-action-rebind",
+        "menu-command-input-actions-inspect",
         "menu-command-input-actions-reset",
         "menu-command-package-inspect",
         "menu-command-package-install",
         "menu-command-package-remove",
+        "menu-command-physics-evaluate",
         "menu-command-profile-inspect",
         "menu-command-project-build",
         "menu-command-project-git-commit-prepare",
@@ -8079,7 +8200,13 @@
         "menu-command-project-open",
         "menu-command-project-save",
         "menu-command-run-play",
+        "menu-command-scene-prefab-define",
+        "menu-command-scene-prefab-inspect",
+        "menu-command-scene-prefab-instance",
+        "menu-command-scene-prefab-override",
+        "menu-command-scene-prefab-refresh",
         "menu-command-ship-export-web",
+        "menu-command-viewport-source-set",
         "menu-command-workspace-layout-apply",
         "menu-command-workspace-layout-inspect",
         "menu-command-workspace-layout-reset",
@@ -8100,10 +8227,12 @@
         "palette-extension-inspect",
         "palette-extension-start",
         "palette-input-action-rebind",
+        "palette-input-actions-inspect",
         "palette-input-actions-reset",
         "palette-package-inspect",
         "palette-package-install",
         "palette-package-remove",
+        "palette-physics-evaluate",
         "palette-profile-inspect",
         "palette-project-build",
         "palette-project-git-commit-prepare",
@@ -8118,7 +8247,13 @@
         "palette-project-open",
         "palette-project-save",
         "palette-run-play",
+        "palette-scene-prefab-define",
+        "palette-scene-prefab-inspect",
+        "palette-scene-prefab-instance",
+        "palette-scene-prefab-override",
+        "palette-scene-prefab-refresh",
         "palette-ship-export-web",
+        "palette-viewport-source-set",
         "palette-workspace-layout-apply",
         "palette-workspace-layout-inspect",
         "palette-workspace-layout-reset",
@@ -8308,8 +8443,11 @@
       "sites/umbrella/src/app/admin/ledger/page.tsx",
       "sites/umbrella/src/app/api/admin/ledger/route.ts",
       "sites/umbrella/src/app/api/auth/[...all]/route.ts",
+      "sites/umbrella/src/app/api/auth/own-session/route.ts",
       "sites/umbrella/src/app/api/checkout/route.ts",
       "sites/umbrella/src/app/api/editor/catalog-intake/route.ts",
+      "sites/umbrella/src/app/api/editor/export/route.ts",
+      "sites/umbrella/src/app/api/health/route.ts",
       "sites/umbrella/src/app/api/login/route.ts",
       "sites/umbrella/src/app/api/logout/route.ts",
       "sites/umbrella/src/app/api/stripe/webhook/route.ts",
@@ -8324,8 +8462,7 @@
       "sites/umbrella/src/app/open/page.tsx",
       "sites/umbrella/src/app/page.tsx",
       "sites/umbrella/src/app/pricing/page.tsx",
-      "sites/umbrella/src/app/profiles/page.tsx",
-      "sites/umbrella/src/app/api/health/route.ts"
+      "sites/umbrella/src/app/profiles/page.tsx"
     ],
     "migrations": [
       "db/migrations/0000_schema_migrations.sql",
@@ -8335,7 +8472,8 @@
       "db/migrations/0004_stripe_connect_audit.sql",
       "db/migrations/0005_better_auth_provider.sql",
       "db/migrations/0006_credit_reconciliation.sql",
-      "db/migrations/0007_stripe_live_mode_audit.sql"
+      "db/migrations/0007_stripe_live_mode_audit.sql",
+      "db/migrations/0008_credit_chain_hosted_budget.sql"
     ],
     "providerEntrypoints": [
       "sites/umbrella/src/lib/provider-adapters.ts",
@@ -8441,11 +8579,11 @@
       },
       {
         "path": "packages/engine-orchestrator/src/index.ts",
-        "symbol": "ORCHESTRATOR_REFUSALS"
+        "symbol": "ORCHESTRATOR_REFUSAL_REASONS"
       },
       {
         "path": "packages/engine-orchestrator/src/index.ts",
-        "symbol": "ORCHESTRATOR_REFUSAL_REASONS"
+        "symbol": "ORCHESTRATOR_REFUSALS"
       },
       {
         "path": "packages/importers/src/index.ts",
@@ -8533,15 +8671,15 @@
       },
       {
         "path": "packages/schemas/src/index.ts",
+        "symbol": "PROJECT_BUILD_REFUSALS"
+      },
+      {
+        "path": "packages/schemas/src/index.ts",
         "symbol": "PROJECT_GIT_DIAGNOSTICS"
       },
       {
         "path": "packages/schemas/src/index.ts",
         "symbol": "PROJECT_MANIFEST_DIAGNOSTICS"
-      },
-      {
-        "path": "packages/schemas/src/index.ts",
-        "symbol": "PROJECT_BUILD_REFUSALS"
       },
       {
         "path": "packages/schemas/src/index.ts",
@@ -8597,11 +8735,11 @@
       },
       {
         "path": "packages/site-kit/src/index.ts",
-        "symbol": "SITE_REFUSALS"
+        "symbol": "SITE_REFUSAL_REASONS"
       },
       {
         "path": "packages/site-kit/src/index.ts",
-        "symbol": "SITE_REFUSAL_REASONS"
+        "symbol": "SITE_REFUSALS"
       },
       {
         "path": "packages/site-kit/src/index.ts",
@@ -8622,12 +8760,21 @@
       {
         "path": "sites/umbrella/src/provider/better-auth-provider-refusals.ts",
         "symbol": "BETTER_AUTH_PROVIDER_REFUSALS"
+      },
+      {
+        "path": "packages/authoring-core/src/index.ts",
+        "symbol": "LOCAL_PROJECT_BUILD_REFUSALS"
+      },
+      {
+        "path": "packages/importers/src/index.ts",
+        "symbol": "ASSET_PREPARATION_REFUSALS"
       }
     ],
     "workflows": [
       ".github/workflows/desktop-artifact-expiry.yml",
       ".github/workflows/desktop-linux.yml",
       ".github/workflows/desktop-macos.yml",
+      ".github/workflows/desktop-windows.yml",
       ".github/workflows/engine-sdk.yml",
       ".github/workflows/gate.yml"
     ],
@@ -8708,22 +8855,18 @@
       "docs/web-experience-editor.md"
     ],
     "releaseArtifacts": [
-      "scripts/build-engine-sdk.mjs",
-      "scripts/engine-sdk-files.json",
-      "scripts/lib/zip.mjs",
-      "docs/publish-readiness.md",
       "desktop/linux/electron-builder.yml",
       "desktop/linux/package.json",
       "desktop/linux/pnpm-lock.yaml",
-      "desktop/linux/scripts/build.mjs",
       "desktop/linux/scripts/build-linux.mjs",
+      "desktop/linux/scripts/build.mjs",
       "desktop/linux/scripts/dist.mjs",
       "desktop/linux/scripts/renderer-bundle.mjs",
       "desktop/linux/src/native/publish-no-replace.c",
       "desktop/macos/electron-builder.yml",
+      "desktop/macos/entitlements.mac.plist",
       "desktop/macos/package.json",
       "desktop/macos/pnpm-lock.yaml",
-      "desktop/macos/entitlements.mac.plist",
       "desktop/macos/scripts/build.mjs",
       "desktop/macos/scripts/dist.mjs",
       "desktop/macos/scripts/release-provenance.mjs",
@@ -8731,24 +8874,29 @@
       "desktop/windows/package.json",
       "desktop/windows/pnpm-lock.yaml",
       "desktop/windows/scripts/build.mjs",
-      "desktop/windows/scripts/package-release.mjs",
       "desktop/windows/scripts/dist.mjs",
+      "desktop/windows/scripts/package-release.mjs",
       "desktop/windows/scripts/release-preflight.mjs",
-      "desktop/windows/scripts/release.mjs"
+      "desktop/windows/scripts/release.mjs",
+      "desktop/windows/scripts/smoke.mjs",
+      "docs/publish-readiness.md",
+      "scripts/build-engine-sdk.mjs",
+      "scripts/engine-sdk-files.json",
+      "scripts/lib/zip.mjs"
     ],
     "counts": {
       "matrixPackages": 27,
       "delayedPackages": 4,
-      "cliVerbs": 21,
+      "cliVerbs": 30,
       "editorCommands": 66,
-      "desktopControls": 163,
+      "desktopControls": 179,
       "bridgeActions": 11,
       "authoringOperations": 10,
       "assistantOperations": 3,
       "localAgentTools": 67,
-      "routes": 29,
-      "migrations": 8,
-      "workflows": 5,
+      "routes": 31,
+      "migrations": 9,
+      "workflows": 6,
       "goldenTests": 57
     },
     "documentedClaims": [

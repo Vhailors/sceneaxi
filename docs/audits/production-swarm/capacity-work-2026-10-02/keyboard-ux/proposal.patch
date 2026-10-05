@@ -1,0 +1,8 @@
+# UNAPPLIED candidate mitigation; historical failure evidence, NOT browser-verified.
+# Only serial integration after Astra handoff may evaluate/apply.
+--- a/apps/desktop-shell/src/chrome.ts
++++ b/apps/desktop-shell/src/chrome.ts
+@@ -1252,1 +1252,3 @@
+ .inspector{border-left:1px solid var(--line)}
++/* Preserve section intrinsic height so focused descendants scroll, not overlap. */
++.inspector > section{flex-shrink:0}

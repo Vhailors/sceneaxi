@@ -1,0 +1,111 @@
+name: desktop-windows
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      native_runtime:
+        description: Unsigned native runtime smoke only (no signing or publication)
+        type: boolean
+        default: false
+      native_candidate:
+        description: Explicit isolated signed Windows candidate (never publish)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  static-staging:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/linux
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/windows
+      - run: pnpm -s build
+      - run: pnpm typecheck
+        working-directory: desktop/windows
+      - run: pnpm build
+        working-directory: desktop/windows
+      - run: pnpm smoke
+        working-directory: desktop/windows
+
+  # Default-off native runtime proof; never calls dist/release or reads secrets.
+  native-runtime:
+    if: github.event_name == 'workflow_dispatch' && inputs.native_runtime == true
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/linux
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/windows
+      - run: pnpm -s build
+      - run: pnpm typecheck
+        working-directory: desktop/windows
+      - run: pnpm build
+        working-directory: desktop/windows
+      - run: node scripts/native-runtime-smoke.mjs
+        working-directory: desktop/windows
+
+  # Environment protection/secret provisioning must be separately approved by operators.
+  # No CI run, signing, upload or publication is authorized by adding this job.
+  native-candidate:
+    if: github.event_name == 'workflow_dispatch' && inputs.native_candidate == true
+    runs-on: windows-latest
+    timeout-minutes: 40
+    environment: approved-isolated-windows-native-candidate
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Refuse absent separately approved signing inputs
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.ISOLATED_WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.ISOLATED_WINDOWS_CSC_KEY_PASSWORD }}
+        run: |
+          if (-not $env:CSC_LINK -or -not $env:CSC_KEY_PASSWORD) { throw 'WINDOWS_SIGNING_INPUTS_UNCONFIGURED' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/linux
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/windows
+      - run: pnpm -s build
+      - run: pnpm typecheck
+        working-directory: desktop/windows
+      - name: Stage signed local candidate; packaging enforces --publish never
+        run: pnpm dist
+        working-directory: desktop/windows
+        env:
+          CSC_LINK: ${{ secrets.ISOLATED_WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.ISOLATED_WINDOWS_CSC_KEY_PASSWORD }}
+      - run: pnpm smoke --packaged
+        working-directory: desktop/windows
