@@ -52,8 +52,11 @@ export default async function PublishPage() {
     <>
       <div className="shell publish-head">
         <div className="publish-copy">
-          <p className="eyebrow">{STORE_COPY.eyebrow}</p>
-          <h1>{STORE_COPY.title}</h1>
+          {/* The audience is a chip after the H1 on the same wrapping row, never a label above it. */}
+          <div className="page-head">
+            <h1>{STORE_COPY.title}</h1>
+            <p className="tag">{STORE_COPY.eyebrow}</p>
+          </div>
           <p className="lede">
             {STORE_COPY.offer} and keep {CREATOR_SHARE_RULE.creatorPercent}% of the credits
             on every sale.
@@ -64,37 +67,21 @@ export default async function PublishPage() {
         </div>
 
         <section className="earn" aria-labelledby="earn-title">
-          <h2 className="micro" id="earn-title">
-            What you would earn
-          </h2>
+          <h2 id="earn-title">What you would earn</h2>
+          {/* One worked example from the same derived share: total → creator + platform. */}
           {example.ok && example.value.share !== null ? (
-            <dl className="earn-list">
-              <div className="earn-row">
-                <dt>Listed at</dt>
-                <dd>
-                  <span className="earn-num">{example.value.share.total}</span>
-                  <span className="earn-unit">credits</span>
-                </dd>
-              </div>
-              <div className="earn-row earn-lead">
-                <dt>You receive</dt>
-                <dd>
-                  <strong className="earn-num">{example.value.share.creator}</strong>
-                  <span className="earn-unit">credits</span>
-                </dd>
-              </div>
-              <div className="earn-row">
-                <dt>Platform receives</dt>
-                <dd>
-                  <span className="earn-num">{example.value.share.platform}</span>
-                  <span className="earn-unit">credits</span>
-                </dd>
-              </div>
-            </dl>
+            <p className="worked">
+              <span className="worked-figure">{example.value.share.total} credits</span>{" "}
+              <span className="worked-op" aria-hidden="true">→</span>{" "}
+              <span className="sr-only">split into</span>{" "}
+              <strong className="worked-figure">{example.value.share.creator} you receive</strong>{" "}
+              <span className="worked-op">+</span>{" "}
+              <span className="worked-figure">{example.value.share.platform} platform receives</span>
+            </p>
           ) : (
             <p className="prose">The share preview is unavailable for this example.</p>
           )}
-          <p className="note">{CREATOR_SHARE_RULE.note}</p>
+          <p className="prose">{CREATOR_SHARE_RULE.note}</p>
           <p className="mono-note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
         </section>
       </div>
@@ -113,26 +100,18 @@ export default async function PublishPage() {
               separate committed TEST fixture listing set.
             </p>
           </div>
-          <ol className="req-list">
-            <li className="req-row">{STORE_COPY.firstRequirement}</li>
-            <li className="req-row">
-              A licence, a named rights holder, and whether commercial use is allowed.
-            </li>
-            <li className="req-row">
-              Provenance: where the asset came from and its content hash.
-            </li>
-            <li className="req-row">
-              An AI-generation disclosure, whether or not AI was involved.
-            </li>
-            <li className="req-row">
-              Compatibility: the core range and the profiles it targets.
-            </li>
+          <ol className="steps">
+            <li>{STORE_COPY.firstRequirement}</li>
+            <li>A licence, a named rights holder, and whether commercial use is allowed.</li>
+            <li>Provenance: where the asset came from and its content hash.</li>
+            <li>An AI-generation disclosure, whether or not AI was involved.</li>
+            <li>Compatibility: the core range and the profiles it targets.</li>
           </ol>
         </section>
 
         <TestPipelineProof pipeline={pipeline} />
 
-      <StatePanel tone="warn" title="Production publishing is not open" reason={refusal?.reason}>
+      <StatePanel tone="deny" level={2} title="Production publishing is not open" reason={refusal?.reason}>
         <p>{refusal?.message ?? "Marketplace publishing is not activated."}</p>
         <p>
           Nothing here accepts an upload or payout detail. The TEST proof above has no

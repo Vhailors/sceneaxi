@@ -9,10 +9,17 @@ import { CATALOG_SITE_BRAND } from "../lib/site-config.js";
 export default function NotFound() {
   const catalogue = CATALOG_SITE_BRAND.catalogueWord.toLowerCase();
 
+  // An Operate state route: the H1 leads, its status chip follows on the same row, and a
+  // 2px accent mark under the head draws once (DIRECTION row 13). Nothing rises.
   return (
-    <div className="shell page">
-      <p className="eyebrow">Not found</p>
-      <h1>No {CATALOG_SITE_BRAND.listingWord} with that id</h1>
+    <div className="shell page page-state">
+      <div className="page-head tone-accent">
+        <h1>No {CATALOG_SITE_BRAND.listingWord} with that id</h1>
+        <p className="chip chip-accent">
+          <span className="chip-dot" aria-hidden="true" />
+          Not found
+        </p>
+      </div>
       <p className="lede">
         This {catalogue} only publishes its own committed{" "}
         {CATALOG_SITE_BRAND.listingWordPlural}, so an id from another SceneAxi surface will

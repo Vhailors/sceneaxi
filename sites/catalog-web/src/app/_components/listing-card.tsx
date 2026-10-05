@@ -72,24 +72,24 @@ export function ListingCard({
         { key: "availability", label: listing.availability.asset },
       ];
 
+  // The card prints the model's own price label ("40 credits or 4.00 USD") on one mono
+  // line under the title; the lead plate keeps the split numeral form (`ListingPrice`).
   return (
-    <li className="card">
+    <li className={compact ? "card card-compact" : "card"}>
       <a className="card-link" href={`/item/${listing.itemId}`}>
         <DigestFigure digest={listing.recordDigest} chips={chips} />
         <span className="card-body">
           <span className="card-name">{listing.title}</span>
-          <ListingPrice price={price} />
-          <span className="card-foot">
-            <span className="card-meta">
-              <span className="card-author">by {listing.creatorId}</span>
-              {!compact && (
-                <span className="chip">Creator {CREATOR_SHARE_RULE.creatorPercent}%</span>
-              )}
-            </span>
-            {!compact && share.ok && <span className="card-share">{share.value.label}</span>}
+          <span className="card-price">{price.ok ? price.value.label : `unpriced (${price.reason})`}</span>
+          <span className="card-meta">
+            <span className="card-author">by {listing.creatorId}</span>
+            {!compact && (
+              <span className="chip">Creator {CREATOR_SHARE_RULE.creatorPercent}%</span>
+            )}
           </span>
+          {!compact && share.ok && <span className="card-share">{share.value.label}</span>}
+          {listing.availability.purchase === "refused" && <span className="card-meta card-refusal">View details · purchases unavailable</span>}
         </span>
-          {listing.availability.purchase === "refused" && <span className="card-meta">View details · purchases unavailable</span>}
       </a>
     </li>
   );

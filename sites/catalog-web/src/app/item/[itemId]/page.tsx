@@ -39,7 +39,8 @@ import { StatePanel } from "../../_components/state-panel.js";
  *
  * The buy column comes first in source order, which is what a phone and a screen reader
  * want: title, price, options and the one working action, then the inert purchase notice
- * in the slot a cart button would take, then the record itself.
+ * in the slot a cart button would take, then the record itself. Term → value facts are
+ * evidence lists (`dl.evidence`); the refusals are named state panels.
  */
 export async function generateMetadata({
   params,
@@ -140,38 +141,31 @@ export default async function ItemPage({
               <p className="buy-price">
                 <span className="buy-price-num">{headlineValue}</span>
                 <span className="buy-price-unit">{headlineUnit}</span>
+                <span className="chip chip-accent">{listing.availability.mode.toUpperCase()}</span>
               </p>
 
-              <div className="buy-block">
-                <h2 className="micro">Committed TEST price</h2>
-                <ul className="buy-options">
-                  <li className="buy-option">
-                    <span className="buy-option-name">Credits</span>
-                    <span className="buy-option-value">
-                      {price.ok ? (price.value.credits ?? "not offered") : "unavailable"}
-                    </span>
-                  </li>
-                  <li className="buy-option">
-                    <span className="buy-option-name">Money</span>
-                    <span className="buy-option-value">
-                      {price.ok ? (price.value.money ?? "not offered") : "unavailable"}
-                    </span>
-                  </li>
-                  <li className="buy-option">
-                    <span className="buy-option-name">Creator share · credits</span>
-                    <span className="buy-option-value">
-                      {share.ok ? (share.value.credits ?? "not applicable") : "unavailable"}
-                    </span>
-                  </li>
-                  <li className="buy-option">
-                    <span className="buy-option-name">Creator share · money</span>
-                    <span className="buy-option-value">
-                      {share.ok ? (share.value.money ?? "not applicable") : "unavailable"}
-                    </span>
-                  </li>
-                </ul>
+              <section className="buy-block" aria-labelledby="detail-price-heading">
+                <h2 className="block-title" id="detail-price-heading">Committed TEST price</h2>
+                <dl className="evidence">
+                  <div className="evidence-row">
+                    <dt>Credits</dt>
+                    <dd>{price.ok ? (price.value.credits ?? "not offered") : "unavailable"}</dd>
+                  </div>
+                  <div className="evidence-row">
+                    <dt>Money</dt>
+                    <dd>{price.ok ? (price.value.money ?? "not offered") : "unavailable"}</dd>
+                  </div>
+                  <div className="evidence-row">
+                    <dt>Creator share · credits</dt>
+                    <dd>{share.ok ? (share.value.credits ?? "not applicable") : "unavailable"}</dd>
+                  </div>
+                  <div className="evidence-row">
+                    <dt>Creator share · money</dt>
+                    <dd>{share.ok ? (share.value.money ?? "not applicable") : "unavailable"}</dd>
+                  </div>
+                </dl>
                 <p className="mono-note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
-              </div>
+              </section>
 
               <div className="buy-actions">
                 {link.ok ? (
@@ -212,22 +206,34 @@ export default async function ItemPage({
               </div>
             </div>
 
-            <dl className="buy-spec">
-              <dt>Listing id</dt>
-              <dd>{listing.itemId}</dd>
-              <dt>Contract</dt>
-              <dd>{listing.listing.kind}</dd>
-              <dt>Record digest</dt>
-              <dd title={listing.recordDigest}>{shortenDigest(listing.recordDigest)}</dd>
-              <dt>Published</dt>
-              <dd>{listing.publishedAt}</dd>
-              <dt>Mode</dt>
-              <dd>{listing.availability.mode.toUpperCase()}</dd>
-              <dt>Availability</dt>
-              <dd>
-                browse {listing.availability.browse} · asset {listing.availability.asset} ·
-                purchase {listing.availability.purchase}
-              </dd>
+            <dl className="evidence buy-spec" aria-label="Listing record summary">
+              <div className="evidence-row">
+                <dt>Listing id</dt>
+                <dd>{listing.itemId}</dd>
+              </div>
+              <div className="evidence-row">
+                <dt>Contract</dt>
+                <dd>{listing.listing.kind}</dd>
+              </div>
+              <div className="evidence-row">
+                <dt>Record digest</dt>
+                <dd title={listing.recordDigest}>{shortenDigest(listing.recordDigest)}</dd>
+              </div>
+              <div className="evidence-row">
+                <dt>Published</dt>
+                <dd>{listing.publishedAt}</dd>
+              </div>
+              <div className="evidence-row">
+                <dt>Mode</dt>
+                <dd>{listing.availability.mode.toUpperCase()}</dd>
+              </div>
+              <div className="evidence-row">
+                <dt>Availability</dt>
+                <dd>
+                  browse {listing.availability.browse} · asset {listing.availability.asset} ·
+                  purchase {listing.availability.purchase}
+                </dd>
+              </div>
             </dl>
           </div>
         </div>
@@ -256,29 +262,27 @@ export default async function ItemPage({
             </figcaption>
           </figure>
 
-          <section className="section" id="record">
+          <section className="section" id="record" aria-labelledby="record-heading">
             <div className="section-head">
-              <h2>Fixture listing record</h2>
+              <h2 id="record-heading">Fixture listing record</h2>
               <p className="prose">
                 This page presents every non-price field the committed listing contract
                 carries. The canonical source is <code>{SITE_CATALOG_FIXTURE_PATH}</code>.
               </p>
             </div>
-            <ul className="included">
+            <dl className="evidence evidence-record">
               {record.map((row) => (
-                <li className="included-row" key={row.label}>
-                  <span className="included-check" aria-hidden="true">
-                    ✓
-                  </span>
-                  <span className="included-key">{row.label}</span>
-                  <span className="included-value">{row.value}</span>
-                </li>
+                <div className="evidence-row" key={row.label}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
               ))}
-            </ul>
+            </dl>
           </section>
 
           <StatePanel
             tone="warn"
+            level={2}
             title="Metadata-only fixture"
             reason={listing.availability.reason}
           >
@@ -290,9 +294,9 @@ export default async function ItemPage({
           </StatePanel>
 
           {related.length > 0 && (
-            <section className="section" id="related">
+            <section className="section" id="related" aria-labelledby="related-heading">
               <div className="section-head">
-                <h2>From the same creator</h2>
+                <h2 id="related-heading">From the same creator</h2>
               </div>
               <ul className="cards cards-compact">
                 {related.map((other) => (
@@ -305,6 +309,7 @@ export default async function ItemPage({
           {!price.ok && (
             <StatePanel
               tone="deny"
+              level={2}
               title="This listing has no price to show"
               reason={price.reason}
             >
