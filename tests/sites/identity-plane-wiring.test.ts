@@ -62,8 +62,11 @@ import {
 } from "../../sites/catalog-game/src/index.ts";
 
 const ADMIN_EMAIL = "captain@sceneaxi.test";
+
 const MEMBER_EMAIL = "member@sceneaxi.test";
+
 const NOW = Date.parse("2026-07-26T12:00:00.000Z");
+
 const clock = () => NOW;
 
 /**
@@ -117,7 +120,9 @@ const noProvider: IdentityAdapter = Object.freeze({
 
 function identityPortWith(users: ReadonlyArray<unknown>, sessions: ReadonlyArray<unknown>) {
   const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
   if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+
   return createIdentityPort({
     adapter: noProvider,
     store: createInMemoryIdentityStore({
@@ -130,6 +135,7 @@ function identityPortWith(users: ReadonlyArray<unknown>, sessions: ReadonlyArray
 }
 
 const ADMIN_TOKEN = "admin-session-token";
+
 const MEMBER_TOKEN = "member-session-token";
 
 const adminWorld = () =>
@@ -142,9 +148,12 @@ const adminWorld = () =>
   );
 
 const ENV = Object.freeze({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
 const TEST_ADMIN = (() => {
   const result = resolveAdminIdentity(ENV);
+
   if (!result.ok) throw new Error(`fixture admin unresolved: ${result.reason}`);
+
   return result.value;
 })();
 
@@ -157,6 +166,7 @@ function createUmbrellaIdentityPlane(
   wiring: Parameters<typeof createIdentityPlaneForTest>[1] = {},
 ) {
   const admin = env["SCENEAXI_ADMIN_EMAIL"] === ADMIN_EMAIL ? TEST_ADMIN : null;
+
   return createIdentityPlaneForTest(env, {
     ...wiring,
     admin: wiring.admin === undefined ? admin : wiring.admin,
@@ -171,6 +181,7 @@ describe("administrator ledger support", () => {
 
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: adminWorld(), sessionToken, clock,
+      deployment: { admin: TEST_ADMIN, billingMode: "test", clock, configuration: {}, adminReauthenticate: async (_credential, password) => password === "fixture" },
       creditStore: { ...credits, findAccountByUserId(id) {
         reads.push("account");
 
@@ -208,13 +219,13 @@ describe("administrator ledger support", () => {
     for (const [token, reason] of [[`sess-member.${MEMBER_TOKEN}`, "ADMIN_ROLE_REQUIRED"], ["", "IDENTITY_SESSION_ABSENT"]]) {
       const { plane, reads } = supportWorld(token);
       expect(await plane.ledgerSupport.lookup({ surface: "site", target })).toMatchObject({ ok: false, reason });
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: false, reason });
+      expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields })).toMatchObject({ ok: false, reason });
       expect(reads).toEqual([]);
     }
 
     const { plane, reads } = supportWorld();
     expect(await plane.ledgerSupport.lookup({ surface: "kids", target })).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
-    expect(await plane.ledgerSupport.adjust({ surface: "kids", requestOrigin, fields })).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "kids", requestOrigin, fields })).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
     expect(reads).toEqual([]);
   });
 
@@ -222,10 +233,10 @@ describe("administrator ledger support", () => {
     const { plane, credits } = supportWorld();
     expect(await plane.ledgerSupport.lookup({ surface: "site", target })).toMatchObject({ ok: true, value: { state: { balance: 0, entries: [] }, checkoutIntents: [], reconciliations: [] } });
     expect(credits.entryCount("acc_member")).toBe(0);
-    const first = await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields });
+    const first = await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields });
     expect(first).toMatchObject({ ok: true, value: { replayed: false, entry: { delta: 25, reason: "support:captain: Case 23", movement: "adjustment" } } });
-    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true } });
-    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-10", idempotencyKey: "case-23-debit" } })).toMatchObject({ ok: true, value: { entry: { balanceAfter: 15 } } });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields: { ...fields, delta: "-10", idempotencyKey: "case-23-debit" } })).toMatchObject({ ok: true, value: { entry: { balanceAfter: 15 } } });
     expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "email", value: MEMBER_EMAIL.toUpperCase() } })).toMatchObject({ ok: true, value: { state: { balance: 15 } } });
     expect(credits.entryCount("acc_member")).toBe(2);
   });
@@ -233,18 +244,18 @@ describe("administrator ledger support", () => {
   it("refuses malformed forms, cross-origin requests, conflicts, missing targets and overdrafts", async () => {
     const { plane, credits, reads } = supportWorld();
     const foreign = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://foreign.test" });
-    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin: foreign, fields })).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin: foreign, fields })).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
     expect(reads).toEqual([]);
 
     for (const invalid of [{ reason: " " }, { delta: "0" }, { delta: "1.5" }, { delta: "1e2" }, { delta: "9007199254740992" }, { idempotencyKey: "" }, { idempotencyKey: "sale:one:buyer" }]) {
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, ...invalid } })).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
+      expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields: { ...fields, ...invalid } })).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
     }
 
     expect(reads).toEqual([]);
     expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "absent" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
-    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
-    await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields });
-    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "26" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+    await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields });
+    expect(await plane.ledgerSupport.adjust({ adminPassword: "fixture", surface: "site", requestOrigin, fields: { ...fields, delta: "26" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
     expect(credits.entryCount("acc_member")).toBe(1);
   });
 
@@ -275,6 +286,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionToken: `sess-admin.${ADMIN_TOKEN}`,
       clock,
     });
+
     expect(plane.wired.identity).toBe(true);
 
     const resolved = await plane.identity.resolvePrincipal({ surface: "site" });
@@ -289,6 +301,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
       clock,
     });
+
     const resolved = await plane.identity.resolvePrincipal({ surface: "site" });
     expect(resolved.ok && resolved.value.role).toBe("user");
   });
@@ -310,6 +323,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
         clock,
       },
     );
+
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_PLANE_NOT_WIRED",
@@ -322,6 +336,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
       clock,
     });
+
     for (const credentials of [
       { role: "admin" },
       { isAdmin: true },
@@ -339,6 +354,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionToken: `sess-admin.${ADMIN_TOKEN}`,
       clock,
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "kids" })).toMatchObject({
       ok: false,
       reason: "KIDS_SURFACE_DENIED",
@@ -351,6 +367,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionToken: null,
       clock,
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_SESSION_ABSENT",
@@ -364,6 +381,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
         sessionToken: token,
         clock,
       });
+
       expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
         ok: false,
         reason: "IDENTITY_SESSION_ABSENT",
@@ -376,11 +394,13 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       [user("member-1", MEMBER_EMAIL)],
       [session("sess-old", "member-1", MEMBER_TOKEN, { expiresAt: iso(-1_000) })],
     );
+
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       sessionToken: `sess-old.${MEMBER_TOKEN}`,
       clock,
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_SESSION_EXPIRED",
@@ -392,11 +412,13 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       [user("member-1", MEMBER_EMAIL, { disabled: true })],
       [session("sess-member", "member-1", MEMBER_TOKEN)],
     );
+
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
       clock,
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_USER_DISABLED",
@@ -408,6 +430,7 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       sessionId: "sess-1",
       token: "abc.def",
     });
+
     for (const malformed of [null, undefined, "", "   ", "no-separator", ".leading", "trailing."]) {
       expect(parseSessionToken(malformed)).toBeNull();
     }
@@ -435,6 +458,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
   it("appends nothing on any later read, and never a second grant", async () => {
     const store = memberStore();
     const plane = createUmbrellaIdentityPlane(ENV, { creditStore: store, clock });
+
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const balance = await plane.credits.readBalance({ userId: "member-1" });
       expect(balance).toMatchObject({
@@ -442,6 +466,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
         value: { balance: SITE_STARTER_CREDIT_ALLOTMENT },
       });
     }
+
     expect(store.entryCount("acct-1")).toBe(1);
   });
 
@@ -449,6 +474,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
     const store = createInMemoryCreditStore({
       accounts: [account("acct-1", "member-1"), account("acct-2", "member-2")] as never,
     });
+
     const plane = createUmbrellaIdentityPlane(ENV, { creditStore: store, clock });
     await plane.credits.readBalance({ userId: "member-1" });
     await plane.credits.readBalance({ userId: "member-2" });
@@ -459,15 +485,18 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
   it("survives concurrent first reads with a single grant", async () => {
     const store = memberStore();
     const plane = createUmbrellaIdentityPlane(ENV, { creditStore: store, clock });
+
     const results = await Promise.all(
       Array.from({ length: 4 }, () => plane.credits.readBalance({ userId: "member-1" })),
     );
+
     for (const result of results) {
       expect(result).toMatchObject({
         ok: true,
         value: { balance: SITE_STARTER_CREDIT_ALLOTMENT },
       });
     }
+
     expect(store.entryCount("acct-1")).toBe(1);
   });
 
@@ -476,6 +505,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
       creditStore: createInMemoryCreditStore({}),
       clock,
     });
+
     expect(await plane.credits.readBalance({ userId: "ghost" })).toMatchObject({
       ok: false,
       reason: "CREDITS_PLANE_UNAVAILABLE",
@@ -507,6 +537,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
       },
       clock,
     });
+
     expect(await plane.credits.readBalance({ userId: "member-1" })).toMatchObject({
       ok: false,
       reason: "CREDITS_PLANE_UNAVAILABLE",
@@ -525,6 +556,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const packs = await createUmbrellaIdentityPlane(ENV).billing.listCreditPacks();
     expect(packs.ok).toBe(true);
     expect(packs.ok && packs.value.length).toBeGreaterThan(0);
+
     for (const pack of packs.ok ? packs.value : []) {
       expect(pack.credits).toBeGreaterThan(0);
       expect(pack.unitAmount).toBeGreaterThan(0);
@@ -534,6 +566,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("creates a TEST-mode checkout for the verified buyer", async () => {
     const packs = await createUmbrellaIdentityPlane(ENV).billing.listCreditPacks();
     const packId = packs.ok ? (packs.value[0]?.packId ?? "") : "";
+
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: buyerWorld(),
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
@@ -541,11 +574,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         createCheckoutSession(intent) {
           expect(intent.mode).toBe("test");
           expect(intent.userId).toBe("member-1");
+
           return { redirectUrl: `https://checkout.stripe.test/${intent.intentId}` };
         },
       },
       clock,
     });
+
     expect(plane.wired.billing).toBe(true);
 
     const checkout = await plane.billing.createCheckout({
@@ -555,6 +590,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       cancelUrl: "https://sceneaxi-umbrella.vercel.app/pricing",
       idempotencyKey: "pack:attempt:1",
     });
+
     expect(checkout).toMatchObject({ ok: true, value: { mode: "test" } });
   });
 
@@ -569,6 +605,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
       clock,
     });
+
     expect(
       await plane.billing.createCheckout({
         userId: "captain",
@@ -591,6 +628,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
       clock,
     });
+
     expect(
       await plane.billing.createCheckout({
         userId: "member-1",
@@ -616,6 +654,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         clock,
       },
     );
+
     expect(plane.billingMode).toBe("live");
     expect(await plane.billing.listCreditPacks()).toMatchObject({
       ok: false,
@@ -838,6 +877,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses an inflated persisted intent before the webhook commit boundary", async () => {
     const store = webhookStore();
     const inflatedIntent = Object.freeze({ ...INTENT, credits: 1_000_000 });
+
     const inflatedEvidence: WebhookEvidence = Object.freeze({
       findIntent(intentId: string) {
         return intentId === inflatedIntent.intentId ? inflatedIntent : undefined;
@@ -846,15 +886,18 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         return sessionId === SESSION_ID ? SETTLEMENT : undefined;
       },
     });
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_inflated_credits"),
       store,
       evidence: inflatedEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: false,
       reason: BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
     });
+
     if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -903,6 +946,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(503);
     }
+
     for (const reason of [
       "STRIPE_SIGNATURE_HEADER_MISSING",
       "STRIPE_SIGNATURE_MISMATCH",
@@ -927,12 +971,15 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const closedSet = (name: string): readonly string[] => {
       const declarations = webhookSource.match(new RegExp(`const\\s+${name}\\b`, "g")) ?? [];
       expect(declarations, `${name} must have exactly one declaration`).toHaveLength(1);
+
       const frozenSet = webhookSource.match(
         new RegExp(
           `const\\s+${name}\\b[^=]*=\\s*Object\\.freeze\\(\\s*new\\s+Set(?:<[^>]*>)?\\(\\s*\\[([\\s\\S]*?)\\]\\s*\\)`,
         ),
       );
+
       expect(frozenSet, `${name} must stay one frozen set literal`).not.toBeNull();
+
       return (frozenSet?.[1] ?? "")
         .split(",")
         .map((member) => member.trim())
@@ -961,6 +1008,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const acknowledgements = [...webhookSource.matchAll(/(?<![\w$.])ignored\(([^,]*),/g)].map(
       (match) => (match[1] ?? "").replace(/\s+/g, " ").trim(),
     );
+
     const routedThroughClosedSet = acknowledgements.filter((reason) => reason === "reason");
     expect(
       routedThroughClosedSet,
@@ -1004,6 +1052,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // Stripe dashboard is pointed at their own env var rather than at Stripe.
     const store = webhookStore();
     const payload = eventBody("evt_test_nosecret_status");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1016,8 +1065,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       evidence,
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_SECRET_MISSING" });
     expect(outcome.ok).toBe(false);
+
     if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1030,6 +1081,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // its id is a `pi_...` no settlement can ever be retrieved for: the acknowledgement
     // must come from the verified body, not from an evidence read that happens to answer.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_other_type", {
         type: "payment_intent.succeeded",
@@ -1044,6 +1096,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       store,
       evidence: unreachableEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1059,6 +1112,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // would refuse `STRIPE_CHECKOUT_EVIDENCE_MISSING` (503) for a session that was never
     // paid, and Stripe would retry it until it gave up.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_expired", { type: "checkout.session.expired" }),
       store,
@@ -1071,6 +1125,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         },
       },
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1085,10 +1140,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(granted).toMatchObject({ ok: true, ignored: false, balance: PACK.credits });
 
     const payload = refundBody("evt_test_refund");
+
     const [outcome, concurrentReplay] = await Promise.all([
       signedCall({ payload, store, evidence: refundEvidence }),
       signedCall({ payload, store, evidence: refundEvidence }),
     ]);
+
     expect(concurrentReplay).toMatchObject({
       ok: true, ignored: false, movement: "refund", replayed: true, credits: -PACK.credits, balance: 0,
     });
@@ -1134,6 +1191,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(INTENT.intentId.startsWith(prefixIntentId)).toBe(true);
 
     const payload = refundBody("evt_test_prefix_refund", { intentId: prefixIntentId });
+
     const prefixEvidence: WebhookEvidence = Object.freeze({
       findIntent(intentId: string) {
         return intentId === prefixIntentId ? prefixIntent : undefined;
@@ -1142,9 +1200,11 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         throw new Error("a refund must not invent or re-read checkout settlement");
       },
     });
+
     const outcome = await signedCall({ payload, store, evidence: prefixEvidence });
     expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_LEDGER_STATE_INVALID" });
     expect(store.entryCount("acct-1")).toBe(1);
+
     // A grant that is simply not committed *yet* is the same shape, and its own event may
     // still be in Stripe's retry sequence, so this one stays retryable rather than being
     // acknowledged as settled.
@@ -1230,6 +1290,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       store,
       evidence: refundEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1248,6 +1309,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       store,
       evidence: refundEvidence,
     });
+
     expect(completed).toMatchObject({
       ok: true,
       ignored: false,
@@ -1267,10 +1329,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // follow, and an operator settles it out of band.
     const account = await store.findAccountByUserId("member-1");
     expect(account).toBeDefined();
+
     if (account === undefined) return;
     const held = await store.listEntries(account.accountId);
     const grant = held.at(-1);
     expect(grant).toBeDefined();
+
     if (grant === undefined) return;
     await store.appendEntry({
       ...grant,
@@ -1288,6 +1352,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       store,
       evidence: refundEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1306,12 +1371,14 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // Acknowledging unhandled types must not become a blanket 2xx for anything unlabelled:
     // Stripe always states the type, so a body without one is a fault, not a no-op.
     const store = webhookStore();
+
     const payload = JSON.stringify({
       id: "evt_test_typeless",
       created: Math.floor(NOW / 1000),
       livemode: false,
       data: { object: { id: "cs_test_session_1", metadata: {} } },
     });
+
     const outcome = await signedCall({ payload, store, evidence: unreachableEvidence });
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
@@ -1319,6 +1386,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("acknowledges a checkout session this deployment never created", async () => {
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_foreign_session", {
         sessionId: "cs_test_someone_elses",
@@ -1326,6 +1394,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       }),
       store,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1340,6 +1409,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // other three metadata keys are already refused as an invalid payload by
     // `parseCheckoutCompletedEvent`, so all four of one contract fail the same way.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_partial_metadata", {
         metadata: {
@@ -1350,8 +1420,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       }),
       store,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(outcome.ok).toBe(false);
+
     if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(400);
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1361,6 +1433,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // value still claims the checkout, so it must not fall through to the foreign-event
     // acknowledgement.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_blank_intent", {
         metadata: {
@@ -1372,6 +1445,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       }),
       store,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1383,11 +1457,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // after either would turn an event owed nothing into a 503 retried until Stripe gives
     // up. It must mint nothing, read nothing, and not be retried forever.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: listingBody("evt_test_listing"),
       store,
       evidence: unreachableEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1402,6 +1478,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // be reported as this deployment's unmet obligation: `STRIPE_CHECKOUT_EVIDENCE_MISSING`
     // answers 503, which Stripe would retry until it gave up, for an event owed no grant.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: listingBody("evt_test_listing_no_intent"),
       store,
@@ -1414,6 +1491,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         },
       },
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1427,6 +1505,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // unknown value is not a purpose that settles elsewhere — it is a payload fault, and
     // acknowledging it would let a malformed credit-pack completion strand a paid grant.
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_unknown_purpose", {
         metadata: {
@@ -1438,6 +1517,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       }),
       store,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1448,11 +1528,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // completion's purpose keeps that state out of the answer: an event owed no credits
     // must not become a permanent 503 retry because a ledger it never needed was absent.
     const store = createInMemoryCreditStore();
+
     const outcome = await signedCall({
       payload: listingBody("evt_test_listing_unprovisioned"),
       store,
       evidence: listingEvidence,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
@@ -1489,6 +1571,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
    */
   const boundaryOnlyStore = () => {
     const inner = webhookStore();
+
     return Object.freeze({
       ...inner,
       appendEntry(): never {
@@ -1501,10 +1584,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("commits a webhook grant only through the credit commit boundary", async () => {
     const store = boundaryOnlyStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_boundary_only"),
       store,
     });
+
     expect(outcome).toMatchObject({
       ok: true,
       ignored: false,
@@ -1521,6 +1606,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
    */
   const throwingCommitStore = (persists: boolean) => {
     const inner = webhookStore();
+
     return Object.freeze({
       ...inner,
       appendOrReplayEntry(entry: Parameters<typeof inner.appendOrReplayEntry>[0]) {
@@ -1532,10 +1618,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("refuses retryably when the boundary could not commit, granting nothing", async () => {
     const store = throwingCommitStore(false);
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_commit_lost"),
       store: store as ReturnType<typeof webhookStore>,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
     expect(creditWebhookHttpStatus("CREDIT_STORE_FAILED")).toBe(503);
     expect(store.entryCount("acct-1")).toBe(0);
@@ -1548,10 +1636,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // how the old hand-rolled re-read's guarantee survives with one owner instead of two.
     const store = throwingCommitStore(true);
     const payload = eventBody("evt_test_commit_unconfirmed");
+
     const unconfirmed = await signedCall({
       payload,
       store: store as ReturnType<typeof webhookStore>,
     });
+
     expect(unconfirmed).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
     expect(store.entryCount("acct-1")).toBe(1);
 
@@ -1559,6 +1649,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       payload,
       store: store as ReturnType<typeof webhookStore>,
     });
+
     expect(redelivery).toMatchObject({
       ok: true,
       ignored: false,
@@ -1574,10 +1665,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // after this caller read the ledger. `appendOrReplayEntry` answers it directly, so
     // there is nothing left for this module to reconcile.
     const inner = webhookStore();
+
     const store = Object.freeze({
       ...inner,
       appendOrReplayEntry(entry: Parameters<typeof inner.appendOrReplayEntry>[0]) {
         inner.appendEntry(entry);
+
         return inner.appendOrReplayEntry(entry);
       },
     }) as ReturnType<typeof webhookStore>;
@@ -1595,6 +1688,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("names the failing step when a store read throws instead of escaping the plane", async () => {
     const inner = webhookStore();
+
     const throwOn = (method: "findAccountByUserId" | "listEntries") =>
       Object.freeze({
         ...inner,
@@ -1608,14 +1702,17 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         payload: eventBody(`evt_test_read_${method}`),
         store: throwOn(method),
       });
+
       expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
     }
+
     expect(inner.entryCount("acct-1")).toBe(0);
   });
 
   it("names the failing step when the checkout evidence adapter throws", async () => {
     const store = webhookStore();
     const payload = eventBody("evt_test_evidence_down");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1635,6 +1732,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
       now: NOW,
     });
+
     expect(outcome).toMatchObject({
       ok: false,
       reason: "STRIPE_CHECKOUT_EVIDENCE_UNAVAILABLE",
@@ -1644,6 +1742,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("refuses an unsigned body without touching the ledger", async () => {
     const store = webhookStore();
+
     const outcome = await applyCreditPackWebhook({
       payload: eventBody("evt_test_unsigned"),
       signatureHeader: null,
@@ -1652,6 +1751,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       evidence,
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_SIGNATURE_HEADER_MISSING" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1659,6 +1759,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses a forged signature", async () => {
     const store = webhookStore();
     const payload = eventBody("evt_test_forged");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1671,6 +1772,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       evidence,
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_SIGNATURE_MISMATCH" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1678,11 +1780,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses a body altered after signing, because the signature covers raw bytes", async () => {
     const store = webhookStore();
     const signed = eventBody("evt_test_tamper");
+
     const header = signStripeWebhookPayload({
       payload: signed,
       secret: TEST_WEBHOOK_SECRET,
       timestamp: Math.floor(NOW / 1000),
     });
+
     const outcome = await applyCreditPackWebhook({
       payload: signed.replace('"member-1"', '"captain"'),
       signatureHeader: header,
@@ -1691,17 +1795,20 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       evidence,
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_SIGNATURE_MISMATCH" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
   it("refuses a captured event replayed outside the tolerance window", async () => {
     const store = webhookStore();
+
     const outcome = await signedCall({
       payload: eventBody("evt_test_stale"),
       store,
       timestamp: Math.floor(NOW / 1000) - 3_600,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_SIGNATURE_TIMESTAMP_STALE" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1709,6 +1816,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses when no webhook secret is configured, rather than accepting the event", async () => {
     const store = webhookStore();
     const payload = eventBody("evt_test_nosecret");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1721,6 +1829,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       evidence,
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_SECRET_MISSING" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
@@ -1728,6 +1837,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses a signed event whose persisted intent is missing", async () => {
     const store = webhookStore();
     const payload = eventBody("evt_test_nointent");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1747,8 +1857,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_CHECKOUT_EVIDENCE_MISSING" });
     expect(outcome.ok).toBe(false);
+
     // Nothing about the request is wrong: this deployment's own checkout adapter never
     // persisted the intent the grant must be bound to, so it answers on the server side.
     if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
@@ -1758,6 +1870,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   it("refuses an unpaid settlement even with a valid signature and intent", async () => {
     const store = webhookStore();
     const payload = eventBody("evt_test_unpaid");
+
     const outcome = await applyCreditPackWebhook({
       payload,
       signatureHeader: signStripeWebhookPayload({
@@ -1775,16 +1888,19 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
       now: NOW,
     });
+
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
   it("refuses a livemode event, because going live is a separate captain decision", async () => {
     const store = webhookStore();
+
     const payload = JSON.stringify({
       ...(JSON.parse(eventBody("evt_test_live")) as Record<string, unknown>),
       livemode: true,
     });
+
     const outcome = await signedCall({ payload, store });
     expect(outcome.ok).toBe(false);
     expect(store.entryCount("acct-1")).toBe(0);
@@ -1813,6 +1929,7 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
         expiresAt: iso(3_600_000),
       },
     });
+
     const plane = createCatalogIdentityPlane({
       clock,
       adapter: {
@@ -1821,6 +1938,7 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
         },
       },
     });
+
     expect(plane.wired).toBe(true);
     const viewer = await resolveCatalogViewer(plane, "sess-member.token");
     expect(viewer).toMatchObject({ ok: true, value: { role: "user" } });
@@ -1853,6 +1971,7 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
         },
       },
     });
+
     expect(await resolveCatalogViewer(plane, "sess-shell.token")).toMatchObject({
       ok: false,
       reason: "IDENTITY_SESSION_SURFACE_MISMATCH",
@@ -1867,6 +1986,7 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
         },
       },
     });
+
     expect(
       await plane.identity.resolvePrincipal({
         surface: "site",
@@ -1883,6 +2003,7 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
         },
       },
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "kids" })).toMatchObject({
       ok: false,
       reason: "KIDS_SURFACE_DENIED",
@@ -1907,6 +2028,7 @@ describe("umbrella deployment health configuration", () => {
       BETTER_AUTH_SECRET: "synthetic-secret-value",
       SCENEAXI_BILLING_MODE: "production-ish",
     });
+
     expect(Object.keys(report).sort()).toEqual([
       "BETTER_AUTH_ORIGIN",
       "BETTER_AUTH_SECRET",
@@ -1926,10 +2048,12 @@ describe("umbrella deployment health configuration", () => {
     expect(report.BETTER_AUTH_SECRET).toBe("present-malformed");
     expect(report.SCENEAXI_BILLING_MODE).toBe("present-malformed");
     expect(report.STRIPE_SECRET_KEY).toBe("absent");
+
     const valid = inspectUmbrellaConfiguration({
       SCENEAXI_ADMIN_EMAIL: "captain@sceneaxi.test",
       SCENEAXI_STRIPE_LIVE_AUTHORIZED: "live-mode-authorized:captain@sceneaxi.test:2026-08-27",
     });
+
     expect(valid.SCENEAXI_ADMIN_EMAIL).toBe("present-valid");
     // D5: resolveLiveModeAuthorization() is the only reader of the live-mode source, so
     // the health report neither parses nor even names it.
@@ -1994,6 +2118,7 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
       clock,
     });
+
     expect(plane.wired.billing).toBe(false);
     expect(
       await plane.billing.createCheckout({
@@ -2022,6 +2147,7 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
       sessionToken: `sess-member.${MEMBER_TOKEN}`,
       clock,
     });
+
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_PLANE_UNAVAILABLE",
@@ -2041,6 +2167,7 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
     } as const)) {
       expect(typeof siteReasonForAuthReason(reason)).toBe("string");
     }
+
     expect(siteReasonForAuthReason("KIDS_IDENTITY_SURFACE_DENIED")).toBe("KIDS_SURFACE_DENIED");
     expect(siteReasonForAuthReason("AUTH_STORE_FAILED")).toBe("IDENTITY_PLANE_UNAVAILABLE");
     expect(siteReasonForAuthReason("AUTH_SESSION_NOT_FOUND")).toBe("IDENTITY_SESSION_ABSENT");
@@ -2053,6 +2180,7 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
     expect(siteReasonForBillingReason("BILLING_CATALOG_INVALID")).toBe(
       "BILLING_PLANE_UNAVAILABLE",
     );
+
     // Ledger reasons describe the balance wherever they surface.
     for (const reason of [
       "CREDIT_DELTA_SIGN_MISMATCH",
@@ -2063,6 +2191,7 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
       expect(siteReasonForBillingReason(reason, "credits")).toBe("CREDIT_ADAPTER_OUTPUT_INVALID");
       expect(siteReasonForBillingReason(reason)).toBe("CREDIT_ADAPTER_OUTPUT_INVALID");
     }
+
     // `@sceneaxi/billing` raises these from both the ledger and the checkout builder,
     // so the plane the caller was reading decides which one is unavailable.
     expect(siteReasonForBillingReason("CREDIT_CLOCK_INVALID", "credits")).toBe(
@@ -2102,6 +2231,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
 
   it("lets an explicit null admin override deployment-issued evidence", async () => {
     let providerCalls = 0;
+
     const plane = createUmbrellaIdentityPlane(
       {},
       {
@@ -2115,6 +2245,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
           checkoutSessions: {
             createCheckoutSession() {
               providerCalls += 1;
+
               return { redirectUrl: "https://checkout.stripe.test/unreachable" };
             },
           },
@@ -2140,10 +2271,12 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       new URL("../../sites/umbrella/src/lib/identity-plane.ts", import.meta.url),
       "utf8",
     );
+
     const requestAuthoritySource = readFileSync(
       new URL("../../sites/umbrella/src/lib/request-authority.ts", import.meta.url),
       "utf8",
     );
+
     expect(identitySource).toMatch(/export function umbrellaPlaneHandles\(\)/);
     expect(requestAuthoritySource).toMatch(
       /export function umbrellaRequestAuthority\(\)[\s\S]*const deployment = umbrellaPlaneHandles\(\)/,
@@ -2175,6 +2308,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       new URL("../../sites/umbrella/src/app/api/stripe/webhook/route.ts", import.meta.url),
       "utf8",
     );
+
     expect(webhookRoute).toContain("umbrellaRequestAuthority().applyCreditWebhook(");
     expect(webhookRoute).not.toContain("/identity-plane.js");
     expect(webhookRoute).not.toContain("/credit-webhook.js");
@@ -2188,10 +2322,12 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
       "utf8",
     );
+
     const route = readFileSync(
       new URL("../../sites/umbrella/src/app/api/auth/[...all]/route.ts", import.meta.url),
       "utf8",
     );
+
     expect(provider).toContain('from "better-auth"');
     expect(provider).toContain('from "better-auth/plugins"');
     expect(provider).toContain('from "pg"');
@@ -2212,17 +2348,21 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
     // the endpoint could not act, never that Stripe sent a bad request.
     const providerEnv = ["DATABASE_URL", "STRIPE_SECRET_KEY"];
     const saved = providerEnv.map((name) => [name, process.env[name]] as const);
+
     for (const name of providerEnv) Reflect.deleteProperty(process.env, name);
+
     try {
       const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
         payload: '{"type":"checkout.session.completed"}',
         signatureHeader: null,
       });
+
       expect(outcome).toMatchObject({
         ok: false,
         reason: CREDIT_WEBHOOK_REASONS.planeNotWired,
       });
       expect(outcome).not.toHaveProperty("response");
+
       if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
     } finally {
       for (const [name, value] of saved) {
@@ -2235,10 +2375,12 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
   it("keeps environment and provider I/O out of the hermetic auth and billing roots", () => {
     const sources = ["auth", "billing"].flatMap((name) => {
       const directory = new URL(`../../packages/${name}/src/`, import.meta.url);
+
       return readdirSync(directory)
         .filter((entry) => entry.endsWith(".ts"))
         .map((entry) => readFileSync(new URL(entry, directory), "utf8"));
     });
+
     const source = sources.join("\n");
     expect(source).not.toMatch(/\bprocess\.env(?:\.|\[)/);
     expect(source).not.toMatch(/from\s+["'](?:stripe|@neondatabase\/serverless)["']/);
@@ -2251,7 +2393,9 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       sessionToken: `sess-admin.${ADMIN_TOKEN}`,
       clock,
     });
+
     const catalog = createCatalogIdentityPlane();
+
     for (const port of [umbrella.identity, catalog.identity]) {
       expect(await port.resolvePrincipal({ surface: "kids" })).toMatchObject({
         ok: false,
@@ -2277,11 +2421,14 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     env: Readonly<Record<string, string | undefined>>,
     origin: string,
   ) => verifyLoginRequestOrigin(env, { origin, requestUrl: `${origin}/api/login` });
+
   const SAME_ORIGIN = originProof(ENV, "http://localhost:3000");
+
   const httpsOrigin = originProof(
     { ...ENV, NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://sceneaxi.example" },
     "https://sceneaxi.example",
   );
+
   /** What a cross-site page's auto-submitted form actually arrives as. */
   const CROSS_ORIGIN = verifyLoginRequestOrigin(ENV, {
     origin: "https://attacker.example",
@@ -2294,10 +2441,12 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       new URL("../../sites/umbrella/src/app/_session.ts", import.meta.url),
       "utf8",
     );
+
     const loginSource = readFileSync(
       new URL("../../sites/umbrella/src/app/api/login/route.ts", import.meta.url),
       "utf8",
     );
+
     const logoutSource = readFileSync(
       new URL("../../sites/umbrella/src/app/api/logout/route.ts", import.meta.url),
       "utf8",
@@ -2306,10 +2455,12 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(sessionSource).toContain("readSiteMutationRequestSignals");
     expect(sessionSource).toContain('request.headers.get("origin")');
     expect(sessionSource).toContain('request.headers.get("x-forwarded-proto")');
+
     for (const routeSource of [loginSource, logoutSource]) {
       expect(routeSource).not.toContain("request.headers.get(");
       expect(routeSource.indexOf("if (!requestOrigin.ok)")).toBeGreaterThan(-1);
     }
+
     expect(loginSource.indexOf("if (!requestOrigin.ok)")).toBeLessThan(
       loginSource.indexOf("request.formData()"),
     );
@@ -2329,6 +2480,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
         if (credentials.email !== email || credentials.password !== MEMBER_PASSWORD) {
           return undefined;
         }
+
         return {
           user: { id: userId, email, emailVerified: true },
           session: {
@@ -2343,11 +2495,14 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
   const loginWorld = (overrides: Record<string, unknown> = {}) => {
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
     if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+
     const store = createInMemoryIdentityStore({
       users: [user("member-1", MEMBER_EMAIL, overrides)] as never,
       sessions: [] as never,
     });
+
     const port = createIdentityPort({
       adapter: provider(MEMBER_EMAIL, "member-1"),
       store,
@@ -2375,14 +2530,17 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
   it("signs in through the real port and reaches the entitled editor", async () => {
     const { store, port } = loginWorld();
+
     const creditStore = createInMemoryCreditStore({
       accounts: [account("acct-1", "member-1")] as never,
     });
+
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       creditStore,
       clock,
     });
+
     expect(plane.wired.login).toBe(true);
 
     // 1. The form submission authenticates through the injected provider.
@@ -2392,7 +2550,9 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
     });
+
     expect(outcome.kind).toBe("success");
+
     if (outcome.kind !== "success") return;
     expect(outcome.location).toBe("/account");
     expect(outcome.principal.role).toBe("user");
@@ -2422,11 +2582,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       sessionToken: credential,
       clock,
     });
+
     const access = await resolveUmbrellaEditorAccess({
       plane: laterPlane,
       env: ENV,
       sessionToken: credential,
     });
+
     expect(access.decision).toMatchObject({ granted: true, mode: "entitled" });
     expect(access.access.principal?.user.userId).toBe("member-1");
   });
@@ -2436,12 +2598,15 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     // cookie credential is read back by splitting on its first dot — so this
     // session id is unrepresentable and must fail closed by name at issuance.
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
     if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+
     const dotted: IdentityAdapter = Object.freeze({
       authenticate(credentials: { email: string; password: string }) {
         if (credentials.email !== MEMBER_EMAIL || credentials.password !== MEMBER_PASSWORD) {
           return undefined;
         }
+
         return {
           user: { id: "member-1", email: MEMBER_EMAIL, emailVerified: true },
           session: {
@@ -2453,6 +2618,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
         };
       },
     });
+
     const port = createIdentityPort({
       adapter: dotted,
       store: createInMemoryIdentityStore({
@@ -2462,18 +2628,21 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       admin: admin.value,
       clock,
     });
+
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
 
     expect(parseSessionToken(`sess.a1.${FRESH_TOKEN}`)).toEqual({
       sessionId: "sess",
       token: `a1.${FRESH_TOKEN}`,
     });
+
     const outcome = await performLogin({
       requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
     });
+
     expect(outcome).toMatchObject({
       kind: "refused",
       reason: "LOGIN_SESSION_NOT_ISSUED",
@@ -2487,6 +2656,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
   it("names a provider fault at issuance as one, never as a credential this browser presented", async () => {
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
     if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
 
     // 1. Clock skew: the provider authenticates and hands back a session that has
@@ -2499,6 +2669,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
         if (credentials.email !== MEMBER_EMAIL || credentials.password !== MEMBER_PASSWORD) {
           return undefined;
         }
+
         return {
           user: { id: "member-1", email: MEMBER_EMAIL, emailVerified: true },
           session: {
@@ -2510,6 +2681,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
         };
       },
     });
+
     const skewedPlane = createUmbrellaIdentityPlane(ENV, {
       identityPort: createIdentityPort({
         adapter: skewed,
@@ -2522,6 +2694,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       }),
       clock,
     });
+
     expect(
       await performLogin({
         requestOrigin: SAME_ORIGIN,
@@ -2544,12 +2717,14 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       }),
       clock,
     });
+
     const outcome = await performLogin({
       requestOrigin: SAME_ORIGIN,
       plane: unprovisioned,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
     });
+
     expect(outcome).toMatchObject({ kind: "refused", reason: "LOGIN_SESSION_NOT_ISSUED" });
     expect(describeSiteAccessState("LOGIN_SESSION_NOT_ISSUED").action).toBeNull();
 
@@ -2559,6 +2734,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(siteReasonForLoginAuthReason("AUTH_CREDENTIALS_REJECTED")).toBe(
       "LOGIN_CREDENTIALS_REJECTED",
     );
+
     for (const reason of [
       "AUTH_USER_NOT_FOUND",
       "AUTH_SESSION_NOT_FOUND",
@@ -2567,6 +2743,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     ] as const) {
       expect(siteReasonForLoginAuthReason(reason)).toBe("LOGIN_SESSION_NOT_ISSUED");
     }
+
     for (const reason of [
       "KIDS_IDENTITY_SURFACE_DENIED",
       "ROLE_CLAIM_FROM_CLIENT_DENIED",
@@ -2581,12 +2758,14 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
   it("refuses wrong credentials as their own named outcome, back at the form", async () => {
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
     const outcome = await performLogin({
       requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: "wrong" },
       secure: true,
     });
+
     expect(outcome).toMatchObject({
       kind: "refused",
       reason: "LOGIN_CREDENTIALS_REJECTED",
@@ -2596,27 +2775,35 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
   it("refuses an empty submission before the provider is consulted", async () => {
     let consulted = false;
+
     const spy: IdentityAdapter = Object.freeze({
       authenticate() {
         consulted = true;
+
         return undefined;
       },
     });
+
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
     if (!admin.ok) throw new Error("admin unresolved");
+
     const port = createIdentityPort({
       adapter: spy,
       store: createInMemoryIdentityStore({ users: [] as never }),
       admin: admin.value,
       clock,
     });
+
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
     const outcome = await performLogin({
       requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: "", password: "" },
       secure: true,
     });
+
     expect(outcome).toMatchObject({
       kind: "refused",
       reason: "LOGIN_CREDENTIALS_REQUIRED",
@@ -2627,11 +2814,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
   it("refuses a disabled user with the named outcome even on a correct password", async () => {
     const { port } = loginWorld({ disabled: true });
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
     const login = await plane.login.signIn({
       surface: "site",
       email: MEMBER_EMAIL,
       password: MEMBER_PASSWORD,
     });
+
     expect(login).toMatchObject({ ok: false, reason: "IDENTITY_USER_DISABLED" });
   });
 
@@ -2667,7 +2856,9 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     ).toMatchObject({ ok: false, reason: "IDENTITY_PLANE_NOT_WIRED" });
 
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+
     if (!admin.ok) throw new Error("admin unresolved");
+
     const broken = createIdentityPort({
       adapter: Object.freeze({
         authenticate(): never {
@@ -2678,6 +2869,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       admin: admin.value,
       clock,
     });
+
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: broken, clock });
     expect(
       await plane.login.signIn({
@@ -2691,6 +2883,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
   it("confines the post-login destination to a same-site relative path", async () => {
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
     for (const hostile of [
       "https://evil.example",
       "//evil.example",
@@ -2704,27 +2897,34 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
         fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: hostile },
         secure: true,
       });
+
       expect(outcome.kind).toBe("success");
+
       if (outcome.kind === "success") expect(outcome.location).toBe("/account");
     }
+
     const kept = await performLogin({
       requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: "/editor" },
       secure: true,
     });
+
     expect(kept.kind === "success" && kept.location).toBe("/editor");
   });
 
   it("signs out both sessions and clears the cookie", async () => {
     const { store, port, deployment, revokedTokens } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
     const login = await plane.login.signIn({
       surface: "site",
       email: MEMBER_EMAIL,
       password: MEMBER_PASSWORD,
     });
+
     expect(login.ok).toBe(true);
+
     if (!login.ok) return;
     expect(store.sessionCount()).toBe(1);
 
@@ -2734,12 +2934,15 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       deployment,
       clock,
     });
+
     const outcome = await performLogout({
       plane: boundPlane,
       requestOrigin: SAME_ORIGIN,
       secure: true,
     });
+
     expect(outcome.kind).toBe("signed-out");
+
     if (outcome.kind !== "signed-out") return;
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).toContain("sceneaxi.session=;");
@@ -2760,18 +2963,22 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
   it("still revokes the provider when the local session is already gone", async () => {
     const { port, deployment, revokedTokens } = loginWorld();
+
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       deployment,
       sessionToken: "sess-gone.some-token",
       clock,
     });
+
     const outcome = await performLogout({
       plane,
       requestOrigin: SAME_ORIGIN,
       secure: false,
     });
+
     expect(outcome.kind).toBe("signed-out");
+
     if (outcome.kind !== "signed-out") return;
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).not.toContain("Secure");
@@ -2938,11 +3145,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       ...ENV,
       NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://sceneaxi.example",
     };
+
     // What the app itself sees behind the proxy: plain http, private address.
     const proxied = {
       forwardedProto: "http",
       requestUrl: "http://10.0.0.4:3000/api/login",
     };
+
     expect(resolveSessionCookieSecurity(httpsEnv, proxied)).toBe(true);
     // An unconfigured local deployment is still allowed to run over http.
     expect(
@@ -2951,13 +3160,16 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(httpsEnv, { identityPort: port, clock });
+
     const outcome = await performLogin({
       requestOrigin: httpsOrigin,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: resolveSessionCookieSecurity(httpsEnv, proxied),
     });
+
     expect(outcome.kind).toBe("success");
+
     if (outcome.kind !== "success") return;
     expect(outcome.setCookie).toContain("Secure");
 
@@ -2966,6 +3178,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       plane,
       secure: resolveSessionCookieSecurity(httpsEnv, proxied),
     });
+
     expect(signedOut.kind === "signed-out" && signedOut.clearCookie).toContain("Secure");
   });
 
@@ -2983,6 +3196,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: "/editor" },
       secure: true,
     });
+
     expect(forgedLogin).toEqual({
       kind: "refused",
       reason: "SITE_REQUEST_CROSS_ORIGIN",
@@ -3002,6 +3216,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
     });
+
     expect(signedIn.kind).toBe("success");
     expect(store.sessionCount()).toBe(1);
 
@@ -3011,11 +3226,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       deployment,
       clock,
     });
+
     const forcedLogout = await performLogout({
       plane: boundPlane,
       requestOrigin: CROSS_ORIGIN,
       secure: true,
     });
+
     expect(forcedLogout).toEqual({
       kind: "refused",
       reason: "SITE_REQUEST_CROSS_ORIGIN",
@@ -3029,5 +3246,57 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const rendered = describeSiteAccessState("SITE_REQUEST_CROSS_ORIGIN");
     expect(rendered.key).toBe("cross-origin");
     expect(rendered.action).toBeNull();
+  });
+});
+
+
+describe("authenticated purchase-history facade", () => {
+  function historyWorld(sessionToken = `sess-member.${MEMBER_TOKEN}`) {
+    const reads: Array<{ userId: string; page: unknown }> = [];
+    const credits = createInMemoryCreditStore({ accounts: [account("acc_member", "member-1")] });
+
+    const intents = ["intent-new", "intent-old"].map((intentId, index) => ({
+      schemaVersion: 1 as const, kind: "sceneaxi.checkout-session-intent" as const,
+      intentId, userId: "member-1", purpose: "credit-pack" as const, itemId: "starter", credits: 100,
+      unitAmount: 1000, currency: "usd", stripePriceId: "price_fixture", mode: "test" as const,
+      successUrl: "https://sceneaxi.example/account", cancelUrl: "https://sceneaxi.example/pricing",
+      idempotencyKey: `checkout:${intentId}`, createdAt: iso(-index * 1000),
+    }));
+
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: adminWorld(), sessionToken, clock, creditStore: credits,
+      supportStore: { users: createInMemoryIdentityStore({ users: [user("member-1", MEMBER_EMAIL)] }), async listCheckoutIntents(userId, page) {
+        reads.push({ userId, page });
+
+ return page?.before === undefined ? intents : intents.slice(1);
+      } },
+    });
+
+    return { plane, reads };
+  }
+
+  it("derives member from verified credential and returns a bounded next key without claiming payment", async () => {
+    const { plane, reads } = historyWorld();
+    expect(await plane.purchaseHistory.read({ surface: "site", limit: 1 })).toMatchObject({ ok: true, value: {
+      purchases: [{ intentId: "intent-new", status: "pending", mode: "test" }], next: { createdAt: iso(0), intentId: "intent-new" },
+    } });
+    expect(reads).toEqual([{ userId: "member-1", page: { limit: 2 } }]);
+    const before = { createdAt: iso(0), intentId: "intent-new" };
+    expect(await plane.purchaseHistory.read({ surface: "site", limit: 1, before })).toMatchObject({ ok: true, value: { purchases: [{ intentId: "intent-old" }], reconciliationTruncated: false } });
+    expect(reads[1]).toEqual({ userId: "member-1", page: { limit: 2, before } });
+  });
+  it("refuses absent/forged sessions, Kids and caller-selected users before history persistence", async () => {
+    for (const token of ["", "sess-member.wrong-token"]) {
+      const { plane, reads } = historyWorld(token);
+      expect((await plane.purchaseHistory.read({ surface: "site" })).ok).toBe(false); expect(reads).toHaveLength(0);
+    }
+
+    const { plane, reads } = historyWorld();
+    expect((await plane.purchaseHistory.read({ surface: "kids" })).ok).toBe(false);
+    expect((await plane.purchaseHistory.read({ surface: "site", userId: "captain" } as never)).ok).toBe(false);
+    expect(reads).toHaveLength(0);
+  });
+  it("does not need Stripe checkout capability to read persisted own history", async () => {
+    const { plane } = historyWorld(); expect(plane.wired.billing).toBe(false);
+    expect((await plane.purchaseHistory.read({ surface: "site" })).ok).toBe(true);
   });
 });

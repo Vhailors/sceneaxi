@@ -12,6 +12,7 @@ import {
   loadLedgerState,
   type LedgerState,
 } from "@sceneaxi/billing";
+
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 
 const ACCOUNT = Object.freeze({
@@ -35,7 +36,9 @@ const grant = (overrides: Record<string, unknown> = {}) => ({
 
 const seeded = (): LedgerState => {
   const appended = appendCreditEntry(createLedgerState(ACCOUNT), grant());
+
   if (!appended.ok) throw new Error("fixture append failed");
+
   return appended.value.state;
 };
 
@@ -44,6 +47,7 @@ describe("appendCreditEntry", () => {
     const before = createLedgerState(ACCOUNT);
     const appended = appendCreditEntry(before, grant());
     expect(appended.ok).toBe(true);
+
     if (!appended.ok) return;
 
     expect(appended.value.state).not.toBe(before);
@@ -57,6 +61,7 @@ describe("appendCreditEntry", () => {
     expect(Object.isFrozen(state)).toBe(true);
     expect(Object.isFrozen(state.entries)).toBe(true);
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
     expect(Object.isFrozen(first)).toBe(true);
     expect(() => {
@@ -69,6 +74,7 @@ describe("appendCreditEntry", () => {
 
   it("assigns a strictly monotonic 1-based sequence", () => {
     let state = createLedgerState(ACCOUNT);
+
     for (let i = 1; i <= 3; i += 1) {
       const appended = appendCreditEntry(state, {
         ...grant(),
@@ -76,11 +82,14 @@ describe("appendCreditEntry", () => {
         delta: 10,
         idempotencyKey: `grant:${i}`,
       });
+
       expect(appended.ok).toBe(true);
+
       if (!appended.ok) return;
       expect(appended.value.entry?.sequence).toBe(i);
       state = appended.value.state;
     }
+
     expect(state.balance).toBe(30);
   });
 
@@ -92,29 +101,37 @@ describe("appendCreditEntry", () => {
       idempotencyKey: "grant:2",
       balanceAfter: 9999,
     });
+
     expect(appended.ok).toBe(true);
+
     if (!appended.ok) return;
     expect(appended.value.entry?.balanceAfter).toBe(105);
   });
 
   it("enforces delta sign rules per movement", () => {
     const state = seeded();
+
     const badGrant = appendCreditEntry(state, {
       ...grant(),
       delta: -5,
       idempotencyKey: "g:neg",
     });
+
     expect(badGrant.ok).toBe(false);
+
     if (!badGrant.ok) {
       expect(badGrant.reason).toBe(BILLING_REFUSE_REASONS.deltaSignMismatch);
     }
+
     const badDebit = appendCreditEntry(state, {
       ...grant(),
       movement: "debit",
       delta: 5,
       idempotencyKey: "d:pos",
     });
+
     expect(badDebit.ok).toBe(false);
+
     if (!badDebit.ok) {
       expect(badDebit.reason).toBe(BILLING_REFUSE_REASONS.deltaSignMismatch);
     }
@@ -122,14 +139,17 @@ describe("appendCreditEntry", () => {
 
   it("accepts an adjustment in either direction", () => {
     const state = seeded();
+
     for (const delta of [7, -7]) {
       const appended = appendCreditEntry(state, {
         ...grant(),
         movement: "adjustment",
         delta,
         reason: "admin correction",
+        entryId: `ent_adj_${delta}`,
         idempotencyKey: `adj:${delta}`,
       });
+
       expect(appended.ok).toBe(true);
     }
   });
@@ -141,7 +161,9 @@ describe("appendCreditEntry", () => {
         delta,
         idempotencyKey: `bad:${String(delta)}`,
       });
+
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
     }
@@ -149,14 +171,18 @@ describe("appendCreditEntry", () => {
 
   it("refuses a debit larger than the balance and appends nothing", () => {
     const state = seeded();
+
     const result = appendCreditEntry(state, {
       ...grant(),
       movement: "debit",
       delta: -101,
       reason: "too much",
+      entryId: "ent_big",
       idempotencyKey: "usage:big",
     });
+
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
     expect(state.entries.length).toBe(1);
@@ -169,20 +195,26 @@ describe("appendCreditEntry", () => {
       movement: "debit",
       delta: -100,
       reason: "spend it all",
+      entryId: "ent_all",
       idempotencyKey: "usage:all",
     });
+
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.state.balance).toBe(0);
   });
 
   it("replays an identical idempotency key without appending", () => {
     const state = seeded();
+
     const replay = appendCreditEntry(state, {
       ...grant(),
       entryId: "ent_regenerated",
     });
+
     expect(replay.ok).toBe(true);
+
     if (!replay.ok) return;
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.state.entries.length).toBe(1);
@@ -199,6 +231,7 @@ describe("appendCreditEntry", () => {
     ]) {
       const result = appendCreditEntry(seeded(), { ...grant(), ...patch });
       expect(result.ok).toBe(false);
+
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
     }
@@ -208,6 +241,7 @@ describe("appendCreditEntry", () => {
     expect(appendCreditEntry(null, grant()).ok).toBe(false);
     expect(appendCreditEntry({ entries: [] }, grant()).ok).toBe(false);
     expect(appendCreditEntry(createLedgerState(ACCOUNT), null).ok).toBe(false);
+
     for (const patch of [
       { now: Number.NaN },
       { reason: "" },
@@ -218,12 +252,14 @@ describe("appendCreditEntry", () => {
         ...grant(),
         ...patch,
       });
+
       expect(result.ok).toBe(false);
     }
   });
 
   it("produces entries that satisfy the published contract", () => {
     const state = seeded();
+
     for (const entry of state.entries) {
       expect(validateCreditLedgerEntry(entry).ok).toBe(true);
     }
@@ -236,10 +272,49 @@ describe("appendCreditEntry", () => {
 });
 
 describe("deriveBalance", () => {
+  it("refuses duplicate entry IDs even when keys and balances differ", () => {
+    const first = seeded().entries[0];
+
+    if (first === undefined) throw new Error("expected an entry");
+
+    const result = deriveBalance([
+      first,
+      { ...first, sequence: 2, balanceAfter: 200, idempotencyKey: "grant:second" },
+    ]);
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses histories mixing accounts even with an otherwise valid chain", () => {
+    const first = seeded().entries[0];
+
+    if (first === undefined) throw new Error("expected an entry");
+
+    const result = deriveBalance([
+      first,
+      { ...first, entryId: "ent_second", accountId: "acc_other", sequence: 2, balanceAfter: 200, idempotencyKey: "grant:second" },
+    ]);
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses reusing an entry ID for a different append without mutating state", () => {
+    const state = seeded();
+    const result = appendCreditEntry(state, grant({ idempotencyKey: "grant:second" }));
+    expect(result.ok).toBe(false);
+    expect(state.balance).toBe(100);
+    expect(state.entries).toHaveLength(1);
+    const replay = appendCreditEntry(state, grant());
+    expect(replay.ok).toBe(true);
+
+    if (!replay.ok) throw new Error("expected same-key replay");
+    expect(replay.value.replayed).toBe(true);
+  });
   it("equals the last entry's balanceAfter", () => {
     const state = seeded();
     const derived = deriveBalance(state.entries);
     expect(derived.ok).toBe(true);
+
     if (!derived.ok) return;
     expect(derived.value).toBe(state.entries.at(-1)?.balanceAfter);
   });
@@ -247,6 +322,7 @@ describe("deriveBalance", () => {
   it("is zero for an empty ledger", () => {
     const derived = deriveBalance([]);
     expect(derived.ok).toBe(true);
+
     if (!derived.ok) return;
     expect(derived.value).toBe(0);
   });
@@ -254,16 +330,19 @@ describe("deriveBalance", () => {
   it("refuses a gapped sequence", () => {
     const state = seeded();
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
     const gapped = [{ ...first, sequence: 2 }];
     const derived = deriveBalance(gapped);
     expect(derived.ok).toBe(false);
+
     if (derived.ok) return;
     expect(derived.reason).toBe(BILLING_REFUSE_REASONS.ledgerOrderInvalid);
   });
 
   it("refuses a reordered list", () => {
     let state = createLedgerState(ACCOUNT);
+
     for (let i = 1; i <= 2; i += 1) {
       const appended = appendCreditEntry(state, {
         ...grant(),
@@ -271,11 +350,14 @@ describe("deriveBalance", () => {
         delta: 10,
         idempotencyKey: `g:${i}`,
       });
+
       if (!appended.ok) throw new Error("fixture append failed");
       state = appended.value.state;
     }
+
     const derived = deriveBalance([...state.entries].reverse());
     expect(derived.ok).toBe(false);
+
     if (derived.ok) return;
     expect(derived.reason).toBe(BILLING_REFUSE_REASONS.ledgerOrderInvalid);
   });
@@ -283,12 +365,16 @@ describe("deriveBalance", () => {
   it("refuses a duplicated idempotency key", () => {
     const state = seeded();
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
+
     const derived = deriveBalance([
       first,
       { ...first, entryId: "ent_dupe", sequence: 2, balanceAfter: 200 },
     ]);
+
     expect(derived.ok).toBe(false);
+
     if (derived.ok) return;
     expect(derived.reason).toBe(BILLING_REFUSE_REASONS.ledgerOrderInvalid);
   });
@@ -296,9 +382,11 @@ describe("deriveBalance", () => {
   it("refuses a tampered balanceAfter", () => {
     const state = seeded();
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
     const derived = deriveBalance([{ ...first, balanceAfter: 1_000_000 }]);
     expect(derived.ok).toBe(false);
+
     if (derived.ok) return;
     expect(derived.reason).toBe(BILLING_REFUSE_REASONS.ledgerOrderInvalid);
   });
@@ -314,6 +402,7 @@ describe("loadLedgerState", () => {
     const state = seeded();
     const loaded = loadLedgerState(ACCOUNT, state.entries);
     expect(loaded.ok).toBe(true);
+
     if (!loaded.ok) return;
     expect(loaded.value.balance).toBe(100);
     expect(loaded.value.entries.length).toBe(1);
@@ -322,11 +411,15 @@ describe("loadLedgerState", () => {
   it("refuses entries belonging to another account", () => {
     const state = seeded();
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
+
     const loaded = loadLedgerState(ACCOUNT, [
       { ...first, accountId: "acc_other" },
     ]);
+
     expect(loaded.ok).toBe(false);
+
     if (loaded.ok) return;
     expect(loaded.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
   });
@@ -334,6 +427,7 @@ describe("loadLedgerState", () => {
   it("refuses a corrupted history rather than producing plausible arithmetic", () => {
     const state = seeded();
     const first = state.entries[0];
+
     if (first === undefined) throw new Error("expected an entry");
     const loaded = loadLedgerState(ACCOUNT, [{ ...first, sequence: 5 }]);
     expect(loaded.ok).toBe(false);
@@ -344,6 +438,7 @@ describe("in-memory credit store", () => {
   it("mirrors the database append-only constraints", () => {
     const state = seeded();
     const entry = state.entries[0];
+
     if (entry === undefined) throw new Error("expected an entry");
     const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
 
@@ -362,12 +457,15 @@ describe("in-memory credit store", () => {
   it("enforces entry ids across every account", () => {
     const state = seeded();
     const entry = state.entries[0];
+
     if (entry === undefined) throw new Error("expected an entry");
+
     const other = Object.freeze({
       ...ACCOUNT,
       accountId: "acc_other",
       userId: "usr_other",
     });
+
     const store = createInMemoryCreditStore({ accounts: [ACCOUNT, other] });
     store.appendEntry(entry);
 
@@ -391,6 +489,7 @@ describe("in-memory credit store", () => {
   it("reserves sale entries for atomic settlement", () => {
     const state = seeded();
     const entry = state.entries[0];
+
     if (entry === undefined) throw new Error("expected an entry");
     const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
 
@@ -417,6 +516,7 @@ describe("in-memory credit store", () => {
   it("snapshots and freezes appended entries", async () => {
     const state = seeded();
     const entry = state.entries[0];
+
     if (entry === undefined) throw new Error("expected an entry");
     const mutable = { ...entry };
     const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
@@ -442,6 +542,7 @@ describe("in-memory credit store", () => {
   it("refuses entries for an unknown account", () => {
     const state = seeded();
     const entry = state.entries[0];
+
     if (entry === undefined) throw new Error("expected an entry");
     const store = createInMemoryCreditStore();
 

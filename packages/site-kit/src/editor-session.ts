@@ -61,6 +61,8 @@ export type EditorRender = {
   readonly artifactId: string;
   /** SHA-256 of the text-canonical document after this render's real save. */
   readonly documentDigest: string;
+  /** Exact saved canonical bytes, never a reconstructed export. */
+  readonly documentBytes: string;
   /** Digest of the composed editor artifact; identical to the composition evidence. */
   readonly artifactDigest: string;
   /**
@@ -96,17 +98,21 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
 
 function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
   const artifact = webEditorStarterArtifact();
+
   if (!artifact.ok) return artifact;
 
   const workspaceRoot = mkdtempSync(join(tmpdir(), "sceneaxi-umbrella-editor-"));
+
   try {
     const created = createWebEditorSession({
       workspaceRoot,
       backend: "three",
       seed: EDITOR_SEED,
     });
+
     if (!created.ok) return created;
     const session = created.value;
+
     try {
       for (const instance of state.instances) {
         session.addSculpt({
@@ -115,31 +121,39 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
           transform: instance.transform,
         });
       }
+
       session.select(state.selectedInstanceId);
+
       if (state.playing) {
         session.play();
         session.step(16);
       }
+
       const composition = session.composeSceneProjection({ sceneId: EDITOR_SCENE_ID });
 
       // Captured before save so the Changes review judges the same baseline
       // the proposal was made against. An unreadable baseline is `null`, never
       // an invented document.
       let baseDocument: SceneDocument | null = null;
+
       try {
         const parsed = parseDocumentText(
           readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
         );
+
         baseDocument = parsed.ok ? parsed.document : null;
       } catch {
         baseDocument = null;
       }
+
       const mountable = composition.ok
         ? mountableSceneFromDocumentData(composition, baseDocument?.data)
         : null;
+
       if (composition.ok && mountable === null) return refuse("EDITOR_WORKSPACE_INVALID");
 
       const save = session.save();
+
       if (!save.ok) {
         return ok(
           Object.freeze({
@@ -150,21 +164,25 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
             mountable,
             artifactId: artifact.value.artifactId,
             documentDigest: "",
+            documentBytes: "",
             artifactDigest: composition.ok ? composition.sceneDigest : "",
             baseDocument,
           }),
         );
       }
+
       // An unreadable saved document yields no digest rather than an invented one,
       // exactly like the `!save.ok` branch above; submission refuses on an empty digest.
       let documentDigest = "";
+      let documentBytes = "";
+
       try {
-        documentDigest = contentHash(
-          readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
-        );
+        documentBytes = readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH));
+        documentDigest = contentHash(documentBytes);
       } catch {
         documentDigest = "";
       }
+
       return ok(
         Object.freeze({
           snapshot: session.snapshot(),
@@ -174,6 +192,7 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
           mountable,
           artifactId: artifact.value.artifactId,
           documentDigest,
+          documentBytes,
           artifactDigest: composition.ok ? composition.sceneDigest : "",
           baseDocument,
         }),

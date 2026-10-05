@@ -56,7 +56,9 @@ import {
 /** The published hex for a Foundations token, or a failure naming the missing token. */
 const foundationHex = (token: string): string => {
   const found = FOUNDATION_COLORS.find((color) => color.token === token);
+
   if (found === undefined) throw new Error(`no Foundations token ${token}`);
+
   return found.hex;
 };
 
@@ -66,11 +68,17 @@ const read = (relativePath: string): string =>
   readFileSync(join(UMBRELLA, relativePath), "utf8");
 
 const CSS = read("src/app/globals.css");
+
 const LAYOUT = read("src/app/layout.tsx");
+
 const HOME = read("src/app/page.tsx");
+
 const ENGINE = read("src/app/engine/page.tsx");
+
 const DOCS = read("src/app/docs/page.tsx");
+
 const PRICING = read("src/app/pricing/page.tsx");
+
 const CREDIT_PACK_OFFERS = read("src/lib/credit-pack-offers.ts");
 
 /** Every committed source under the umbrella's `src`, discovered rather than listed. */
@@ -78,9 +86,11 @@ function collect(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir).sort()) {
     if (["node_modules", ".next", "dist"].includes(entry)) continue;
     const path = join(dir, entry);
+
     if (statSync(path).isDirectory()) collect(path, out);
     else if (entry.endsWith(".ts") || entry.endsWith(".tsx")) out.push(path);
   }
+
   return out;
 }
 
@@ -98,12 +108,14 @@ describe("umbrella help section", () => {
       "cli",
       "faq",
     ]);
+
     for (const { slug, title } of HELP_DOCS) {
       const route = `src/app/docs/${slug}/page.tsx`;
       expect(existsSync(join(UMBRELLA, route))).toBe(true);
       expect(read(route)).toContain(`slug="${slug}"`);
       expect(ALL_SOURCE).toContain(title);
     }
+
     const sitemap = read("src/app/sitemap.ts");
     expect(sitemap).toContain("`/docs/${doc.slug}`");
     expect(DOCS).toContain("HELP_DOCS.map");
@@ -142,13 +154,17 @@ describe("shipped content stays frozen and rendered", () => {
     // guarantee about the shipped page while guarding nothing — so an export that
     // loses its render site is removed with it rather than left here.
     const content = read("src/lib/site-content.ts");
+
     const exported = [...content.matchAll(/^export const ([A-Z][A-Z0-9_]*)/gm)].map(
       (match) => match[1] ?? "",
     );
+
     expect(exported.length).toBeGreaterThan(0);
+
     const rendered = UMBRELLA_SOURCES.filter(
       (path) => path !== "src/lib/site-content.ts",
     ).map((path) => read(path));
+
     for (const name of exported) {
       expect(
         rendered.some((source) => new RegExp(`\\b${name}\\b`).test(source)),
@@ -172,8 +188,9 @@ describe("the marketing surface makes no claim the repository cannot stand behin
       "Download for macOS",
       "Download for Windows",
     ]) {
-      expect(ALL_SOURCE).not.toContain(invented);
+      expect(ALL_SOURCE).not.toMatch(new RegExp(invented.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![A-Za-z-])"));
     }
+
     expect(ALL_SOURCE).not.toMatch(/\b\d+\s*MB\b/);
     // Digest and byte size are read from the offers, never typed into the page.
     expect(ENGINE).toContain("sdk.sha256");
@@ -205,9 +222,11 @@ describe("the marketing surface makes no claim the repository cannot stand behin
   it("prices in credits and sells no seat, plan, or subscription", () => {
     expect(PRICING).toContain("listCreditPacks");
     expect(PRICING).toContain("credits");
+
     for (const invented of ["per seat", "/ month", "per month", "Start a trial"]) {
       expect(PRICING).not.toContain(invented);
     }
+
     // Pack money amounts come from the billing plane's own pack records. The pure
     // presentation module owns the formatting so the page and its behavior tests use
     // the same values rather than restating a price.
@@ -228,6 +247,7 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     for (const claim of ["generally available", "production ready", "production-ready"]) {
       expect(ALL_SOURCE.toLowerCase()).not.toContain(claim.toLowerCase());
     }
+
     /*
       `shippingClaim` is a real contract field, and `/profiles` mirrors it — so banning
       the identifier outright would ban carrying the contract forward. What must never
@@ -238,6 +258,7 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     const mentions = [
       ...ALL_SOURCE.matchAll(/shippingClaim\b["'`]?\??\s*(:|=)?\s*([^,;)\n]*)/g),
     ];
+
     expect(mentions.length).toBeGreaterThan(0);
     /*
       A mention with no `:` or `=` after it binds nothing — it is prose in a comment, and
@@ -247,6 +268,7 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     */
     const bindings = mentions.filter(([, operator]) => operator !== undefined);
     expect(bindings.length).toBeGreaterThan(0);
+
     for (const [, operator, bound] of bindings) {
       expect(`${operator} ${(bound ?? "").trim()}`).toMatch(
         /^[:=] \{?\s*(readonly\s+)?false\b/,
@@ -287,6 +309,7 @@ describe("the marketing surface makes no claim the repository cannot stand behin
 
   it("states the release marker once, from one constant", () => {
     expect(RELEASE_MARKER).toContain("0.0.0");
+
     for (const source of [LAYOUT, HOME, ENGINE]) {
       expect(source).toContain("RELEASE_MARKER");
     }
@@ -326,6 +349,7 @@ describe("family and footer links only ever point at routes this site serves", (
       "/account",
       "/editor",
     ]);
+
     for (const column of FOOTER_COLUMNS) {
       for (const item of column.items) {
         expect(routes.has(item.href)).toBe(true);
@@ -374,6 +398,7 @@ describe("accessibility structure", () => {
     // A labelled `div` is `role=generic`, whose accessible name assistive technology
     // does not expose — a keyboard user who tabs into the scroller would hear nothing.
     let focusable = 0;
+
     for (const relativePath of UMBRELLA_SOURCES) {
       for (const opening of read(relativePath).matchAll(/<div\b[^>]*\bscroll-x\b[^>]*>/gs)) {
         if (!opening[0].includes("tabIndex")) continue;
@@ -383,6 +408,7 @@ describe("accessibility structure", () => {
         );
       }
     }
+
     expect(focusable).toBeGreaterThan(0);
   });
 
@@ -420,14 +446,17 @@ describe("accessibility structure", () => {
     ];
 
     const failures: string[] = [];
+
     for (const token of ["--fg", "--fg-2"]) {
       expect(FOUNDATION_CONTRAST_ROLES[token]).toBe("body");
+
       for (const surface of surfaces) {
         if (!meetsContrast(hexOf(token), surface, "body")) {
           failures.push(`${token} on ${surface}`);
         }
       }
     }
+
     expect(failures).toEqual([]);
 
     // `--fg-4` is Foundations' non-text token. This site uses it for the reason label and
@@ -452,11 +481,13 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
   it("serves the shared sheet, and every token the stylesheet reads resolves in it", () => {
     const sheet = umbrellaFoundationsCss();
     expect(sheet.ok).toBe(true);
+
     if (!sheet.ok) return;
 
     const emitted = new Set(
       [...sheet.value.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]),
     );
+
     // Site-local layout metrics, declared and read in this sheet only. The
     // `--ed-narrow-*` three are the reflowed editor row's budget: the row floor
     // is their sum, so the canvas cannot be squeezed to nothing by a dock or a
@@ -470,26 +501,33 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
       "--ed-narrow-note",
       "--ed-narrow-canvas",
     ]);
+
     const used = new Set(
       [...CSS.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]),
     );
+
     const unresolved = [...used].filter(
       (token) => token !== undefined && !emitted.has(token) && !localMetrics.has(token),
     );
+
     expect(unresolved).toEqual([]);
   });
 
   it("projects the status vocabulary from site-kit rather than restating it", () => {
     const sheet = umbrellaFoundationsCss();
     expect(sheet.ok).toBe(true);
+
     if (!sheet.ok) return;
+
     for (const status of FOUNDATION_STATUSES) {
       expect(sheet.value).toContain(`--status-${status.id}-fg: ${status.fg};`);
       expect(sheet.value).toContain(`--status-${status.id}-bg: ${status.bg};`);
       expect(sheet.value).toContain(`--status-${status.id}-line: ${status.line};`);
     }
+
     // The projection is derived, so the module holds no status hex of its own.
     const module = read("src/lib/foundations.ts");
+
     for (const status of FOUNDATION_STATUSES) {
       expect(module).not.toContain(status.fg);
     }
@@ -508,18 +546,23 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
       ...UMBRELLA_RECORDED_GAPS.map((gap) => gap.value),
       ...Object.values(UMBRELLA_RESTATED_FOUNDATION_COLORS),
     ]);
+
     const undeclared: string[] = [];
+
     for (const relativePath of UMBRELLA_SOURCES) {
       const source = read(relativePath);
+
       for (const [, , literal] of source.matchAll(/(['"`])(#[0-9A-Fa-f]{3,8})\1/g)) {
         if (literal !== undefined && !declared.has(literal)) {
           undeclared.push(`${relativePath}: ${literal}`);
         }
       }
+
       expect(source, `${relativePath} writes a colour function`).not.toMatch(
         /\b(?:rgba?|hsla?|color-mix)\(/,
       );
     }
+
     expect(undeclared).toEqual([]);
 
     // Every literal in the first list is a value the archive does not state, and says so.
@@ -540,6 +583,7 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
     for (const [token, value] of Object.entries(UMBRELLA_RESTATED_FOUNDATION_COLORS)) {
       expect(value, `${token} drifted from Foundations`).toBe(foundationHex(token));
     }
+
     expect(VIEWPORT_LETTERBOX).toBe(foundationHex("--bg-base"));
     expect(read("src/app/_components/sculpt-viewport.tsx")).toContain(
       "background: background ?? VIEWPORT_LETTERBOX",
@@ -565,6 +609,7 @@ describe("the hero draws a real Sculpt Artifact", () => {
   it("renders the composed scene rather than procedural marketing geometry", () => {
     expect(HOME).toContain("resolveLiveOpenScene()");
     expect(HOME).toContain("<HeroViewport");
+
     // The retired gradient field and its veil are gone from both the page and the sheet.
     for (const retired of ["hero-field", "hero-veil"]) {
       expect(HOME).not.toContain(retired);
@@ -606,12 +651,14 @@ describe("the hero draws a real Sculpt Artifact", () => {
     const hero = read("src/app/_components/hero-viewport.tsx");
     const boundary = read("src/app/_components/sculpt-viewport.tsx");
     expect(hero).toContain('presentation: "snapshot"');
+
     for (const routed of [
       "src/app/open/_components/live-viewport.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
     ]) {
       expect(read(routed)).not.toContain("snapshot");
     }
+
     expect(boundary).toMatch(/if \(!snapshot\) \{\s*const detachInput = backend\.camera\.attach\(/);
     expect(CSS).toMatch(/\.viewport-canvas-static[^{]*\{[^}]*touch-action:\s*auto/);
     expect(CSS).not.toMatch(/\.viewport-canvas-static[^{]*\{[^}]*cursor:\s*grab/);
@@ -661,6 +708,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
   it("describes an append-only ledger and no seat subscription anywhere", () => {
     expect(CREDIT_LEDGER_COPY.model).toContain("append-only");
     expect(CREDIT_LEDGER_FACTS.map((fact) => fact.title)).toContain("Append-only");
+
     for (const invented of [
       "per seat",
       "per-seat",
@@ -672,8 +720,9 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
       "Start a trial",
       "free trial",
     ]) {
-      expect(ALL_SOURCE).not.toContain(invented);
+      expect(ALL_SOURCE).not.toMatch(new RegExp(invented.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![A-Za-z-])"));
     }
+
     /*
       "Subscription" and "tier" may still appear — but only where the text is rejecting
       the model, never offering it. Each occurrence is checked in its own neighbourhood
@@ -682,6 +731,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
       seats"), and a per-sentence rule would fail exactly the passage doing the work.
     */
     const denial = /never|not a|does not|no seat|rejected|instead of|rather than/i;
+
     for (const match of ALL_SOURCE.matchAll(/subscription/gi)) {
       const at = match.index ?? 0;
       const around = ALL_SOURCE.slice(Math.max(0, at - 220), at + 220);
@@ -694,6 +744,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
   it("reads a balance and never offers to write one", () => {
     expect(ACCOUNT).toContain("resolved.credits.value.balance");
     expect(ACCOUNT).toContain("CREDIT_LEDGER_COPY.balanceIsDerived");
+
     // No form, no input, no mutating method reaches the ledger from the account surface.
     for (const mutating of ["<form", "<input", "method=\"post\""]) {
       expect(ACCOUNT).not.toContain(mutating);
@@ -710,6 +761,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
     // truncation, no "details" affordance standing between a reader and the reason.
     expect(STATE_PANEL).toContain("model.reason !== null &&");
     expect(STATE_PANEL).toContain('className="reason"');
+
     for (const source of [
       ACCOUNT,
       read("src/app/editor/page.tsx"),
@@ -722,8 +774,9 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
 
   it("adds no retry affordance the contracts do not define", () => {
     expect(STATE_PANEL).toContain("no re-attempt affordance");
+
     for (const invented of ["Try again", "Retry", "retry now", "Refresh to retry"]) {
-      expect(ALL_SOURCE).not.toContain(invented);
+      expect(ALL_SOURCE).not.toMatch(new RegExp(invented.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![A-Za-z-])"));
     }
   });
 
@@ -731,6 +784,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
     for (const tone of ["ok", "warn", "deny", "iso"]) {
       expect(CSS).toContain(`.state-${tone} {`);
     }
+
     expect(CSS).toContain(".state-head {");
     expect(CSS).toContain(".reason-label {");
   });
@@ -747,6 +801,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
   const rule = (scope: string, selector: string): string => {
     const at = scope.indexOf(`${selector} {`);
     expect(at, `no \`${selector}\` rule in this scope`).toBeGreaterThan(-1);
+
     return scope.slice(at, scope.indexOf("}", at));
   };
 
@@ -793,9 +848,11 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
     // And the key is still printed whole — bounded in width, never elided or clipped.
     const reason = rule(CSS, ".reason");
     expect(reason).toContain("overflow-wrap: anywhere");
+
     for (const eliding of ["text-overflow", "white-space: nowrap", "overflow: hidden"]) {
       expect(reason).not.toContain(eliding);
     }
+
     // The key's own label is a single word and is held out of the same collapse: it is a
     // flex item beside the key, and the `anywhere` the key needs would otherwise let the
     // label break between letters once its container is bounded.
@@ -821,9 +878,11 @@ describe("the layout is one responsive composition, not a desktop-only one", () 
     const declared = [...CSS.matchAll(/^\.grid-(\d+) \{/gm)].map((match) => `.grid-${match[1]}`);
     expect(declared.length).toBeGreaterThan(0);
     const phone = CSS.slice(CSS.indexOf("@media (max-width: 620px)"));
+
     for (const selector of declared) {
       expect(phone, `${selector} has no phone rule`).toContain(selector);
     }
+
     expect(phone).toContain("grid-template-columns: minmax(0, 1fr)");
   });
 
@@ -855,6 +914,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     const clients = UMBRELLA_SOURCES.filter((relativePath) =>
       read(relativePath).startsWith('"use client"'),
     ).sort();
+
     expect(clients).toEqual([
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
@@ -873,6 +933,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     const content = read("src/lib/site-content.ts");
     // No import statement at all: it is data the gate can type-check on its own.
     expect(content).not.toMatch(/^import\s/m);
+
     for (const needle of ['from "react"', 'from "next/', 'from "@sceneaxi/']) {
       expect(content).not.toContain(needle);
     }
@@ -906,6 +967,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       ].flatMap(([, typeKeyword, fromSpecifier, sideEffectSpecifier]) => {
         if (typeKeyword !== undefined) return [];
         const specifier = fromSpecifier ?? sideEffectSpecifier;
+
         return specifier === undefined ? [] : [specifier];
       });
 
@@ -915,13 +977,16 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     const clientGraph = new Set(
       UMBRELLA_SOURCES.filter((relativePath) => read(relativePath).startsWith('"use client"')),
     );
+
     // A Set iterated while it grows visits what the walk appends, so this is the whole
     // transitive closure rather than one hop.
     for (const relativePath of clientGraph) {
       const dir = relativePath.split("/").slice(0, -1).join("/");
+
       for (const specifier of valueImports(relativePath)) {
         if (!specifier.startsWith(".")) continue;
         const resolved = join(dir, specifier).split(sep).join("/").replace(/\.js$/, "");
+
         for (const candidate of [`${resolved}.ts`, `${resolved}.tsx`]) {
           if (UMBRELLA_SOURCES.includes(candidate)) clientGraph.add(candidate);
         }
@@ -932,6 +997,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "@sceneaxi/engine-presentation",
       "@sceneaxi/site-kit/state-panel",
     ]);
+
     const offenders = [...clientGraph].flatMap((relativePath) =>
       valueImports(relativePath)
         .filter(
@@ -940,22 +1006,27 @@ describe("the visual layer adds no behaviour the site did not already have", () 
         )
         .map((specifier) => `${relativePath} -> ${specifier}`),
     );
+
     expect(offenders).toEqual([]);
 
     // An exempt entry is only browser-safe if everything it pulls in is: the modules it
     // imports are compiled into the same bundle, and they sit in the directory the
     // Node-bearing barrel re-exports from. So the closure is walked, not just the entry.
     const siteKitSrc = fileURLToPath(new URL("../../packages/site-kit/src/", import.meta.url));
+
     const exemptEntries = [...browserSafeValueImports]
       .filter((specifier) => specifier.startsWith("@sceneaxi/site-kit/"))
       .map((specifier) => `${specifier.slice("@sceneaxi/site-kit/".length)}.ts`);
+
     expect(exemptEntries.length).toBeGreaterThan(0);
 
     const siteKitGraph = new Set(exemptEntries);
     const notBrowserSafe: string[] = [];
     const unresolved: string[] = [];
+
     for (const entry of siteKitGraph) {
       const source = readFileSync(join(siteKitSrc, entry), "utf8");
+
       for (const specifier of valueSpecifiers(source)) {
         if (!specifier.startsWith(".")) {
           // A bare specifier is compiled into the same bundle as the entry but cannot be
@@ -967,13 +1038,17 @@ describe("the visual layer adds no behaviour the site did not already have", () 
           if (!browserSafeValueImports.has(specifier)) {
             notBrowserSafe.push(`${entry} -> ${specifier}`);
           }
+
           continue;
         }
+
         const target = `${specifier.replace(/^\.\//, "").replace(/\.js$/, "")}.ts`;
+
         if (existsSync(join(siteKitSrc, target))) siteKitGraph.add(target);
         else unresolved.push(`${entry} -> ${specifier}`);
       }
     }
+
     expect(notBrowserSafe).toEqual([]);
     expect(unresolved).toEqual([]);
     // The walk reached past the entry itself, so the guard is as deep as the risk.
@@ -989,6 +1064,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       ["deny", "refused"],
       ["iso", "isolated"],
     ] as const;
+
     for (const [tone, id] of expected) {
       const model = createStatePanelModel({ tone, title: "State" });
       expect(model.status.id).toBe(id);
@@ -996,6 +1072,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
         FOUNDATION_STATUSES.find((status) => status.id === id)?.label,
       );
     }
+
     expect(read("src/app/_components/state-panel.tsx")).not.toMatch(
       /\{ id: "[a-z-]+", label: "[^"]+" \}/,
     );
@@ -1021,6 +1098,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(SHELL).toContain(region);
     }
+
     // The chrome is data-driven: modes, menus, and dock tabs come from the
     // view the server built, never from a literal list in JSX.
     expect(SHELL).toContain("view.modes.map");
@@ -1063,6 +1141,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(CSS).toContain(rule);
     }
+
     expect(CSS).toContain('.edshell[data-mode="animate"] .ed-dock {\n  height: 252px;');
   });
 
@@ -1072,6 +1151,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // which is what `EDITOR_SHELL_FABRICATED_FIGURES` claims about this file.
     expect(EDITOR_SHELL_FABRICATED_FIGURES.length).toBeGreaterThan(0);
     expect(EDITOR_SHELL_RETIRED_COPY.length).toBeGreaterThan(0);
+
     for (const source of [SHELL, PAGE, CSS]) {
       for (const pinned of [
         ...EDITOR_SHELL_FABRICATED_FIGURES,
@@ -1134,6 +1214,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // canvas carries that minimum itself.
     const narrow = CSS.slice(CSS.indexOf("@media (max-width: 1179px), (max-height: 659px)"));
     const block = narrow.slice(0, narrow.indexOf("\n}\n") + 3);
+
     for (const declaration of [
       "--ed-narrow-dock:",
       "--ed-narrow-note:",
@@ -1144,6 +1225,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(block).toContain(declaration);
     }
+
     expect(block).toContain("var(--ed-narrow-note) + var(--ed-narrow-dock)");
     // The timeline dock is the specific rule, so shrinking `.ed-dock` alone
     // would leave `animate` at 252px and take the canvas back.
@@ -1194,6 +1276,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // legend is deliberately not: `aria-describedby` has to keep resolving into
     // it from the palette's own inert rows.
     expect(SHELL).toContain('role="dialog" aria-modal="true"');
+
     for (const region of [
       '<header className="ed-titlebar" aria-label="Editor title bar" inert={paletteOpen}>',
       '<div className="ed-body" inert={paletteOpen}>',
@@ -1201,6 +1284,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(SHELL).toContain(region);
     }
+
     expect(SHELL).toContain('<div className="ed-legend" hidden>');
     // The below-minimum note is deliberately never inert: it is the only thing
     // that surface renders, and the tier hides the overlay in CSS instead.
@@ -1225,6 +1309,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // or one keystroke paints a live play link over a refusal.
     const tier = CSS.slice(CSS.indexOf("@media (max-width: 899px), (max-height: 599px)"));
     const block = tier.slice(0, tier.indexOf("\n}\n") + 3);
+
     for (const region of [
       ".ed-titlebar",
       ".ed-body",
@@ -1233,6 +1318,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(block).toContain(region);
     }
+
     expect(block).toContain("display: none !important;");
   });
 
@@ -1264,10 +1350,12 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // what it deliberately never does is true of all seven.
     expect(SHELL).toContain("{viewportCopy.lede}");
     expect(SHELL).toContain("{viewportCopy.honesty}");
+
     const viewportColumn = SHELL.slice(
       SHELL.indexOf('className="ed-viewport-col"'),
       SHELL.indexOf('className="ed-dock"'),
     );
+
     expect(viewportColumn).toContain("{viewportCopy.lede}");
     expect(viewportColumn).toContain("{viewportCopy.honesty}");
   });
@@ -1302,6 +1390,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     ]) {
       expect(SHELL).toContain(wiring);
     }
+
     // The scene tree's selection links are minted controls too, drawn through
     // the same helper rather than as bare anchors.
     expect(SHELL).toContain("<ShellButton control={row.select}");

@@ -164,7 +164,9 @@ export type OpenPathHandle<K extends OpenPathKind, S> = {
 };
 
 export type ProductOpenPathHandle = OpenPathHandle<"product", KernelSession>;
+
 export type SculptOpenPathHandle = OpenPathHandle<"sculpt", SculptKernelSession>;
+
 export type SceneOpenPathHandle = OpenPathHandle<"scene", SceneKernelSession>;
 
 export type AnyOpenPathHandle =
@@ -175,8 +177,10 @@ export type AnyOpenPathHandle =
 /** Read one own data property without invoking an accessor the value may define. */
 function ownField(value: unknown, field: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
+
   try {
     const descriptor = Object.getOwnPropertyDescriptor(value, field);
+
     return descriptor !== undefined && "value" in descriptor
       ? descriptor.value
       : undefined;
@@ -188,11 +192,15 @@ function ownField(value: unknown, field: string): unknown {
 /** Read one own string data property, or `""` when it is absent or not a string. */
 function ownString(value: unknown, field: string): string {
   const found = ownField(value, field);
+
   return typeof found === "string" ? found : "";
 }
 
 function kernelMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  // Never invoke toString, Error.message getters or proxy traps for diagnostics.
+  const message = ownField(error, "message");
+
+  return typeof message === "string" ? message.slice(0, 512) : "operation failed";
 }
 
 type ResolvedHost = {
@@ -216,16 +224,19 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   }
 
   let clock: unknown;
+
   try {
     clock = host.nowMs;
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
+
   if (typeof clock !== "function") {
     return refuse("OPEN_PATH_HOST_INVALID", "host.nowMs is required");
   }
 
   let digest: KernelDigest;
+
   try {
     digest = resolveKernelDigest(host.digest);
   } catch (error) {
@@ -233,12 +244,14 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   }
 
   let openedAtMs: unknown;
+
   try {
     openedAtMs = host.nowMs();
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
-  if (typeof openedAtMs !== "number" || !Number.isInteger(openedAtMs)) {
+
+  if (typeof openedAtMs !== "number" || !Number.isSafeInteger(openedAtMs)) {
     return refuse(
       "OPEN_PATH_HOST_INVALID",
       "host.nowMs must return an integer number of milliseconds",
@@ -273,6 +286,7 @@ function sessionIdOf(
 ): OrchestratorResult<string> {
   const mode = resumed ? "resume" : "open";
   let hex: unknown;
+
   try {
     hex = digest(
       `sceneaxi.open-path:${kind}:${subjectId}:${String(openedAtMs)}:${mode}`,
@@ -280,12 +294,14 @@ function sessionIdOf(
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
+
   if (typeof hex !== "string" || !SESSION_ID_DIGEST_RE.test(hex)) {
     return refuse(
       "OPEN_PATH_HOST_INVALID",
       "host digest must return 64 lowercase hex characters",
     );
   }
+
   return ok(`sha256:${hex}`);
 }
 
@@ -294,6 +310,7 @@ function createHandle<K extends OpenPathKind, S>(
   kernelSession: S,
 ): OpenPathHandle<K, S> {
   let live = true;
+
   return Object.freeze({
     kind: bootstrap.kind,
     bootstrap,
@@ -306,7 +323,7 @@ function createHandle<K extends OpenPathKind, S>(
   });
 }
 
-type Bootstrapped<K extends OpenPathKind, S> = OrchestratorResult<
+export type Bootstrapped<K extends OpenPathKind, S> = OrchestratorResult<
   OpenPathHandle<K, S>
 >;
 
@@ -322,16 +339,20 @@ function bootstrapWith<K extends OpenPathKind, S>(
   openSession: (resolved: ResolvedHost) => S,
 ): Bootstrapped<K, S> {
   const resolved = resolveHost(host);
+
   if (!resolved.ok) return resolved;
+
   if (subjectId === "") {
     return refuse("OPEN_PATH_SUBJECT_UNIDENTIFIED", `${kind} request`);
   }
 
   const { openedAtMs, digest } = resolved.value;
   const sessionId = sessionIdOf(kind, subjectId, openedAtMs, resumed, digest);
+
   if (!sessionId.ok) return sessionId;
 
   let kernelSession: S;
+
   try {
     kernelSession = openSession(resolved.value);
   } catch (error) {
@@ -362,10 +383,13 @@ function refuseRequest(request: unknown): OrchestratorRefusal {
   if (typeof request !== "object" || request === null) {
     return refuse("OPEN_PATH_REQUEST_MALFORMED", "request is not an object");
   }
+
   const kind = ownField(request, "kind");
+
   if (typeof kind !== "string" || kind === "") {
     return refuse("OPEN_PATH_REQUEST_MALFORMED", "request.kind is required");
   }
+
   return refuse("OPEN_PATH_KIND_UNKNOWN", kind);
 }
 
@@ -402,6 +426,7 @@ export function bootstrapOpenPath(
         request,
         "productManifest",
       ) as ProductManifest;
+
       return bootstrapWith(
         "product",
         host,
@@ -410,9 +435,11 @@ export function bootstrapOpenPath(
         (resolved) => open(productManifest, resolved.kernelHost),
       );
     }
+
     case "sculpt": {
       const artifact = ownField(request, "artifact");
       const options = ownField(request, "options") as SculptKernelOptions;
+
       return bootstrapWith(
         "sculpt",
         host,
@@ -424,9 +451,11 @@ export function bootstrapOpenPath(
           }),
       );
     }
+
     case "scene": {
       const scene = ownField(request, "scene");
       const options = ownField(request, "options") as SceneKernelOptions;
+
       return bootstrapWith(
         "scene",
         host,
@@ -436,6 +465,7 @@ export function bootstrapOpenPath(
           openSceneKernelSession(scene, options, { digest: resolved.digest }),
       );
     }
+
     default:
       return refuseRequest(request);
   }
@@ -471,6 +501,7 @@ export function resumeOpenPath(
   switch (ownField(request, "kind")) {
     case "product": {
       const save = ownField(request, "save") as KernelSessionSaveArtifact;
+
       return bootstrapWith(
         "product",
         host,
@@ -479,8 +510,10 @@ export function resumeOpenPath(
         (resolved) => replay(save, resolved.kernelHost),
       );
     }
+
     case "sculpt": {
       const save = ownField(request, "save") as SculptKernelSaveArtifact;
+
       return bootstrapWith(
         "sculpt",
         host,
@@ -490,8 +523,10 @@ export function resumeOpenPath(
           replaySculptKernelSession(save, { digest: resolved.digest }),
       );
     }
+
     case "scene": {
       const save = ownField(request, "save") as SceneKernelSaveArtifact;
+
       return bootstrapWith(
         "scene",
         host,
@@ -501,6 +536,7 @@ export function resumeOpenPath(
           replaySceneKernelSession(save, { digest: resolved.digest }),
       );
     }
+
     default:
       return refuseRequest(request);
   }

@@ -2,6 +2,7 @@
  * Deterministic Plugin Host load pipeline (ADR 0005).
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -28,6 +29,14 @@ import type {
 } from "./types.js";
 import { PLUGIN_HOST_API_VERSION } from "./types.js";
 
+// Node caches modules process-wide. Never present cached implementations as
+// newly inspected bytes. This is lifecycle integrity for TRUSTED plugins, not
+// a sandbox or permission boundary. Restart the process to adopt edited code.
+const evaluatedFingerprints = new Map<string, string>();
+
+// A changed graph leaves an unverifiable cached namespace even if bytes are restored.
+const unverifiableEvaluations = new Set<string>();
+
 export type InternalLoadedPlugin = LoadedPlugin & {
   readonly implementations: ReadonlyMap<string, unknown>;
 };
@@ -41,11 +50,14 @@ function sortLoaded(loaded: readonly LoadedPlugin[]): LoadedPlugin[] {
     if (a.pluginId !== b.pluginId) {
       return a.pluginId < b.pluginId ? -1 : 1;
     }
+
     if (a.pluginVersion !== b.pluginVersion) {
       return a.pluginVersion < b.pluginVersion ? -1 : 1;
     }
+
     const aCaps = a.capabilities.join("\0");
     const bCaps = b.capabilities.join("\0");
+
     return aCaps < bCaps ? -1 : aCaps > bCaps ? 1 : 0;
   });
 }
@@ -87,13 +99,17 @@ function authorizedPackagesFor(
   registry: PluginCapabilityRegistry,
 ): { ok: true; packages: Set<string> } | { ok: false; capabilityId: string } {
   const packages = new Set<string>();
+
   for (const capabilityId of manifest.capabilities) {
     const hit = lookupPluginCapability(registry, capabilityId);
+
     if (!hit.ok) {
       return { ok: false, capabilityId };
     }
+
     packages.add(hit.entry.owningPackage);
   }
+
   return { ok: true, packages };
 }
 
@@ -114,6 +130,7 @@ function filesystemFailureReason(error: unknown): "missing" | "unreadable" {
     isRecord(error) && typeof error["code"] === "string"
       ? error["code"]
       : null;
+
   return code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable";
 }
 
@@ -123,8 +140,10 @@ function inspectPathType(
 ): PathTypeResult {
   try {
     const metadata = statSync(path);
+
     const matches =
       type === "directory" ? metadata.isDirectory() : metadata.isFile();
+
     return matches
       ? { ok: true }
       : {
@@ -150,14 +169,19 @@ function extractCapabilityTable(
   if (!isRecord(moduleNamespace)) {
     return { ok: false, message: "Entrypoint module namespace is not an object." };
   }
+
   const direct = moduleNamespace["capabilities"];
+
   if (isRecord(direct)) {
     return { ok: true, table: direct };
   }
+
   const defaultExport = moduleNamespace["default"];
+
   if (isRecord(defaultExport) && isRecord(defaultExport["capabilities"])) {
     return { ok: true, table: defaultExport["capabilities"] };
   }
+
   return {
     ok: false,
     message:
@@ -171,13 +195,17 @@ function implementationKeysMatch(
 ): boolean {
   const declaredSet = new Set(declared);
   const exportedKeys = Reflect.ownKeys(table);
+
   if (exportedKeys.length !== declaredSet.size) return false;
+
   for (const key of exportedKeys) {
     if (typeof key !== "string" || !declaredSet.has(key)) return false;
   }
+
   for (const id of declaredSet) {
     if (!Object.hasOwn(table, id)) return false;
   }
+
   return true;
 }
 
@@ -198,11 +226,14 @@ async function processCandidate(options: {
     seenPluginIds,
     capabilityContracts,
   } = options;
+
   const packageRoot = resolve(locator);
 
   const packageRootMetadata = inspectPathType(packageRoot, "directory");
+
   if (!packageRootMetadata.ok) {
     const unreadable = packageRootMetadata.reason === "unreadable";
+
     return {
       ok: false,
       refused: refuse({
@@ -219,8 +250,10 @@ async function processCandidate(options: {
 
   const descriptorPath = join(packageRoot, PLUGIN_MANIFEST_PATH);
   const descriptorMetadata = inspectPathType(descriptorPath, "file");
+
   if (!descriptorMetadata.ok) {
     const unreadable = descriptorMetadata.reason === "unreadable";
+
     return {
       ok: false,
       refused: refuse({
@@ -236,12 +269,15 @@ async function processCandidate(options: {
   }
 
   let text: string;
+
   try {
     text = readFileSync(descriptorPath, "utf8");
   } catch (error) {
     const missing = filesystemFailureReason(error) === "missing";
+
     const message =
       error instanceof Error ? error.message : "descriptor read failed";
+
     return {
       ok: false,
       refused: refuse({
@@ -257,11 +293,14 @@ async function processCandidate(options: {
   }
 
   const parsed = parsePluginManifestText(text);
+
   if (!parsed.ok) {
     const first = parsed.diagnostics[0];
+
     const schemaMismatch = parsed.diagnostics.some(
       (d) => d.code === "schema-version-mismatch",
     );
+
     return {
       ok: false,
       refused: refuse({
@@ -338,11 +377,13 @@ async function processCandidate(options: {
       }),
     };
   }
+
   // Reserve identity for the remainder of this load set (even if later phases refuse).
   seenPluginIds.add(manifest.pluginId);
 
   for (const capabilityId of manifest.capabilities) {
     const lookup = lookupPluginCapability(registry, capabilityId);
+
     if (!lookup.ok) {
       return {
         ok: false,
@@ -364,6 +405,7 @@ async function processCandidate(options: {
     packageRoot,
     manifest.entrypoint,
   );
+
   if (!entrypointResolved.ok || entrypointResolved.absolutePath === undefined) {
     const failed =
       !entrypointResolved.ok
@@ -372,6 +414,7 @@ async function processCandidate(options: {
             reason: "entrypoint-missing" as const,
             message: "Entrypoint path could not be resolved.",
           };
+
     return {
       ok: false,
       refused: refuse({
@@ -385,9 +428,11 @@ async function processCandidate(options: {
       }),
     };
   }
+
   const entrypointAbsolute = entrypointResolved.absolutePath;
 
   const authorized = authorizedPackagesFor(manifest, registry);
+
   if (!authorized.ok) {
     return {
       ok: false,
@@ -409,6 +454,7 @@ async function processCandidate(options: {
     entrypointAbsolute,
     authorizedSceneaxiPackages: authorized.packages,
   });
+
   if (!isolation.ok) {
     return {
       ok: false,
@@ -424,14 +470,31 @@ async function processCandidate(options: {
     };
   }
 
+  const fingerprints = new Map(isolation.fingerprints);
+  fingerprints.set(descriptorPath, createHash("sha256").update(text).digest("hex"));
+
+  for (const [file, digest] of fingerprints) {
+    const previous = evaluatedFingerprints.get(file);
+
+    if (unverifiableEvaluations.has(entrypointAbsolute) || (previous !== undefined && previous !== digest)) {
+      return { ok: false, refused: refuse({ locator: packageRoot, reason: "isolation-unverifiable", phase: "isolation", message: "Previously evaluated plugin artifacts changed; restart the host process before loading edited packages.", pluginId: manifest.pluginId, pluginVersion: manifest.pluginVersion, entrypointEvaluated: false }) };
+    }
+  }
+
+  // Reserve before awaiting import so simultaneous loads cannot approve two
+  // byte identities for a URL; failed evaluations are cached by Node too.
+  for (const [file, digest] of fingerprints) evaluatedFingerprints.set(file, digest);
+
   // Post-isolation: intentional evaluation.
   let moduleNamespace: unknown;
+
   try {
     const href = pathToFileURL(entrypointAbsolute).href;
     moduleNamespace = await import(href);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "entrypoint evaluation failed";
+
     return {
       ok: false,
       refused: refuse({
@@ -446,9 +509,30 @@ async function processCandidate(options: {
     };
   }
 
+  const afterEvaluation = checkPackageIsolation({ packageRoot, entrypointAbsolute, authorizedSceneaxiPackages: authorized.packages });
+  let unchanged = afterEvaluation.ok && afterEvaluation.fingerprints?.size === isolation.fingerprints?.size;
+
+  if (afterEvaluation.ok) {
+    for (const [file, digest] of afterEvaluation.fingerprints ?? []) {
+      if (fingerprints.get(file) !== digest) unchanged = false;
+    }
+  }
+
+  try {
+    if (createHash("sha256").update(readFileSync(descriptorPath)).digest("hex") !== fingerprints.get(descriptorPath)) unchanged = false;
+  } catch { unchanged = false; }
+
+  if (!unchanged) {
+    unverifiableEvaluations.add(entrypointAbsolute);
+
+    return { ok: false, refused: refuse({ locator: packageRoot, reason: "isolation-unverifiable", phase: "integrity", message: "Plugin artifacts changed during evaluation; nothing exposed. Restart the host process before loading edited packages.", pluginId: manifest.pluginId, pluginVersion: manifest.pluginVersion, entrypointEvaluated: true }) };
+  }
+
   const implementations = new Map<string, unknown>();
+
   try {
     const tableResult = extractCapabilityTable(moduleNamespace);
+
     if (!tableResult.ok) {
       return {
         ok: false,
@@ -486,6 +570,7 @@ async function processCandidate(options: {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "integrity inspection failed";
+
     return {
       ok: false,
       refused: refuse({
@@ -509,11 +594,14 @@ async function processCandidate(options: {
   // capability order so the reported violation is deterministic.
   for (const capabilityId of sortedCaps) {
     const check = capabilityContracts.get(capabilityId);
+
     if (check === undefined) continue;
 
     let violation: string | null;
+
     try {
       const outcome: unknown = check(implementations.get(capabilityId));
+
       if (
         outcome === null ||
         typeof outcome !== "object" ||
@@ -529,6 +617,7 @@ async function processCandidate(options: {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "contract check threw";
+
       violation = `Capability contract check threw for "${capabilityId}": ${message}`;
     }
 
@@ -586,6 +675,7 @@ export async function loadPluginCandidates(options: {
       seenPluginIds,
       capabilityContracts,
     });
+
     if (outcome.ok) {
       loaded.push(outcome.loaded);
     } else {

@@ -21,8 +21,8 @@ export const ExitCode = {
    */
   USAGE: 2,
   /**
-   * Held-key refusal (reserved for sceneaxi#7). Skeleton maps HELD_KEY
-   * failures here so later wiring does not renumber the table.
+   * Held-key refusal: unavailable currency, invalid/stale registry data,
+   * epoch mismatch, undeclared verbs, or unresolved/unknown holds.
    */
   HELD_KEY: 3,
 } as const;

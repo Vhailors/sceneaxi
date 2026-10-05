@@ -14,6 +14,7 @@ export type DesktopByoConfigurationPort = Readonly<{
 }>;
 
 const SURFACE_ID = "desktop-byo-configuration";
+
 const STYLE_ID = "desktop-byo-configuration-style";
 
 function assistantProfile(shell: HTMLElement): DesktopByoConfigurationRequest["profile"] {
@@ -54,7 +55,9 @@ function element<K extends keyof HTMLElementTagNameMap>(
   className?: string,
 ): HTMLElementTagNameMap[K] {
   const value = document.createElement(tag);
+
   if (className !== undefined) value.className = className;
+
   return value;
 }
 
@@ -64,6 +67,7 @@ export function installDesktopByoConfigurationSurface(
   const shell = document.querySelector<HTMLElement>(".shell");
   const routes = document.querySelector<HTMLElement>(".assistant-routes");
   const byoRoute = document.querySelector<HTMLElement>("#assistant-route-byo");
+
   if (shell === null || routes === null || byoRoute === null) return false;
 
   installStyles();
@@ -86,12 +90,14 @@ export function installDesktopByoConfigurationSurface(
   provider.setAttribute("aria-label", "BYOK provider");
   provider.hidden = true;
   providerField.hidden = true;
+
   for (const id of DESKTOP_BYO_PROVIDERS) {
     const option = element("option");
     option.value = id;
     option.textContent = DESKTOP_BYO_PROVIDER_LABELS[id];
     provider.append(option);
   }
+
   provider.value = "opencode";
   providerField.append(providerLabel, provider);
 
@@ -130,6 +136,7 @@ export function installDesktopByoConfigurationSurface(
     const view = desktopByoConfigurationView(response);
     state.textContent = view.state;
     message.textContent = view.message;
+
     if (view.saveLabel !== null) save.textContent = view.saveLabel;
     keyInput.disabled = !view.keyFieldEnabled;
     save.disabled = !view.saveEnabled;
@@ -151,8 +158,10 @@ export function installDesktopByoConfigurationSurface(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionUnavailable,
         "The privileged BYOK configuration channel is not exposed.",
       );
+
       return;
     }
+
     try {
       render(await port.configureByo(input));
     } catch {
@@ -172,6 +181,7 @@ export function installDesktopByoConfigurationSurface(
 
   const refresh = async (): Promise<void> => {
     const profile = assistantProfile(shell);
+
     if (profile === "@sceneaxi/profile-kids") return;
     await request({
       action: "status",
@@ -182,28 +192,31 @@ export function installDesktopByoConfigurationSurface(
 
   const synchronizeVisibility = (): void => {
     const kids = assistantProfile(shell) === "@sceneaxi/profile-kids";
-    if (!kids && shell.dataset.assistantRoute !== "byo") {
-      shell.dataset.assistantRoute = "byo";
-      byoRoute.setAttribute("aria-pressed", "true");
-    }
-    const visible = !kids;
+    // Configuration is a view of the user's route, never a route-selection authority.
+    const visible = !kids && shell.dataset.assistantRoute === "byo";
     surface.hidden = !visible;
     byoRoute.setAttribute("aria-expanded", String(visible));
+
     if (!visible) keyInput.value = "";
+
     if (visible) void refresh();
   };
 
   save.addEventListener("click", () => {
     void (async () => {
       const profile = assistantProfile(shell);
+
       // Refuse before reading the key field. Switching to Kids and clicking in
       // the same turn therefore cannot submit or access secure storage.
       if (profile === "@sceneaxi/profile-kids") {
         keyInput.value = "";
+
         return;
       }
+
       const submittedKey = keyInput.value;
       keyInput.value = "";
+
       try {
         await request({
           action: "save",
@@ -219,6 +232,7 @@ export function installDesktopByoConfigurationSurface(
 
   remove.addEventListener("click", () => {
     const profile = assistantProfile(shell);
+
     if (profile === "@sceneaxi/profile-kids") return;
     void request({
       action: "remove",
@@ -233,11 +247,14 @@ export function installDesktopByoConfigurationSurface(
 
   document.addEventListener("click", (event) => {
     const target = event.target;
+
     if (!(target instanceof Element)) return;
+
     if (target.closest("[data-action='assistant-route'], [data-action='profile']") === null) return;
     queueMicrotask(synchronizeVisibility);
   });
 
   synchronizeVisibility();
+
   return true;
 }

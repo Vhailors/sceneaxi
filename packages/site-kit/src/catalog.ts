@@ -11,6 +11,7 @@
  * checkout adapter. Prices and the established creator-share rule are useful
  * evaluation metadata; they are not evidence that payment happened.
  */
+import type { SearchParams } from "./site-search-params.js";
 import { createHash } from "node:crypto";
 import {
   CATALOG_LISTINGS_DATA,
@@ -87,10 +88,12 @@ function deepFreeze<T extends object>(value: T): T {
   for (const nested of Object.values(value) as unknown[]) {
     if (nested !== null && typeof nested === "object") deepFreeze(nested as object);
   }
+
   return Object.freeze(value);
 }
 
 const validatedListingSet = validateCatalogListingSet(CATALOG_LISTINGS_DATA);
+
 if (!validatedListingSet.ok) {
   throw new Error(
     `Committed catalog listing data refused ${validatedListingSet.code}: ${validatedListingSet.message}`,
@@ -143,6 +146,7 @@ export function showSiteListing(
   const listing = LISTINGS.find(
     (candidate) => candidate.surface === surface && candidate.itemId === itemId,
   );
+
   return listing === undefined ? refuse("CATALOG_ITEM_NOT_FOUND") : ok(listing);
 }
 
@@ -160,10 +164,13 @@ function currencyFractionDigits(currency: string): number | null {
 /** Format committed minor units without introducing a locale-dependent symbol. */
 export function formatMoneyPrice(price: SiteMoneyPrice): string {
   const digits = currencyFractionDigits(price.currency);
+
   if (digits === null) {
     return `${price.unitAmount} ${price.currency.toUpperCase()} minor units`;
   }
+
   const scale = 10 ** digits;
+
   return `${(price.unitAmount / scale).toFixed(digits)} ${price.currency.toUpperCase()}`;
 }
 
@@ -173,12 +180,16 @@ export function describeListingPrice(price: SiteListingPrice): SiteResult<PriceD
     price.credits === null
       ? null
       : `${price.credits} credit${price.credits === 1 ? "" : "s"}`;
+
   const money = price.money === null ? null : formatMoneyPrice(price.money);
+
   if (credits === null && money === null) return refuse("CATALOG_PRICE_UNAVAILABLE");
+
   const label =
     credits !== null && money !== null
       ? `${credits} or ${money}`
       : ((credits ?? money) as string);
+
   return ok(Object.freeze({ credits, money, label }));
 }
 
@@ -197,6 +208,7 @@ export type CreatorShare = {
 export function creatorShare(total: number): SiteResult<CreatorShare> {
   if (!Number.isSafeInteger(total) || total < 0) return refuse("CATALOG_PRICE_UNAVAILABLE");
   const creator = Math.floor(total / 2);
+
   return ok(Object.freeze({ total, creator, platform: total - creator }));
 }
 
@@ -212,14 +224,17 @@ export function describeCreatorShare(
   price: SiteListingPrice,
 ): SiteResult<CreatorShareDisplay> {
   const creditsSplit = price.credits === null ? null : creatorShare(price.credits);
+
   if (creditsSplit !== null && !creditsSplit.ok) return creditsSplit;
   const moneySplit = price.money === null ? null : creatorShare(price.money.unitAmount);
+
   if (moneySplit !== null && !moneySplit.ok) return moneySplit;
 
   const credits =
     creditsSplit === null
       ? null
       : `${creditsSplit.value.creator} creator / ${creditsSplit.value.platform} platform credits`;
+
   const money =
     moneySplit === null || price.money === null
       ? null
@@ -230,7 +245,9 @@ export function describeCreatorShare(
           unitAmount: moneySplit.value.platform,
           currency: price.money.currency,
         })} platform (bookkeeping only)`;
+
   if (credits === null && money === null) return refuse("CATALOG_PRICE_UNAVAILABLE");
+
   return ok(
     Object.freeze({
       credits,
@@ -284,15 +301,19 @@ export function attemptCatalogPurchase(
   request: CatalogPurchaseRequest,
 ): SiteResult<never> | CatalogCommerceRefusal {
   const listing = showSiteListing(request.surface, request.itemId);
+
   if (!listing.ok) return listing;
   const price = describeListingPrice(listing.value.price);
+
   if (!price.ok) return price;
+
   if (
     (request.payWith === "credits" && listing.value.price.credits === null) ||
     (request.payWith === "money" && listing.value.price.money === null)
   ) {
     return refuse("CATALOG_PURCHASE_METHOD_UNAVAILABLE");
   }
+
   return commerceInert();
 }
 
@@ -315,9 +336,12 @@ export function createPublishIntent(input: {
   readonly price: SiteListingPrice;
 }): SiteResult<PublishIntent> {
   const display = describeListingPrice(input.price);
+
   if (!display.ok) return display;
   const share = input.price.credits === null ? null : creatorShare(input.price.credits);
+
   if (share !== null && !share.ok) return share;
+
   return ok(
     Object.freeze({
       creatorId: input.creatorId,
@@ -334,6 +358,7 @@ export function createPublishIntent(input: {
 /** Submitting a publish intent refuses while marketplace activation stays closed. */
 export function submitPublishIntent(intent: PublishIntent): CatalogCommerceRefusal {
   void intent;
+
   return commerceInert();
 }
 
@@ -342,3 +367,25 @@ export const SITE_CATALOG_POLICY_CITES = CATALOG_POLICY_CITES;
 
 /** Canonical source named by the storefront without copying its contents. */
 export const SITE_CATALOG_FIXTURE_PATH = CATALOG_LISTINGS_FIXTURES_PATH;
+
+/** Bounded GET projection of the committed TEST inventory. */
+export function browseSiteCatalog(surface: CatalogSurface, params: SearchParams = {}): readonly SiteListing[] {
+  const allowed = ["q", "price", "sort"];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (!allowed.includes(key) || Array.isArray(value) || (value !== undefined && typeof value !== "string")) throw new Error("CATALOG_BROWSE_QUERY_INVALID");
+  }
+
+  const q = typeof params["q"] === "string" ? params["q"].trim().toLowerCase() : "";
+  const price = params["price"] ?? ""; const sort = params["sort"] ?? "inventory";
+
+  if ((typeof params["q"] === "string" && params["q"].length > 100) || !["", "credits", "money", "credits-and-money"].includes(price as string) || !["inventory", "title", "newest"].includes(sort as string)) throw new Error("CATALOG_BROWSE_QUERY_INVALID");
+  const listings = listSiteCatalog(surface).filter(item => `${item.title} ${item.itemId} ${item.creatorId}`.toLowerCase().includes(q) && (price === "" || item.priceMode === price));
+  const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+
+  if (sort === "title") listings.sort((a,b) => compare(a.title,b.title) || compare(a.itemId,b.itemId));
+
+  if (sort === "newest") listings.sort((a,b) => compare(b.publishedAt,a.publishedAt) || compare(a.itemId,b.itemId));
+
+  return Object.freeze(listings);
+}

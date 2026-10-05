@@ -80,6 +80,7 @@ export type CreateDesktopOpenRouterProviderSessionOptions = Readonly<{
  */
 function rendererSafeResult(result: AssistantSculptResult): AssistantSculptResult {
   if (result.ok) return result;
+
   return Object.freeze({
     ok: false as const,
     reason: result.reason,
@@ -113,19 +114,23 @@ export function createDesktopOpenRouterProviderSession(
     // transport lives under one guard, so a malformed session is closed on the way
     // out exactly like a mis-pinned adapter is.
     let closed = false;
+
     const closeTransport = async () => {
       if (closed) return;
       closed = true;
+
       const close: unknown =
         transportSession === null || typeof transportSession !== "object"
           ? undefined
           : (transportSession as { close?: unknown }).close;
+
       if (typeof close === "function") {
         await (close as () => void | Promise<void>).call(transportSession);
       }
     };
 
     let port: ReturnType<typeof createModelProviderPort>;
+
     try {
       if (
         typeof transportSession !== "object" ||
@@ -139,6 +144,7 @@ export function createDesktopOpenRouterProviderSession(
           "The privileged OpenRouter transport session is invalid.",
         );
       }
+
       port = createModelProviderPort({
         adapter: createOpenRouterAdapter({
           model,
@@ -163,6 +169,7 @@ export function createDesktopOpenRouterProviderSession(
             "The privileged OpenRouter provider session is closed.",
           );
         }
+
         return rendererSafeResult(
           await runAssistantSculptAction({
             ...request,
@@ -205,17 +212,21 @@ export type CreatePrivilegedDesktopByoRuntimeOptions = Readonly<{
 export function createPrivilegedDesktopByoRuntime(
   options: CreatePrivilegedDesktopByoRuntimeOptions,
 ): PrivilegedDesktopByoRuntime {
-  const configuration = createDesktopByoConfiguration({
-    keyStore: options.keyStore,
-    providerRuntimeAvailable: options.createProviderSession !== undefined,
-  });
-  if (options.createProviderSession === undefined) {
-    return Object.freeze({ configuration });
-  }
   const provider = options.provider ??
     (DESKTOP_BYO_PROVIDERS.includes(OPENROUTER_PROVIDER_ID)
       ? OPENROUTER_PROVIDER_ID
       : DESKTOP_BYO_PROVIDERS[0]);
+
+  const configuration = createDesktopByoConfiguration({
+    keyStore: options.keyStore,
+    providerRuntimeAvailable: options.createProviderSession !== undefined,
+    runtimeProvider: provider,
+  });
+
+  if (options.createProviderSession === undefined) {
+    return Object.freeze({ configuration });
+  }
+
   return Object.freeze({
     configuration,
     runByoAssistant: createSecureDesktopByoAssistantRunner({
@@ -239,6 +250,7 @@ export function createDesktopOpenCodeProviderSession(
   }> = {},
 ): CreateDesktopByoProviderSession {
   const model = Object.freeze({ ...(options.model ?? DESKTOP_DEEPSEEK_MODEL) });
+
   return ({ provider, key }) => {
     if (provider !== "opencode") {
       throw new DesktopByoRunnerRefusal(
@@ -246,11 +258,13 @@ export function createDesktopOpenCodeProviderSession(
         "The privileged DeepSeek session received an unsupported provider.",
       );
     }
+
     const transport = createDesktopOpenCodeLiveTransport({
       credential: key,
       ...(options.apiBase === undefined ? {} : { apiBase: options.apiBase }),
       ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
     });
+
     const port = createModelProviderPort({
       adapter: Object.freeze({
         routeKind: "third-party" as const,
@@ -260,6 +274,7 @@ export function createDesktopOpenCodeProviderSession(
         }),
         complete: async (request) => {
           const text = await transport.complete(request.prompt, model);
+
           return Object.freeze({
             response: desktopOpenCodeCompleteResponse(text),
             executedModel: model,
@@ -271,6 +286,7 @@ export function createDesktopOpenCodeProviderSession(
         "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
       }),
     });
+
     return Object.freeze({
       async run(request: DesktopAssistantRunRequest) {
         return rendererSafeResult(
@@ -344,6 +360,7 @@ export function createDesktopRarityFixtureProvider(
   const executedModel = Object.freeze({
     ...(options.executedModel ?? DESKTOP_RARITY_FIXTURE_MODEL),
   });
+
   const port = createModelProviderPort({
     adapter: Object.freeze({
       routeKind: "third-party" as const,
@@ -353,6 +370,7 @@ export function createDesktopRarityFixtureProvider(
       }),
       toolCall: (dispatched) => {
         options.onDispatch?.(dispatched);
+
         return Object.freeze({
           response: Object.freeze({
             schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -374,6 +392,7 @@ export function createDesktopRarityFixtureProvider(
       "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
     }),
   });
+
   return (request) =>
     requestRarityProviderContribution({
       port,

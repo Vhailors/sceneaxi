@@ -7,7 +7,7 @@ import {
   type PhysicsWorldHost,
   type ScenePhysicsCatalog,
 } from "@sceneaxi/schemas";
-import { createWorld } from "./world.js";
+import { createWorld, replayWorld, type RapierWorldHandle, type RapierWorldOptions, type RapierWorldSave } from "./world.js";
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/physics-rapier",
@@ -44,7 +44,11 @@ function probe() {
   if (run() !== run()) throw new Error(PHYSICS_WORLD_HOST_REFUSALS.probeFailed);
 }
 
-export async function createRapierPhysicsWorldHost(): Promise<PhysicsWorldHost> {
+export type RapierPhysicsWorldHost = Omit<PhysicsWorldHost, "create"> & { create(catalog: ScenePhysicsCatalog, options?: RapierWorldOptions): RapierWorldHandle; replay(save: RapierWorldSave): RapierWorldHandle };
+
+export type { RapierBodyPose, RapierBodySnapshot, RapierJointFrame, RapierWorldOptions, RapierWorldSave, RapierWorldHandle } from "./world.js";
+
+export async function createRapierPhysicsWorldHost(): Promise<RapierPhysicsWorldHost> {
   try {
     initialization ??= init();
     await initialization;
@@ -59,5 +63,5 @@ export async function createRapierPhysicsWorldHost(): Promise<PhysicsWorldHost> 
     throw new Error(PHYSICS_WORLD_HOST_REFUSALS.probeFailed);
   }
 
-  return Object.freeze({ kind: "rapier", create: createWorld });
+  return Object.freeze({ kind: "rapier", create: createWorld, replay: replayWorld });
 }

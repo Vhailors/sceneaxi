@@ -1,0 +1,205 @@
+{
+  "verdict": "PARTIAL",
+  "productionStatus": "blocked-not-production-ready",
+  "graphId": "sceneaxi-production-swarm",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "integrationPassCount": 3,
+  "integrationPassEvidence": {
+    "basis": "independently observed gate-log filenames; contents not reread",
+    "paths": ["docs/audits/production-swarm/integration-pass-1-gate.log", "docs/audits/production-swarm/integration-pass-2-gate.log", "docs/audits/production-swarm/integration-pass-3-gate.log"]
+  },
+  "baselineHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "postVerificationHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "platform": {"os": "linux", "arch": "x64", "node": "v24.21.0"},
+  "verification": [
+    {"command": "pnpm gate", "exitCode": 0, "cwd": "/home/devuser/Documents/Projects/sceneaxi", "vitestFilesPassed": 282, "vitestTestsPassed": 4297, "nodeContractTestsPassed": 40, "requirementsAccounted": 109, "allExistingGateStagesCompleted": true, "rawEvidence": "/home/devuser/.local/share/empryo/tee/2026-10-01T15-51-53-459Z_shell-full.txt", "rawEvidencePortability": "host-local"},
+    {"command": "pnpm exec vitest run tests/e2e/auth-credits-refuse-matrix.test.ts tests/desktop/desktop-windows-packaging.test.ts tests/e2e/desktop-command-interactions-golden.test.ts", "exitCode": 0, "testsPassed": 139, "testsFailed": 0, "evidence": "docs/audits/production-swarm/judge.md"},
+    {"command": "git diff --check", "exitCode": 0, "coverage": "whitespace only"}
+  ],
+  "counts": {"auditReportFiles": 12, "builderReportFiles": 11, "integrationGateLogFiles": 3, "priorJudgeRegressionIdsNoLongerReproducing": 3, "partiallyResolvedEvidenceIds": 1, "currentReviewCoverageIds": 1, "uniqueFinalTaskCounts": null, "individualNodeOutcomes": null},
+  "taskOutcomes": [
+    {"id": "JUDGE-GATE-01", "status": "reproduced-local-failure-closed", "evidence": "current complete pnpm gate passes; real database acceptance remains unverified"},
+    {"id": "JUDGE-WIN-02", "status": "focused-regression-passes", "evidence": "139-test focused run and full gate; inspected draft/upload and update-refusal oracle diffs"},
+    {"id": "JUDGE-CMD-03", "status": "focused-regression-passes", "evidence": "139-test focused run and full gate; inspected modal submit, typed-payload validation and dispatch assertions"},
+    {"id": "JUDGE-EVIDENCE-04", "status": "partially-resolved", "evidence": "FINAL.md/json exist; 12 audit and 11 fix JSONs; fix-identity.json absent; equivalent identity outcome not independently confirmed"},
+    {"id": "JUDGE-REVIEW-05", "status": "unverified-at-third-pass-bound", "severity": "high", "owner": "integration/judge", "source": "docs/audits/production-swarm/judge.md:1", "symbol": "final-review coverage", "reproduction": "retry prohibits rereading listed artifacts; cached bodies unavailable in this context", "impact": "exhaustive closure and whole-checkout safety cannot be certified", "dependencies": ["complete final artifact/source review", "identity outcome mapping", "native/browser/front-door evidence"], "fix": "independently review final source and every outcome/evidence artifact; rerun uncovered assertions without weaker checks", "acceptance": "all backlog/new requirements and per-node/task outcomes mapped with current real front-door and safety evidence"}
+  ],
+  "externalGateRequests": [
+    {"id": "DB-OPS", "inputs": "existing authorized real test DB and restricted credentials outside reports", "proof": "migration/rollback, ledger reconciliation, restore and operations assertions", "authority": "production migration separately authorized"},
+    {"id": "PROVIDERS", "inputs": "genuine auth/email/model/provider/Stripe configuration through approved secret storage", "proof": "redacted real identity, checkout/webhook/refund and hosted-AI metering/failure paths", "authority": "no LIVE activation, money movement, new account or spend authorized"},
+    {"id": "SIGNED-HOSTS", "inputs": "supported Windows/macOS hosts and legitimate signing/notarization identities", "proof": "actual runtime/package/update evidence", "authority": "upload/publication separately authorized for existing approved target"},
+    {"id": "LEGAL-RIGHTS", "inputs": "genuine licence/trademark/privacy/Kids and asset-rights clearance/provenance", "proof": "legal, moderation and delivery evidence; not fabricated engineering approval"},
+    {"id": "DELIVERY-OPS", "inputs": "existing DNS/TLS/storage/monitoring/backup/incident ownership", "proof": "actual operational evidence", "authority": "deploy/publish/public posting separately authorized"}
+  ],
+  "coverageHoles": ["exhaustive source/artifact review restricted by retry", "unique final task and individual node counts not independently confirmed", "current native Linux capture/hostile-frame/consent evidence not independently reviewed", "actual site/browser/CLI/SDK front-door evidence not independently reviewed", "real database/provider/operations and signed Windows/macOS acceptance"],
+  "safety": {"applicationSourceEditedByJudge": false, "productionActionsPerformed": false, "secretValuesPrinted": false, "preserveHeldKeyKidsLiveAndPackageBoundaries": true, "wholeCheckoutSafetyCertified": false, "scopedOracleWeakeningIdentified": false},
+  "evidencePaths": ["docs/audits/production-swarm/judge.md", "docs/audits/production-swarm/FINAL.md", "docs/audits/production-swarm/FINAL.json", "docs/audits/production-swarm/MEGALIST.md", "docs/audits/production-swarm/MEGALIST.json", "docs/audits/production-swarm/integration-verification-receipts.json"],
+  "evidenceCaveat": "Integrator artifacts listed as locations, not independently endorsed closure. Raw gate evidence is host-local. Existing gate is green, not production PASS.",
+  "supersededReviewNotice": "The nested pass-1 review below is historical only. Top-level verdict/counts/verification are authoritative; historical missing-file and failure claims are superseded.",
+  "supersededReview": {
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "nodeId": "independent-final-judge",
+  "role": "code",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "baselineHeadRechecked": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "verdict": "FAIL",
+  "productionStatus": "FAIL",
+  "productionReady": false,
+  "integrationPassCount": 1,
+  "integrationPassCountBasis": "Only integration-pass-1-gate.log exists; no pass-2/pass-3 evidence was present. Count is observed artifact count, not an orchestration attestation. Builder retries are not integration passes.",
+  "routeTo": "serial-integration",
+  "reason": "Unchanged required gate and focused tests fail; final-current-source native acceptance and final reporting are incomplete. Local failures precede the third integration pass; external blockers cannot justify PARTIAL yet.",
+  "sourceEditsByJudge": [],
+  "reportPaths": ["docs/audits/production-swarm/judge.md", "docs/audits/production-swarm/judge.json"],
+  "findings": [
+    {
+      "id": "JUDGE-GATE-01",
+      "severity": "blocker",
+      "owner": "integration",
+      "source": "scripts/check-traceability.mjs:641-646",
+      "symbol": "checkInventorySurface",
+      "reproduction": "pnpm gate",
+      "actualImpact": "Required gate stops at traceability; later gate stages have no evidence from this run.",
+      "output": "[surface-accounting] migrations inventory is stale (missing: db/migrations/0008_credit_chain_hosted_budget.sql; extra: none)",
+      "dependencies": ["db/migrations/0008_credit_chain_hosted_budget.sql", "authoritative runtime surface inventory"],
+      "fix": "Integration must reconcile the inventory and mapped migration ownership without disabling checks or applying production data changes.",
+      "acceptance": "Unchanged pnpm gate passes every stage on the final integrated source with durable command/output evidence.",
+      "status": "OPEN_LOCAL_REPRODUCED"
+    },
+    {
+      "id": "JUDGE-WIN-02",
+      "severity": "high",
+      "owner": "desktop-release/integration",
+      "source": "tests/desktop/desktop-windows-packaging.test.ts:86,130",
+      "symbol": "desktop-windows packaging and update refusal assertions",
+      "reproduction": "pnpm exec vitest run tests/e2e/auth-credits-refuse-matrix.test.ts tests/desktop/desktop-windows-packaging.test.ts tests/e2e/desktop-command-interactions-golden.test.ts",
+      "output": "expected release source to contain publish: onTagOrDraft; update transport named-refusal deep equality mismatch",
+      "actualImpact": "Windows publication/update contract acceptance fails.",
+      "dependencies": ["desktop/windows/scripts/release.mjs", "desktop/windows/src/lib/update-policy.ts"],
+      "fix": "Diagnose implementation/oracle drift; preserve draft-only explicit-authority publication and named update refusal protections.",
+      "acceptance": "Both exact tests and entire desktop suite pass without weaker assertions; applicable supported-host proof remains separate.",
+      "status": "OPEN_LOCAL_REPRODUCED"
+    },
+    {
+      "id": "JUDGE-CMD-03",
+      "severity": "high",
+      "owner": "shells/integration",
+      "source": "tests/e2e/desktop-command-interactions-golden.test.ts:508,554,558",
+      "symbol": "invoke",
+      "output": "package-install/remove menu and palette invocations expected engine dispatch but received an empty dispatch list; combined focused run has 26 failures",
+      "actualImpact": "Desktop command front-door parity is not established on current candidate.",
+      "dependencies": ["apps/desktop-shell/src/chrome.ts", "apps/desktop-shell/src/interaction-commands.ts"],
+      "fix": "Reconcile each typed command payload and dispatch with meaningful real front-door acceptance; do not label all failures stale without evidence.",
+      "acceptance": "Whole unchanged golden command suite proves menu/palette/accelerator parity, followed by the unchanged full gate.",
+      "status": "OPEN_LOCAL_REPRODUCED"
+    },
+    {
+      "id": "JUDGE-NATIVE-04",
+      "relatedTaskIds": ["DL-COV-03", "DL-COV-04", "DL-HARD-05", "DL-PRIV-06"],
+      "severity": "high",
+      "owner": "desktop-linux/integration",
+      "source": "docs/audits/production-swarm/fix-desktop-linux.json:28-31,47-48",
+      "symbol": "verification and remaining native acceptance",
+      "output": "smoke FAILED — the packaged app did not print its proof line; Desktop startup failed. See local logs.",
+      "actualImpact": "Latest capture-enabled native runtime failed; earlier passing artifacts do not establish final-source acceptance.",
+      "independentlyRerunByJudge": false,
+      "dependencies": ["desktop/linux/src/electron/main.ts", "desktop/linux/scripts/smoke.mjs"],
+      "fix": "Diagnose locally; preserve byte/frame/security/PNG assertions and finish outstanding command/IPC/dump-retention evidence.",
+      "acceptance": "Current-source native smoke and three fresh packaged runs pass with actual PNG verification and explicit remaining native acceptance closed.",
+      "status": "OPEN_LOCAL_BUILDER_REPORTED"
+    },
+    {
+      "id": "JUDGE-EVIDENCE-05",
+      "severity": "blocker",
+      "owner": "integration",
+      "source": "docs/audits/production-swarm/FINAL.md and FINAL.json (missing)",
+      "symbol": "final per-node/task accounting",
+      "actualImpact": "No final complete remaining list, per-task disposition or independent final-current-source front-door acceptance exists in the required final artifacts.",
+      "dependencies": ["identity-builder outcome", "all integrated front-door evidence", "final task closure mapping"],
+      "fix": "Persist required FINAL artifacts and explicitly account for missing identity-builder outcome and all remaining requirements.",
+      "acceptance": "Complete per-node/task mappings, supported verdict, exact missing-input/action requests and durable final-candidate gate/site/desktop/CLI/SDK evidence.",
+      "status": "OPEN_LOCAL_MISSING_EVIDENCE"
+    }
+  ],
+  "verification": [
+    {
+      "command": "pnpm gate",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exitCode": 1,
+      "passedStages": ["syntax: 367 TypeScript modules", "boundaries: 27 packages", "contracts"],
+      "failedStage": "traceability",
+      "notReachedStages": ["sites", "desktop", "publish-readiness", "build", "full test", "lint"],
+      "evidence": "judge.md: reproduced failure transcript; independently executed in this review"
+    },
+    {
+      "command": "pnpm exec vitest run tests/e2e/auth-credits-refuse-matrix.test.ts tests/desktop/desktop-windows-packaging.test.ts tests/e2e/desktop-command-interactions-golden.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exitCode": 1,
+      "testsPassed": 113,
+      "testsFailed": 26,
+      "evidence": "/home/devuser/.local/share/rtk/tee/1790864714_vitest_run.log",
+      "evidenceDurability": "host-local; integration must preserve durable redacted evidence"
+    },
+    {"command": "git diff --check", "exitCode": 0, "meaning": "Whitespace validation only, not safety or production acceptance"},
+    {"command": "Artifact JSON parse/count verification", "exitCode": 0, "meaning": "Schema-variable extracted rows are not unique task counts or closure verification"}
+  ],
+  "counts": {
+    "auditReportNodesPresent": 12,
+    "builderReportNodesPresent": 11,
+    "expectedBuilderNodes": 12,
+    "missingBuilderReports": ["identity"],
+    "auditExtractedTaskOrFindingRows": 72,
+    "builderExtractedTaskOrFindingRows": 239,
+    "totalExtractedRowsNotDeduplicated": 311,
+    "uniqueFinalTasksVerified": null,
+    "backlogMappingRows": 90,
+    "requirementsMappingRows": 109,
+    "auditFindingsMappingRows": 73,
+    "synthesisReportedGapRootsNotFinalClosure": {"local": 113, "external": 22, "intentionalNonlaunch": 13}
+  },
+  "perNodeExtractedRows": {
+    "audit-assets-plugins": 8, "audit-authoring": 5, "audit-billing-data": 6,
+    "audit-cli": 5, "audit-delivery-ops": 6, "audit-desktop-linux": 0,
+    "audit-desktop-release": 7, "audit-engine": 8, "audit-identity": 5,
+    "audit-profiles-kids": 5, "audit-shells": 9, "audit-sites-ui": 8,
+    "fix-assets-plugins": 18, "fix-authoring": 25, "fix-billing-data": 31,
+    "fix-cli": 21, "fix-delivery-ops": 69, "fix-desktop-linux": 7,
+    "fix-desktop-release": 7, "fix-engine": 19, "fix-profiles-kids": 8,
+    "fix-shells": 14, "fix-sites-ui": 20
+  },
+  "perNodeDisposition": {
+    "audit-authoring": "NO_TOP_LEVEL_VERDICT_FOUND",
+    "audit-delivery-ops": "NO_TOP_LEVEL_VERDICT_FOUND",
+    "audit-desktop-linux": "NO_TOP_LEVEL_VERDICT_FOUND; row extraction schema mismatch, not zero findings",
+    "otherNineAuditReports": "PARTIAL_REPORTED_NOT_INDEPENDENTLY_CERTIFIED",
+    "allElevenBuilderReports": "PARTIAL_REPORTED_NOT_INDEPENDENTLY_CERTIFIED",
+    "identityBuilder": "MISSING_REPORT",
+    "independent-final-judge": "FAIL"
+  },
+  "externalGateRequests": [
+    {"id": "EXT-DB-OPS", "request": "Authorized real nonproduction DB environment, restricted credentials via secret storage, migration/rollback, restore/reconciliation and operations evidence; production changes need separate action-specific authority.", "evidence": ["docs/audits/production-swarm/fix-billing-data.json", "docs/production-activation.md"]},
+    {"id": "EXT-PROVIDERS", "request": "Genuine auth/email/provider/model/keyring/Stripe configuration through approved secret storage and redacted real end-to-end identity, webhook/refund, hosted-AI metering and failure-path proof; no LIVE activation or money movement authorized.", "evidence": ["docs/audits/production-swarm/audit-identity.json", "docs/audits/production-swarm/fix-billing-data.json", "docs/audits/production-swarm/fix-desktop-linux.json"]},
+    {"id": "EXT-RELEASE-HOSTS", "request": "Supported macOS/Windows hosts and legitimate signing/notarization identities, platform runtime/package/update proof; publication needs explicit separate authority and approved existing release target.", "evidence": ["docs/audits/production-swarm/fix-desktop-release.json"]},
+    {"id": "EXT-LEGAL-RIGHTS", "request": "Genuine licence/trademark/privacy/Kids clearance and reviewed assets rights/provenance/moderation/delivery evidence; ordinary product choices remain delegated.", "evidence": ["docs/audits/go-live-backlog.json", "docs/audits/production-swarm/fix-assets-plugins.json", "docs/audits/production-swarm/fix-profiles-kids.json"]},
+    {"id": "EXT-DELIVERY-OPS", "request": "Deployment/DNS/TLS/storage/monitoring/backups/incident ownership and operational proof; deployment/publication/public posting/new spend/account creation remain separately unauthorized.", "evidence": ["docs/audits/production-swarm/fix-delivery-ops.json", "docs/production-activation.md"]}
+  ],
+  "coverageHoles": [
+    "Previously read files cannot be reread under retry instruction; their tool contents are unavailable in current context, so exhaustive all-artifact/source review is not attested.",
+    "Only selected risky workflow/test diffs were independently reviewed; whole-application safety is unproven.",
+    "All gate stages after traceability remain required and were not reached in this run.",
+    "All final-candidate site/browser, desktop/native, CLI and SDK front-door proofs remain unverified by this judge.",
+    "Native current-source capture failure is builder-reported, not independently rerun.",
+    "Megalist mapping presence and pre-integration counts are not final task acceptance or deduplicated final disposition.",
+    "External blockers and intentional nonlaunch exclusions remain full-production gaps even after local repair."
+  ],
+  "controls": {
+    "applicationSourceReadOnly": true,
+    "noCommitsPushDeployPublish": true,
+    "noProductionDataChanges": true,
+    "noSecretValuesPrinted": true,
+    "noCheckWeakening": true,
+    "noNewSpendOrProviderAccounts": true
+  }
+  }
+}

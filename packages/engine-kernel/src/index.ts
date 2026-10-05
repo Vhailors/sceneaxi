@@ -45,11 +45,6 @@ export {
 
 export type {
   FrameClock,
-  KernelCommand,
-  KernelSessionEvent,
-  KernelSessionSaveArtifact,
-  KernelSnapshot,
-  ProductManifest,
   RarityCandidate,
   RarityNamespace,
   RarityOutcome,
@@ -100,3 +95,10 @@ export {
   type SceneKernelSession,
   type SceneKernelSnapshot,
 } from "./scene-session.js";
+
+export type { ProductManifest, KernelCommand, KernelSnapshot, KernelSessionEvent, KernelSessionSaveArtifact } from "./session.js";
+
+export type { GameplayDefinition, GameplayEffect, GameplaySnapshot, GameplayActionCommand } from "./gameplay.js";
+
+// Deliberate SDK export: host-sampled numeric input, no DOM or input authority.
+export { createGamepadActionSampler, type GamepadActionSampler, type GameplayGamepadSample } from "./gameplay.js";

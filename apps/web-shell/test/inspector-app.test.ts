@@ -6,10 +6,11 @@
  * `bin-smoke.test.ts` covers the socket, and `refuse-matrix.test.ts` covers the
  * refusal registry's reachability.
  */
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { Window as HappyWindow } from "happy-dom";
 import {
   createDocument,
   writeDocumentFile,
@@ -23,6 +24,8 @@ import {
   createInspectorApp,
   createInspectorSession,
   inspectorPageHtml,
+  startInspectorDevServer,
+  type AssistantPanel,
   type InspectorApp,
   type InspectorSession,
   type InspectorSnapshot,
@@ -31,23 +34,27 @@ import {
 function fixtureDir(): string {
   const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-app-")), "root");
   mkdirSync(dir);
+
   return dir;
 }
 
 function writeScene(dir: string, name: string, data: JsonObject): void {
   const path = join(dir, name);
   mkdirSync(dirname(path), { recursive: true });
+
   const result = writeDocumentFile(
     path,
     createDocument({ id: name.replace(/\.json$/, ""), data }),
     { cwd: dir },
   );
+
   expect(result.ok).toBe(true);
 }
 
 function project(): { dir: string; app: InspectorApp } {
   const dir = fixtureDir();
   writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1, y: 2 }] });
+
   return { dir, app: createInspectorApp({ projectRoot: dir }) };
 }
 
@@ -68,7 +75,9 @@ const ADMIN_ENV_VARS = [
 /** Build an app with the ambient identity environment removed, then restore it. */
 function assistantProject(): { dir: string; app: InspectorApp } {
   const saved = ADMIN_ENV_VARS.map((name) => [name, process.env[name]] as const);
+
   for (const [name] of saved) Reflect.deleteProperty(process.env, name);
+
   try {
     return project();
   } finally {
@@ -106,6 +115,120 @@ const EDIT = {
 function post(app: InspectorApp, path: string, payload: unknown) {
   return app.handle({ method: "POST", url: path, body: JSON.stringify(payload) });
 }
+
+const ownedRegressionRoots: string[] = [];
+
+afterEach(() => {
+  for (const root of ownedRegressionRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+describe("served inspector production regressions", () => {
+  it("redacts unexpected synchronous and asynchronous failures and survives a real socket failure", async () => {
+    const { dir } = project();
+    ownedRegressionRoots.push(dirname(dir));
+    const sentinel = "AUDIT_REDACTION_SENTINEL";
+    const session = createInspectorSession({ cwd: dir });
+
+    const sync = createInspectorApp({ projectRoot: dir, session: {
+      ...session, snapshot: () => { throw new Error(sentinel); },
+    } });
+
+    const response = sync.handle({ method: "GET", url: "/api/state" });
+    expect(response.status).toBe(500);
+    expect(body(response).reason).toBe(WEB_SHELL_REFUSALS.handlerFailed);
+    expect(response.body).not.toContain(sentinel);
+    const assistant = { ask: async () => { throw new Error(sentinel); } } as unknown as AssistantPanel;
+    const asyncApp = createInspectorApp({ projectRoot: dir, assistant });
+    const failed = await asyncApp.handleAsync({ method: "POST", url: "/api/assistant", body: '{"prompt":"hello"}' });
+    expect(failed.status).toBe(500);
+    expect(failed.body).not.toContain(sentinel);
+    expect(body(failed).reason).toBe(WEB_SHELL_REFUSALS.handlerFailed);
+    const server = await startInspectorDevServer({ projectRoot: dir, host: "127.0.0.1", port: 0, assistant });
+
+    try {
+      const socketFailure = await fetch(server.url + "api/assistant", { method: "POST", body: '{"prompt":"hello"}' });
+      expect(socketFailure.status).toBe(500);
+      expect(await socketFailure.text()).not.toContain(sentinel);
+      expect((await fetch(server.url + "api/state")).status).toBe(200);
+    } finally { await server.close(); }
+  });
+
+  it("permits root review, clears rejected diff and reconciles uncertain acceptance without retrying writes", async () => {
+    const { dir, app } = project();
+    ownedRegressionRoots.push(dirname(dir));
+    const before = readFileSync(join(dir, "scene.json"));
+    const window = new HappyWindow({ url: "http://127.0.0.1/", settings: { enableJavaScriptEvaluation: true } });
+    let failure: "none" | "abort" | "nonjson" | "accept-lost" = "none";
+    let accepts = 0;
+    const errors: unknown[] = [];
+    window.addEventListener("error", (event) => errors.push(event));
+    window.fetch = (async (url: string, options?: { method?: string; body?: string }) => {
+      const path = String(url);
+
+      if (path === "/api/accept") accepts += 1;
+
+      if (failure === "abort" && path === "/api/propose") throw new Error("Failed to fetch");
+
+      if (failure === "nonjson" && path === "/api/propose") return { json: async () => { throw new SyntaxError("invalid JSON"); } };
+      const result = app.handle({ method: options?.method ?? "GET", url: path, ...(options?.body === undefined ? {} : { body: options.body }) });
+
+      if (failure === "accept-lost" && path === "/api/accept") throw new Error("response lost after commit");
+
+      return { json: async () => JSON.parse(result.body) };
+    }) as unknown as typeof window.fetch;
+
+    try {
+      window.document.write(inspectorPageHtml(dir));
+      await window.happyDOM.waitUntilComplete();
+      const input = (id: string) => window.document.getElementById(id) as unknown as { value: string };
+
+      const click = async (id: string) => {
+        (window.document.getElementById(id) as unknown as { click(): void }).click();
+        await window.happyDOM.waitUntilComplete();
+      };
+
+      const submit = async () => {
+        window.document.getElementById("edit")?.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+        await window.happyDOM.waitUntilComplete();
+      };
+
+      input("jsonPointer").value = "";
+      input("newValue").value = JSON.stringify(JSON.parse(before.toString()));
+      expect(window.document.getElementById("jsonPointer")?.hasAttribute("required")).toBe(false);
+      await submit();
+      expect(window.document.getElementById("phase")?.textContent).toBe("reviewing");
+      expect(readFileSync(join(dir, "scene.json"))).toEqual(before);
+      await click("reject");
+      expect(window.document.getElementById("diff")?.textContent).toContain("No current proposal");
+
+      for (const value of ["abort", "nonjson"] as const) {
+        failure = value;
+        await submit();
+        expect(window.document.getElementById("note")?.textContent).toContain("outcome unknown");
+        expect(window.document.getElementById("accept")?.hasAttribute("disabled")).toBe(true);
+        expect(window.document.getElementById("propose")?.hasAttribute("disabled")).toBe(true);
+        failure = "none";
+        await click("reconcile");
+      }
+
+      input("jsonPointer").value = EDIT.jsonPointer;
+      input("newValue").value = "13";
+      await submit();
+      expect(readFileSync(join(dir, "scene.json"))).toEqual(before);
+      failure = "accept-lost";
+      await click("accept");
+      expect(window.document.getElementById("phase")?.textContent).toBe("unknown");
+      await click("accept");
+      expect(accepts).toBe(1);
+      failure = "none";
+      await click("reconcile");
+      expect(window.document.getElementById("phase")?.textContent).toBe("applied");
+      expect(window.document.getElementById("diff")?.textContent).toContain("history");
+      expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain('"x": 13');
+      expect(errors).toEqual([]);
+    } finally { window.close(); }
+  });
+});
 
 describe("served inspector page", () => {
   it("serves a self-contained page naming the served project root", () => {
@@ -172,6 +295,7 @@ describe("served inspector protocol", () => {
     const accepted = body(
       post(app, "/api/accept", { reviewToken: review.reviewToken }),
     );
+
     expect(accepted.ok).toBe(true);
     expect(accepted.snapshot?.phase).toBe("applied");
     expect(accepted.snapshot?.appliedPaths).toEqual(["scene.json"]);
@@ -186,6 +310,7 @@ describe("served inspector protocol", () => {
     const rejected = body(
       post(app, "/api/reject", { reviewToken: review.reviewToken }),
     );
+
     expect(rejected.ok).toBe(true);
     expect(rejected.snapshot?.phase).toBe("rejected");
     expect(rejected.snapshot?.renderedDiff).toBeNull();
@@ -194,6 +319,7 @@ describe("served inspector protocol", () => {
 
   it("reports the served document's id and content hash", () => {
     const { dir, app } = project();
+
     const response = app.handle({
       method: "GET",
       url: "/api/document?path=scene.json",
@@ -209,6 +335,7 @@ describe("served inspector protocol", () => {
 
   it("drives the deterministic fixture assistant through the served app", async () => {
     const { app } = assistantProject();
+
     const response = await app.handleAsync({
       method: "POST",
       url: "/api/assistant",
@@ -228,6 +355,7 @@ describe("served inspector protocol", () => {
 
   it("keeps hosted mode explicit and default-off on the served route", async () => {
     const { app } = assistantProject();
+
     const response = await app.handleAsync({
       method: "POST",
       url: "/api/assistant",
@@ -246,6 +374,7 @@ describe("served inspector drives the existing session, not a second protocol", 
     const { dir } = project();
     const calls: string[] = [];
     const real = createInspectorSession({ cwd: dir });
+
     // A recording proxy over the real session: the routes must reach these
     // methods, and the behaviour underneath must still be authoring-core's.
     const session: InspectorSession = {
@@ -255,6 +384,7 @@ describe("served inspector drives the existing session, not a second protocol", 
       reject: () => (calls.push("reject"), real.reject()),
       refreshRecovery: () => (calls.push("refreshRecovery"), real.refreshRecovery()),
     };
+
     const app = createInspectorApp({ projectRoot: dir, session });
 
     app.handle({ method: "GET", url: INSPECTOR_ACTIONS.state.path });
@@ -280,15 +410,18 @@ describe("served inspector drives the existing session, not a second protocol", 
 
   it("every declared session action names a real InspectorSession method", () => {
     const { dir } = project();
+
     const session = createInspectorSession({ cwd: dir }) as unknown as Record<
       string,
       unknown
     >;
+
     const declared = Object.values(INSPECTOR_ACTIONS)
       .map((route): string | null => route.session)
       .filter((name): name is string => name !== null);
 
     expect(declared.length).toBeGreaterThan(0);
+
     for (const name of declared) {
       expect(typeof session[name], `${name} is not a session method`).toBe("function");
     }
@@ -314,6 +447,7 @@ describe("served inspector fails closed", () => {
 
   it("refuses a body that is not a JSON object", () => {
     const { app } = project();
+
     for (const raw of ["{oops", "[1,2]", '"a string"', "null"]) {
       const response = app.handle({ method: "POST", url: "/api/propose", body: raw });
       expect(response.status, raw).toBe(400);
@@ -323,23 +457,27 @@ describe("served inspector fails closed", () => {
 
   it("refuses an oversized body", () => {
     const { app } = project();
+
     const response = app.handle({
       method: "POST",
       url: "/api/propose",
       body: JSON.stringify({ ...EDIT, newValue: "x".repeat(MAX_REQUEST_BODY_BYTES) }),
     });
+
     expect(response.status).toBe(413);
     expect(body(response).reason).toBe(WEB_SHELL_REFUSALS.requestBodyTooLarge);
   });
 
   it("refuses a malformed edit rather than guessing a default", () => {
     const { app } = project();
+
     const cases: Array<[string, unknown]> = [
       ["missing documentPath", { jsonPointer: "/data", newValue: 1 }],
       ["empty documentPath", { documentPath: "", jsonPointer: "/data", newValue: 1 }],
       ["non-string pointer", { documentPath: "scene.json", jsonPointer: 7, newValue: 1 }],
       ["missing newValue", { documentPath: "scene.json", jsonPointer: "/data" }],
     ];
+
     for (const [label, payload] of cases) {
       const response = post(app, "/api/propose", payload);
       expect(response.status, label).toBe(400);
@@ -363,6 +501,7 @@ describe("served inspector fails closed", () => {
       ...EDIT,
       documentPath: join(dirname(dir), "outside.json"),
     });
+
     expect(absolute.status).toBe(403);
   });
 
@@ -375,6 +514,7 @@ describe("served inspector fails closed", () => {
       ...EDIT,
       documentPath: "linked.json",
     });
+
     expect(response.status).toBe(403);
     expect(body(response).reason).toBe(
       WEB_SHELL_REFUSALS.documentOutsideProjectRoot,
@@ -383,6 +523,7 @@ describe("served inspector fails closed", () => {
 
   it("answers an unexpected routing failure instead of throwing", () => {
     const { dir } = project();
+
     const app = createInspectorApp({
       projectRoot: dir,
       session: {
@@ -392,6 +533,7 @@ describe("served inspector fails closed", () => {
         },
       },
     });
+
     const response = app.handle({ method: "GET", url: "/api/state" });
     expect(response.status).toBe(500);
     expect(body(response).reason).toBe(WEB_SHELL_REFUSALS.handlerFailed);
@@ -404,20 +546,24 @@ describe("served inspector fails closed", () => {
     expect(body(absent).reason).toBe(WEB_SHELL_REFUSALS.documentUnreadable);
 
     writeFileSync(join(dir, "notes.json"), "[1,2,3]", "utf8");
+
     const notADocument = app.handle({
       method: "GET",
       url: "/api/document?path=notes.json",
     });
+
     expect(notADocument.status).toBe(422);
     expect(body(notADocument).reason).toBe(WEB_SHELL_REFUSALS.documentUnreadable);
   });
 
   it("surfaces an authoring-core refusal as a refusal, not a 200", () => {
     const { app } = project();
+
     const response = post(app, "/api/propose", {
       ...EDIT,
       jsonPointer: "/data/entities/0/missing/deeper",
     });
+
     expect(response.status).toBe(409);
     const payload = body(response);
     expect(payload.reason).toBe(WEB_SHELL_REFUSALS.inspectorRefused);
@@ -431,10 +577,12 @@ describe("served inspector fails closed", () => {
     const second = body(post(app, "/api/propose", { ...EDIT, newValue: 17 }));
 
     expect(first.reviewToken).not.toBe(second.reviewToken);
+
     for (const action of ["accept", "reject"] as const) {
       const stale = post(app, `/api/${action}`, {
         reviewToken: first.reviewToken,
       });
+
       expect(stale.status, action).toBe(409);
       expect(body(stale).reason, action).toBe(
         WEB_SHELL_REFUSALS.reviewTokenInvalid,
@@ -447,6 +595,7 @@ describe("served inspector fails closed", () => {
     const accepted = post(app, "/api/accept", {
       reviewToken: second.reviewToken,
     });
+
     expect(accepted.status).toBe(200);
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain('"x": 17');
   });
@@ -460,10 +609,12 @@ describe("served inspector fails closed", () => {
 
   it("refuses a pointer authoring-core rejects, keeping the session idle", () => {
     const { app } = project();
+
     const response = post(app, "/api/propose", {
       ...EDIT,
       jsonPointer: "/data/entities/0/missing/deeper",
     });
+
     expect(response.status).toBe(409);
     const payload = body(response);
     expect(payload.reason).toBe(WEB_SHELL_REFUSALS.inspectorRefused);

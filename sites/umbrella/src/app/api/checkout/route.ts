@@ -23,8 +23,16 @@ export const dynamic = "force-dynamic";
 
 function refusalResponse(request: NextRequest, reason: string, message: string): Response {
   serverLog("warn", "umbrella.checkout.refused", { reason });
+
   if (request.headers.get("accept")?.includes("application/json")) {
-    return NextResponse.json({ ok: false, reason, message }, { status: 402 });
+    const status = reason === "SITE_REQUEST_CROSS_ORIGIN" ? 403
+      : reason === "BILLING_CHECKOUT_REQUEST_INVALID" ? 400
+      : reason === "BILLING_CHECKOUT_RATE_LIMITED" ? 429 : 402;
+
+    return NextResponse.json({ ok: false, reason, message }, {
+      status,
+      ...(status === 429 ? { headers: { "Retry-After": "300" } } : {}),
+    });
   }
 
   // A same-site relative `Location`, as the login flow answers: nothing here is derived
@@ -52,7 +60,55 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const form = await request.formData();
+  // Decode only a bounded form. An unsupported type, oversized body or truncated
+  // multipart is user input, not an unhandled server/provider failure.
+  let form: FormData;
+
+  try {
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!/^(application\/x-www-form-urlencoded|multipart\/form-data)(?:;|$)/i.test(contentType)) {
+      throw new Error("unsupported checkout form");
+    }
+
+    const reader = request.body?.getReader();
+
+    if (reader === undefined) throw new Error("missing checkout form");
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+
+    try {
+      while (true) {
+        const chunk = await reader.read();
+
+        if (chunk.done) break;
+        size += chunk.value.byteLength;
+
+        if (size > 8192) {
+          await reader.cancel();
+          throw new Error("oversized checkout form");
+        }
+
+        chunks.push(chunk.value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+
+    form = await new Response(bytes, { headers: { "content-type": contentType } }).formData();
+
+    if ([...form.keys()].length !== 2 || form.getAll("packId").length !== 1 || form.getAll("attempt").length !== 1) {
+      throw new Error("ambiguous checkout form");
+    }
+  } catch {
+    return refusalResponse(request, "BILLING_CHECKOUT_REQUEST_INVALID", SITE_REFUSALS.BILLING_CHECKOUT_REQUEST_INVALID);
+  }
+
   const packIdEntry = form.get("packId");
 
   const packId =

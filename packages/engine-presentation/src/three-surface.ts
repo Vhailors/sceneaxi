@@ -112,27 +112,32 @@ export function decodeBase64(encoded: string): Uint8Array {
   const values: number[] = [];
   let buffer = 0;
   let bits = 0;
+
   for (const character of encoded) {
     if (character === "=" || character === "\n" || character === "\r") continue;
     const index = BASE64_ALPHABET.indexOf(character);
+
     if (index < 0) {
       throw new ThreePresentationError(
         "capture-unavailable",
         "Captured data URL is not valid base64.",
       );
     }
+
     buffer = (buffer << 6) | index;
     bits += 6;
+
     if (bits >= 8) {
       bits -= 8;
       values.push((buffer >> bits) & 0xff);
     }
   }
+
   return new Uint8Array(values);
 }
 
 function requirePositiveInteger(value: number, field: string) {
-  if (!Number.isInteger(value) || value <= 0) {
+  if (!Number.isSafeInteger(value) || value <= 0 || value > 8192) {
     throw new ThreePresentationError(
       "invalid-viewport",
       `${field} must be a positive integer.`,
@@ -141,7 +146,7 @@ function requirePositiveInteger(value: number, field: string) {
 }
 
 function requireFiniteRatio(value: number) {
-  if (!Number.isFinite(value) || value <= 0) {
+  if (!Number.isFinite(value) || value <= 0 || value > 4) {
     throw new ThreePresentationError(
       "invalid-viewport",
       "pixelRatio must be a finite positive number.",
@@ -159,7 +164,37 @@ function asRenderTargets(
       "Surface received a renderable it cannot draw.",
     );
   }
+
   return { scene, camera };
+}
+
+type CanvasRendererOwner = { renderer: WebGLRenderer; leased: boolean; signature: string };
+
+// One renderer for each retained canvas, not one set of Three default textures per
+// session. Weak ownership lets detached canvases collect; explicit terminal release
+// below destroys the owned context. Per-session geometry/composers are still disposed.
+const canvasRenderers = new WeakMap<ThreeCanvasTarget, CanvasRendererOwner>();
+
+/** Final canvas teardown only. A released canvas needs a restored/new context to mount again. */
+export function releaseThreeCanvas(canvas: ThreeCanvasTarget): void {
+  const owner = canvasRenderers.get(canvas);
+
+  if (owner === undefined) return;
+
+  if (owner.leased) throw new ThreePresentationError("already-mounted", "Canvas is still mounted.");
+  canvasRenderers.delete(canvas);
+  owner.renderer.dispose();
+  owner.renderer.forceContextLoss();
+}
+
+function requireFramebuffer(width: number, height: number, ratio: number) {
+  requirePositiveInteger(width, "width");
+  requirePositiveInteger(height, "height");
+  requireFiniteRatio(ratio);
+  const bufferWidth = Math.floor(width * ratio);
+    const bufferHeight = Math.floor(height * ratio);
+
+    if (bufferWidth < 1 || bufferHeight < 1 || bufferWidth > 8192 || bufferHeight > 8192 || bufferWidth * bufferHeight > 16_777_216) throw new ThreePresentationError("invalid-viewport", "Framebuffer requires 1..8192 pixels per dimension and at most 16777216 pixels.");
 }
 
 /**
@@ -174,12 +209,14 @@ export function createWebGLCanvasSurface(
   // The contract is typed, but an untyped JavaScript consumer can still hand over
   // anything, so the requirement is enforced as well as declared.
   const candidate = options.canvas as Partial<ThreeCanvasTarget> | null | undefined;
+
   if (candidate === null || typeof candidate !== "object") {
     throw new ThreePresentationError(
       "invalid-canvas",
       "A canvas is required for the WebGL surface.",
     );
   }
+
   if (
     typeof candidate.addEventListener !== "function" ||
     typeof candidate.removeEventListener !== "function"
@@ -189,9 +226,17 @@ export function createWebGLCanvasSurface(
       "A WebGL canvas must support context lifecycle events.",
     );
   }
+
   const canvas = options.canvas;
   const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
-  const renderer = new WebGLRenderer({
+  const signature = JSON.stringify([options.antialias ?? true, preserveDrawingBuffer, options.alpha ?? false]);
+  const existing = canvasRenderers.get(canvas);
+
+  if (existing?.leased) throw new ThreePresentationError("already-mounted", "Canvas already has an active owner.");
+
+  if (existing !== undefined && existing.signature !== signature) throw new ThreePresentationError("invalid-canvas", "Canvas construction settings changed; use a new canvas.");
+
+  const renderer = existing?.renderer ?? new WebGLRenderer({
     // `ThreeCanvasTarget` is structural so this package needs no DOM lib. A consumer
     // that *does* take the DOM lib — a site type-checking this source — sees the
     // renderer's own `HTMLCanvasElement | OffscreenCanvas` here, which a structural
@@ -204,6 +249,10 @@ export function createWebGLCanvasSurface(
     preserveDrawingBuffer,
     alpha: options.alpha ?? false,
   });
+
+  const owner = existing ?? { renderer, leased: false, signature };
+  owner.leased = true;
+  canvasRenderers.set(canvas, owner);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.35;
@@ -255,24 +304,31 @@ export function createWebGLCanvasSurface(
     }
   }
 
+  let disposed = false;
+  const requireLive = () => { if (disposed) throw new ThreePresentationError("not-mounted", "Surface is disposed."); };
+
   let drawn = false;
-  let contextAvailable = true;
+  let contextAvailable = !renderer.getContext().isContextLost();
+
   const onContextLost = () => {
     contextAvailable = false;
     drawn = false;
   };
+
   const onContextRestored = () => {
     disposeComposer();
     contextAvailable = true;
     drawn = false;
   };
+
   try {
     canvas.addEventListener("webglcontextlost", onContextLost);
     canvas.addEventListener("webglcontextrestored", onContextRestored);
   } catch (error) {
     canvas.removeEventListener("webglcontextlost", onContextLost);
     canvas.removeEventListener("webglcontextrestored", onContextRestored);
-    renderer.dispose();
+    owner.leased = false;
+    releaseThreeCanvas(canvas);
     throw error;
   }
 
@@ -280,9 +336,8 @@ export function createWebGLCanvasSurface(
     kind: "webgl-canvas",
 
     resize(width, height, pixelRatio) {
-      requirePositiveInteger(width, "width");
-      requirePositiveInteger(height, "height");
-      requireFiniteRatio(pixelRatio);
+      requireFramebuffer(width, height, pixelRatio);
+      requireLive();
       drawn = false;
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
@@ -294,8 +349,10 @@ export function createWebGLCanvasSurface(
     },
 
     draw(sceneHandle, cameraHandle, settings = DEFAULT_SETTINGS) {
+      requireLive();
       const targets = asRenderTargets(sceneHandle, cameraHandle);
-      if (!contextAvailable) {
+
+      if (!contextAvailable || renderer.getContext().isContextLost()) {
         return Object.freeze({ drawCalls: 0, pixelsDrawn: false });
       }
 
@@ -315,6 +372,7 @@ export function createWebGLCanvasSurface(
       }
 
       drawn = true;
+
       return Object.freeze({
         drawCalls: renderer.info.render.calls,
         pixelsDrawn: true,
@@ -322,29 +380,38 @@ export function createWebGLCanvasSurface(
     },
 
     capture() {
+      requireLive();
+
       if (typeof canvas.toDataURL !== "function") {
         throw new ThreePresentationError(
           "capture-unsupported",
           "Canvas does not support toDataURL capture.",
         );
       }
+
       if (!drawn) return null;
       const dataUrl = canvas.toDataURL("image/png");
       const separator = dataUrl.indexOf(",");
+
       if (!dataUrl.startsWith("data:image/png;base64,") || separator < 0) {
         throw new ThreePresentationError(
           "capture-unavailable",
           "Canvas returned a non-PNG data URL.",
         );
       }
+
       return decodeBase64(dataUrl.slice(separator + 1));
     },
 
     dispose() {
+      if (disposed) return;
+      disposed = true;
       disposeComposer();
       canvas.removeEventListener("webglcontextlost", onContextLost);
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
-      renderer.dispose();
+      renderer.renderLists.dispose();
+      renderer.info.reset();
+      owner.leased = false;
       drawn = false;
       contextAvailable = false;
     },
@@ -362,9 +429,7 @@ export function createHeadlessThreeSurface(): ThreePresentationSurface {
     kind: "headless",
 
     resize(width, height, pixelRatio) {
-      requirePositiveInteger(width, "width");
-      requirePositiveInteger(height, "height");
-      requireFiniteRatio(pixelRatio);
+      requireFramebuffer(width, height, pixelRatio);
     },
 
     draw(sceneHandle, cameraHandle) {
@@ -374,6 +439,7 @@ export function createHeadlessThreeSurface(): ThreePresentationSurface {
       targets.scene.traverse((object) => {
         if ((object instanceof Mesh || object instanceof Points) && object.visible) drawCalls += 1;
       });
+
       return Object.freeze({ drawCalls, pixelsDrawn: false });
     },
 

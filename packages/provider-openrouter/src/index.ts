@@ -19,12 +19,14 @@ import { Ajv, type ValidateFunction } from "ajv";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   isJsonObject,
+  isJsonValue,
   parseUnambiguousJson,
   type JsonObject,
   type PackageSeam,
 } from "@sceneaxi/schemas";
 
 export const OPENROUTER_ADAPTER_SCHEMA_VERSION = 1 as const;
+
 export const OPENROUTER_PROVIDER_ID = "openrouter" as const;
 
 export const seam: PackageSeam = Object.freeze({
@@ -132,11 +134,13 @@ function validateOptions(options: CreateOpenRouterAdapterOptions) {
     options.model.model.trim().length > 0 &&
     options.model.quantization.trim().length > 0 &&
     options.model.version.trim().length > 0;
+
   const validEval =
     options.eval.mode === "deterministic" &&
     options.eval.allowFallbacks === false &&
     options.eval.temperature === 0 &&
     Number.isSafeInteger(options.eval.seed);
+
   if (!validModel || !validEval || typeof options.transport !== "function") {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.configurationInvalid,
@@ -173,7 +177,9 @@ function transportRequest(
     temperature: 0 as const,
     seed: evalConfig.seed,
   };
+
   if (request.operation === "complete") return Object.freeze(base);
+
   return Object.freeze({
     ...base,
     tools: Object.freeze(
@@ -198,6 +204,7 @@ function parseTransportResult(
   pinnedModel: ModelDescriptor,
 ) {
   const executedModel = isRecord(result) ? result["executedModel"] : undefined;
+
   if (
     !isModelDescriptor(executedModel) ||
     !sameModel(executedModel, pinnedModel)
@@ -207,6 +214,7 @@ function parseTransportResult(
       "The OpenRouter transport did not attest the exact configured model descriptor.",
     );
   }
+
   return Object.freeze({
     response: result.response,
     executedModel: Object.freeze({ ...executedModel }),
@@ -225,33 +233,40 @@ function parseChoice(payload: unknown, pinnedModel: ModelDescriptor) {
       "OpenRouter returned an invalid response envelope.",
     );
   }
+
   if (payload["model"] !== pinnedModel.model) {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseModelMismatch,
       "OpenRouter reported a model different from the exact configured pin.",
     );
   }
+
   const rawChoices = payload["choices"];
   const first = Array.isArray(rawChoices) ? rawChoices[0] : undefined;
+
   if (!isRecord(first) || !isRecord(first["message"])) {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned no valid first choice.",
     );
   }
+
   const rawFinish = first["finish_reason"];
+
   const finishReason =
     rawFinish === "stop" ||
     rawFinish === "length" ||
     rawFinish === "tool_calls"
       ? rawFinish
       : undefined;
+
   if (finishReason === undefined) {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned an unsupported finish reason.",
     );
   }
+
   return { finishReason, message: first["message"] } satisfies OpenRouterChoice;
 }
 
@@ -260,19 +275,23 @@ function parseComplete(
   pinnedModel: ModelDescriptor,
 ): ModelCompleteResponse {
   const choice = parseChoice(payload, pinnedModel);
+
   if (choice.finishReason === "tool_calls") {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned a tool-call finish reason for a completion.",
     );
   }
+
   const content = choice.message["content"];
+
   if (typeof content !== "string") {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned a non-text completion.",
     );
   }
+
   return Object.freeze({
     schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
     operation: "complete" as const,
@@ -284,12 +303,14 @@ function parseComplete(
 function parseToolCallArguments(value: unknown): JsonObject | undefined {
   if (typeof value !== "string") return undefined;
   const parsed = parseUnambiguousJson(value);
+
   return parsed.ok && isJsonObject(parsed.value) ? parsed.value : undefined;
 }
 
 function compileToolValidators(tools: ModelToolCallRequest["tools"]) {
   const compiler = new Ajv({ allErrors: false, strict: true });
   const validators = new Map<string, ValidateFunction>();
+
   for (const tool of tools) {
     if (validators.has(tool.name)) {
       throw new OpenRouterAdapterError(
@@ -297,11 +318,14 @@ function compileToolValidators(tools: ModelToolCallRequest["tools"]) {
         "OpenRouter tool descriptors must have unique names.",
       );
     }
+
     try {
       const validator = compiler.compile(tool.inputSchema);
+
       if ("$async" in validator && validator.$async === true) {
         throw new Error("Async tool input schemas are not supported.");
       }
+
       validators.set(tool.name, validator);
     } catch {
       throw new OpenRouterAdapterError(
@@ -310,6 +334,7 @@ function compileToolValidators(tools: ModelToolCallRequest["tools"]) {
       );
     }
   }
+
   return validators;
 }
 
@@ -319,27 +344,34 @@ function parseToolCall(
   toolValidators: ReadonlyMap<string, ValidateFunction>,
 ): ModelToolCallResponse {
   const choice = parseChoice(payload, pinnedModel);
+
   if (choice.finishReason !== "tool_calls") {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned an incomplete tool call.",
     );
   }
+
   const rawToolCalls = choice.message["tool_calls"];
+
   if (!Array.isArray(rawToolCalls) || rawToolCalls.length === 0) {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
       "OpenRouter returned no tool calls.",
     );
   }
+
   const toolCalls = rawToolCalls.map((raw) => {
     const fn = isRecord(raw) && isRecord(raw["function"])
       ? raw["function"]
       : undefined;
+
     const name = fn?.["name"];
     const args = parseToolCallArguments(fn?.["arguments"]);
+
     const validateArguments =
       typeof name === "string" ? toolValidators.get(name) : undefined;
+
     if (
       typeof name !== "string" ||
       name.length === 0 ||
@@ -352,8 +384,10 @@ function parseToolCall(
         "OpenRouter returned an invalid tool call.",
       );
     }
+
     return Object.freeze({ name, arguments: args });
   });
+
   return Object.freeze({
     schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
     operation: "tool-call" as const,
@@ -383,16 +417,40 @@ export function createFixtureTransport(
   options: OpenRouterFixtureTransportOptions,
 ): OpenRouterTransport {
   const pinnedModel = Object.freeze({ ...options.model });
-  const responses = Object.freeze({ ...options.responses });
+  // Snapshot bytes, not references owned by the caller or a prior result.
+  // Reuse the JSON validator to reject cycles, accessors and lossy JS values.
+  const responses: Partial<Record<OpenRouterTransportRequest["operation"], string>> = {};
+
+  for (const operation of ["complete", "tool-call"] as const) {
+    if (!Object.hasOwn(options.responses, operation)) continue;
+
+    try {
+      const response = options.responses[operation];
+
+      if (!isJsonValue(response)) throw new Error("Fixture is not JSON.");
+      responses[operation] = JSON.stringify(response);
+    } catch {
+      throw new OpenRouterAdapterError(
+        OPENROUTER_ADAPTER_ERROR_CODES.configurationInvalid,
+        "Recorded OpenRouter fixtures must be lossless JSON values.",
+      );
+    }
+  }
+
+  Object.freeze(responses);
+
   return (request) => {
-    if (!Object.hasOwn(responses, request.operation)) {
+    const recorded = responses[request.operation];
+
+    if (!Object.hasOwn(responses, request.operation) || recorded === undefined) {
       throw new OpenRouterAdapterError(
         OPENROUTER_ADAPTER_ERROR_CODES.fixtureNotRecorded,
         `No OpenRouter fixture is recorded for the '${request.operation}' operation; the fixture transport refuses rather than inventing a response.`,
       );
     }
+
     return Object.freeze({
-      response: responses[request.operation],
+      response: JSON.parse(recorded) as unknown,
       executedModel: pinnedModel,
     });
   };
@@ -411,10 +469,12 @@ export function createOpenRouterAdapter(
     capabilities,
     async complete(request) {
       assertPinnedRequest(request, pinnedModel);
+
       const transportResult = parseTransportResult(
         await options.transport(transportRequest(request, evalConfig)),
         pinnedModel,
       );
+
       return Object.freeze({
         response: parseComplete(transportResult.response, pinnedModel),
         executedModel: transportResult.executedModel,
@@ -423,10 +483,12 @@ export function createOpenRouterAdapter(
     async toolCall(request) {
       assertPinnedRequest(request, pinnedModel);
       const toolValidators = compileToolValidators(request.tools);
+
       const transportResult = parseTransportResult(
         await options.transport(transportRequest(request, evalConfig)),
         pinnedModel,
       );
+
       return Object.freeze({
         response: parseToolCall(
           transportResult.response,
@@ -442,3 +504,5 @@ export function createOpenRouterAdapter(
 export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
   "packages/provider-openrouter/src/index.ts": createOpenRouterAdapter,
 });
+
+export { createOpenRouterLiveTransport, type OpenRouterLiveTransportOptions } from "./live-transport.js";

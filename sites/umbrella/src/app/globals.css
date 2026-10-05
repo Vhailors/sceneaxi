@@ -4412,3 +4412,12 @@ a.ed-tree-label:hover {
     transition: none !important;
   }
 }
+
+/* Browser-owned checkpoints are explicit, keyboard-accessible and never under Kids. */
+.ed-local-project { position: relative; font-size: 12px; }
+.ed-local-project summary { cursor: pointer; padding: 6px; }
+.ed-local-project-panel { position: absolute; right: 0; top: 100%; z-index: 100;
+  width: min(360px, 90vw); padding: 16px; background: var(--bg-panel);
+  border: 1px solid var(--line-strong); box-shadow: 0 18px 40px color-mix(in srgb, var(--bg-base) 70%, transparent); }
+.ed-local-project-panel p { margin-bottom: 10px; }
+.ed-local-project-panel button { display: block; padding: 8px; margin-top: 4px; width: 100%; text-align: left; }

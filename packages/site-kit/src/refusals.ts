@@ -80,10 +80,13 @@ export const SITE_REFUSALS = Object.freeze({
   CREDIT_BALANCE_INSUFFICIENT: "This debit would take the balance below zero. Nothing was appended.",
   CREDIT_IDEMPOTENCY_KEY_CONFLICT: "This key already names a different adjustment. Nothing was appended.",
 
+  ADMIN_REAUTHENTICATION_REQUIRED: "This administrative mutation requires a fresh password check against the carried provider session. No adjustment was made.",
+
   // --- billing ---
   BILLING_LIVE_MODE_NOT_AUTHORIZED:
     "Live billing mode requires an explicit captain authorization. Test mode is the default.",
   BILLING_URL_INSECURE: "Checkout success and cancel URLs must be https.",
+  BILLING_CHECKOUT_RATE_LIMITED: "Too many new checkout attempts. Retry this same attempt or wait 300 seconds.",
   BILLING_CHECKOUT_REQUEST_INVALID: "The checkout request is malformed.",
   BILLING_CHECKOUT_ORIGIN_UNTRUSTED:
     "The request origin is not the umbrella origin this deployment is configured with, so no checkout redirect is built from it.",

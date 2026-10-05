@@ -1,13 +1,22 @@
+import type { Metadata } from "next";
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
   listSiteCatalog,
+  browseSiteCatalog,
+  type SearchParams,
 } from "@sceneaxi/site-kit";
-import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE } from "../lib/site-config.js";
+import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, catalogCanonical } from "../lib/site-config.js";
 import { catalogFacets } from "../lib/catalog-facts.js";
 import { ListingCard } from "./_components/listing-card.js";
 import { ListingTile } from "./_components/listing-tile.js";
 import { StatePanel } from "./_components/state-panel.js";
+
+export function generateMetadata(): Metadata {
+  const canonical = catalogCanonical(process.env, "/");
+
+  return canonical === null ? {} : { alternates: { canonical } };
+}
 
 /** The design leads with four hero tiles; the catalogue fills as many as it has. */
 const HERO_TILES = 4;
@@ -21,10 +30,16 @@ const HERO_TILES = 4;
  * and no control appears whose behaviour a contract does not already define. What
  * survives is the layout, which is the part the design was right about.
  */
-export default function CataloguePage() {
-  const listings = listSiteCatalog(CATALOG_SITE_SURFACE);
+export default async function CataloguePage({ searchParams }: { readonly searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  let listings: ReturnType<typeof listSiteCatalog>;
+
+  try { listings = browseSiteCatalog(CATALOG_SITE_SURFACE, params); }
+  catch { return <StatePanel tone="deny" title="Browse query refused" reason="CATALOG_BROWSE_QUERY_INVALID"><p>Use a single bounded search, price mode and supported sort.</p><a href="/">Clear filters</a></StatePanel>; }
+
   const facets = catalogFacets(listings);
   const featured = listings.slice(0, HERO_TILES);
+
   const word =
     listings.length === 1
       ? CATALOG_SITE_BRAND.listingWord
@@ -91,6 +106,20 @@ export default function CataloguePage() {
         </aside>
 
         <div className="results">
+          <form method="get" action="/" aria-label="Search and filter catalog">
+            <label htmlFor="catalog-search">Title, item ID or creator</label>
+            <input id="catalog-search" name="q" type="search" maxLength={100} defaultValue={typeof params.q === "string" ? params.q : ""} />
+            <label htmlFor="catalog-price">Price mode</label>
+            <select id="catalog-price" name="price" defaultValue={typeof params.price === "string" ? params.price : ""}>
+              <option value="">All price modes</option><option value="credits">Credits</option><option value="money">Money</option><option value="credits-and-money">Credits and money</option>
+            </select>
+            <label htmlFor="catalog-sort">Sort</label>
+            <select id="catalog-sort" name="sort" defaultValue={typeof params.sort === "string" ? params.sort : "inventory"}>
+              <option value="inventory">Inventory order</option><option value="title">Title</option><option value="newest">Newest</option>
+            </select>
+            <button type="submit">Apply filters</button> <a href="/">Clear filters</a>
+          </form>
+          {listings.length === 0 && <section role="status" aria-labelledby="catalog-empty"><h2 id="catalog-empty">No matching listings</h2><p>Try a different title, item ID, creator or price mode.</p><a href="/">Clear filters</a></section>}
           <div className="results-head" id="catalogue">
             <span>
               <span className="results-count">{listings.length}</span> {word}

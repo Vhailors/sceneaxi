@@ -101,12 +101,14 @@ function belowTier(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
   const width = (tier?.minWidth ?? 0) - 1;
   const height = (tier?.minHeight ?? 0) - 1;
+
   return `(max-width:${width}px),(max-height:${height}px)`;
 }
 
 /** The exact complement of `belowTier(id)`, so the two can never overlap. */
 function atTierOrAbove(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
+
   return `(min-width:${tier?.minWidth ?? 0}px) and (min-height:${tier?.minHeight ?? 0}px)`;
 }
 
@@ -220,6 +222,7 @@ function button(
 ): string {
   const inert = ctrl.kind === "inert";
   const described = inert ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"` : "";
+
   return [
     `<button type="button" class="${className}${inert ? " is-inert" : ""}"`,
     ` id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
@@ -232,21 +235,26 @@ function button(
 
 function mutationTextarea(control: DesktopControl, extra = ""): string {
   const inert = control.kind === "inert";
+
   return `<textarea id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inert ? ` aria-disabled="true" readonly data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"` : ""}${extra}></textarea>`;
 }
 
 function editorCommandAttributes(id: EditorCommandId): string {
   const command = EDITOR_COMMAND_REGISTRY.find((candidate) => candidate.id === id);
+
   if (command === undefined) throw new Error(`Missing emitted editor command ${id}`);
+
   return ` data-editor-command="${escapeHtml(id)}" data-command-schema-version="${String(command.schemaVersion)}" data-command-permission="${escapeHtml(command.permission)}"`;
 }
 
 /** Render the one modelled prompt field through the same refusal contract. */
 function promptInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<textarea id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -265,9 +273,11 @@ function numericPropertyInput(
   bounds: Readonly<{ step: number; min: number; max: number }>,
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -282,9 +292,11 @@ function numericPropertyInput(
 
 function gitCommitMessageInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -299,9 +311,11 @@ function gitCommitMessageInput(ctrl: DesktopControl): string {
 
 function transformSnapInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -315,9 +329,11 @@ function transformSnapInput(ctrl: DesktopControl): string {
 
 function sceneEntitySelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}" data-product-action data-action="scene-entity-select"`,
     inert
@@ -330,6 +346,7 @@ function sceneEntitySelect(ctrl: DesktopControl): string {
 
 function selectControlAttributes(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   return [
     `id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -341,9 +358,11 @@ function selectControlAttributes(ctrl: DesktopControl): string {
 /** Render the modelled recent-project chooser through the same refusal contract. */
 function recentProjectSelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -361,9 +380,11 @@ function projectFileSelect(
   files: DesktopVisualView["product"]["surface"]["project"]["files"],
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${escapeHtml(ctrl.kind)}"`,
     inert
@@ -397,20 +418,24 @@ function projectFileSelect(
  */
 function refusalLegend(view: DesktopVisualView): string {
   const messages = new Map<string, string>();
+
   for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
     messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
   }
+
   for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
     if (!messages.has(code)) {
       messages.set(code, DESKTOP_PRODUCT_REFUSAL_MESSAGES[code]);
     }
   }
+
   const rows = [...messages]
     .map(
       ([code, message]) =>
         `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
+
   return `${button(
     view.overlay.refusalHelp,
     "Refusal help",
@@ -423,10 +448,12 @@ function titleBar(view: DesktopVisualView): string {
   const profiles = view.profiles
     .map((profile) => {
       const policy = profile.policy;
+
       const detail =
         policy === null
           ? "not in the shared open-path policy"
           : `${policy.demoLevel} · ${policy.sessionKind}`;
+
       return button(
         profile.control,
         [
@@ -507,6 +534,7 @@ function modeRail(view: DesktopVisualView): string {
   const items = view.modes
     .map((mode) => {
       const def = DESKTOP_MODES.find((candidate) => candidate.id === mode.id);
+
       return button(
         mode.control,
         [
@@ -519,19 +547,23 @@ function modeRail(view: DesktopVisualView): string {
       );
     })
     .join("");
+
   return `<nav class="mode-rail" aria-label="Editor mode"><span class="brand" aria-hidden="true"></span>${items}</nav>`;
 }
 
 function note(text: string, tone: "info" | "scene" | "accent"): string {
   const colors = TONE_COLORS[tone];
+
   return `<p class="panel-note" style="background:${colors.bg};border-color:${colors.line};color:${colors.fg}"><span class="dot" style="background:${colors.dot}" aria-hidden="true"></span>${escapeHtml(text)}</p>`;
 }
 
 function leftDock(view: DesktopVisualView): string {
   const active = view.state.mode;
   const project = view.product.surface.project;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
@@ -539,6 +571,7 @@ function leftDock(view: DesktopVisualView): string {
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
+
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
   <h2 class="panel-head" id="project-files-title"><span data-files-title>Objects</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
@@ -596,6 +629,7 @@ function profileSurfaces(view: DesktopVisualView): string {
           (capability) => `<li><b>${escapeHtml(capability.label)}</b><span>${escapeHtml(capability.detail)}</span></li>`,
         )
         .join("");
+
       const webTools =
         surface.profile === "web"
           ? `<div class="web-authoring-tools">
@@ -607,6 +641,7 @@ function profileSurfaces(view: DesktopVisualView): string {
   </div>
 </div>`
           : `<p class="game-runtime-note">Play the scene in the middle. Ask Flash to make or change objects.</p>`;
+
       return `<section class="profile-surface" data-profile-surface="${escapeHtml(surface.profile)}" aria-label="${escapeHtml(surface.profile === "game" ? "Game product surface" : "Web Experience product surface")}">
   <div><strong>${surface.profile === "game" ? "Scene" : "Website studio"}</strong></div>
   <ul class="capability-list">${capabilities}</ul>
@@ -614,6 +649,7 @@ function profileSurfaces(view: DesktopVisualView): string {
 </section>`;
     })
     .join("");
+
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
   ${button(view.product.play, "Play", "primary-button", ` data-product-action data-command="run-play"`)}
   <p class="runtime-report" data-product-run-report aria-live="polite">Ready.</p>
@@ -631,6 +667,7 @@ function profileSurfaces(view: DesktopVisualView): string {
  */
 function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
+
   return `
 <section class="viewport-region" aria-label="Viewport">
   ${profileSurfaces(view)}
@@ -768,8 +805,10 @@ function inspectorCatalogs(view: DesktopVisualView): string {
 
 function inspector(view: DesktopVisualView): string {
   const active = view.state.mode;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-live-report" : mode === "ship" ? ' data-ship-export-status aria-live="polite"' : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
@@ -779,6 +818,7 @@ function inspector(view: DesktopVisualView): string {
     <p class="scene-property-entity"><b data-scene-property-entity-label></b><code data-scene-property-entity-id></code></p>
     <div class="scene-transform-grid">${DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition, index) => {
       const control = view.product.transformProperties[index];
+
       return control === undefined
         ? ""
         : `<label for="${escapeHtml(control.id)}"><span>${escapeHtml(definition.label)}</span>${numericPropertyInput(control, definition)}</label>`;
@@ -888,10 +928,12 @@ function inspector(view: DesktopVisualView): string {
  */
 function assistant(view: DesktopVisualView): string {
   const denial = kidsAssistantDenial();
+
   const assistantStatus =
     view.state.assistantRuntime === "local"
       ? "Ready. Type, then Send."
       : `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`;
+
   return `
 <aside class="assistant" aria-label="Assistant">
   <div class="assistant-head">
@@ -965,6 +1007,7 @@ function assistant(view: DesktopVisualView): string {
  */
 function profileRefusal(view: DesktopVisualView): string {
   const refusal = view.profileRefusal ?? kidsProfileRefusal();
+
   return `
 <section class="profile-refusal" role="alert" aria-labelledby="kids-refusal-title">
   <div class="profile-refusal-card">
@@ -1044,6 +1087,7 @@ function overlays(view: DesktopVisualView): string {
         const action = dismissal.productAction === null
           ? ` data-action="overlay" data-value="none"`
           : ` data-product-action data-action="${escapeHtml(dismissal.productAction)}"`;
+
         return button(
           dismissal.control,
           escapeHtml(dismissal.label),
@@ -1600,8 +1644,10 @@ function controlsByProfile(
   runtime = view.state.assistantRuntime,
 ): Record<string, Record<string, readonly [string, string | null]>> {
   const table: Record<string, Record<string, readonly [string, string | null]>> = {};
+
   for (const profile of view.profiles) {
     const merged: Record<string, readonly [string, string | null]> = {};
+
     for (const mode of DESKTOP_MODE_IDS) {
       const projected = desktopVisualView({
         ...view.state,
@@ -1609,12 +1655,15 @@ function controlsByProfile(
         mode,
         assistantRuntime: runtime,
       });
+
       for (const control of projected.controls) {
         merged[control.id] = [control.kind, control.refusal] as const;
       }
     }
+
     table[profile.id] = merged;
   }
+
   return table;
 }
 
@@ -1626,6 +1675,7 @@ function script(view: DesktopVisualView): string {
         ...view.state,
         assistantRuntime: runtime,
       });
+
       return [
         runtime,
         {
@@ -1643,6 +1693,7 @@ function script(view: DesktopVisualView): string {
       ];
     }),
   );
+
   const tables = {
     dockTabsByMode: Object.fromEntries(
       DESKTOP_MODE_IDS.map((mode) => [mode, [...dockTabsFor(mode)]]),
@@ -1774,7 +1825,7 @@ if (shell) {
     if (binding.code !== (event.code || fallback)) return false;
     const modifiers = binding.modifiers;
     const primary = event.ctrlKey || event.metaKey;
-    if (modifiers.includes('primary') !== primary) return false;
+    if (modifiers.includes('primary') && !primary) return false;
     if (!modifiers.includes('primary')) {
       if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;
       if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;
@@ -2483,6 +2534,9 @@ if (shell) {
     if (files.length !== status.files.length ||
         !files.some((file) => file.path === status.selectedPath)) return false;
     projectBrowserStatus = status;
+    const browserRevision = Number(shell.dataset.projectBrowserRevision || '0') + 1;
+    shell.dataset.projectBrowserRevision = String(browserRevision);
+    shell.dataset.projectBrowserSelectedPath = status.selectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list && list.tagName === 'SELECT') {
       list.replaceChildren();
@@ -2548,6 +2602,7 @@ if (shell) {
 
   const clearProjectBrowser = () => {
     projectBrowserStatus = null;
+    delete shell.dataset.projectBrowserSelectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list) list.replaceChildren();
     const detail = shell.querySelector('[data-project-browser-detail]');
@@ -3975,7 +4030,7 @@ if (shell) {
   // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
-    return open === null ? [] : Array.from(open.querySelectorAll('button'));
+    return open === null ? [] : Array.from(open.querySelectorAll('button, input:not([disabled]), textarea:not([disabled]), select:not([disabled])'));
   };
 
   const setOverlay = (id) => {
@@ -4216,8 +4271,161 @@ if (shell) {
     }
   });
 
-  const runEditorCommand = async (commandId) => {
-    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'
+  // Collect the registry's real fields; the existing host remains the validator
+    // and the existing Change Review/Save path remains the sole document writer.
+    const inputCommands = new Set([
+    'input-action-rebind', 'input-actions-reset', 'scene-prefab-define',
+    'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh',
+    'viewport-source-set', 'physics-evaluate', 'package-install', 'package-remove',
+    'project-migration-commit', 'extension-start',
+    ]);
+    const collectCommandInput = async (commandId) => {
+    const command = T.editorCommands.find((row) => row.id === commandId);
+    if (shell.dataset.profile === 'kids') return commandRefusal('EDITOR_COMMAND_KIDS_DENIED');
+    const properties = command.inputSchema.properties;
+    if (properties.expectedContentHash && !(await openTimelineVersion())) return;
+    let inspection = null;
+    if (properties.expectedBaseVersion || properties.proposalDigest) {
+      const response = await commandRequest(properties.expectedBaseVersion
+        ? 'input-actions-inspect' : 'project-migration-propose', {});
+      const diagnostic = responseDiagnostic(response);
+      if (diagnostic !== null) return showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
+      inspection = response.data;
+    }
+    shell.querySelector('[data-overlay="command-input"]')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.dataset.overlay = 'command-input';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'command-input-title');
+    const card = document.createElement('div');
+    card.className = 'overlay-card';
+    card.style.maxHeight = '85vh';
+    card.style.overflowY = 'auto';
+    const title = document.createElement('h2');
+    title.id = 'command-input-title';
+    title.textContent = command.label;
+    const help = document.createElement('p');
+    help.textContent = command.mutation === 'stages-change'
+      ? 'Stage for Change Review. Only Save writes; Reject discards.'
+      : 'Review exact input before submitting. Settings and approved migrations commit explicitly; host validation remains mandatory.';
+    const form = document.createElement('form');
+    form.dataset.commandInput = commandId;
+    const fields = new Map();
+    const required = command.inputSchema.required || [];
+    const defaults = {
+      documentPath: T.product.documentPath, expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile, scope: 'project',
+      expectedBaseVersion: inspection?.baseVersions?.project,
+      proposalDigest: inspection?.proposal?.proposalDigest,
+      reviewDigest: 'null', instanceIds: JSON.stringify(selectedSceneEntityIds),
+      instanceId: selectedSceneEntityId, parentInstanceId: editableScene?.hierarchy?.rootInstanceId,
+      steps: 1,
+    };
+    for (const [name, schema] of Object.entries(properties)) {
+      const label = document.createElement('label');
+      label.style.display = 'grid';
+      label.style.marginBottom = '8px';
+      label.textContent = name;
+      const json = Array.isArray(schema.type) || schema.type === 'object' || schema.type === 'array';
+      const boolean = schema.type === 'boolean' || schema.const === true;
+      const field = document.createElement(schema.enum ? 'select' : json ? 'textarea' : 'input');
+      field.dataset.commandField = name;
+      field.name = name;
+      if (schema.enum) schema.enum.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = String(value); option.textContent = String(value); field.append(option);
+      });
+      else if (boolean) field.type = 'checkbox';
+      else if (!json) field.type = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text';
+      if (!boolean) field.required = required.includes(name);
+      if (schema.type === 'integer') field.step = '1';
+      if (schema.type === 'number') field.step = 'any';
+      if (schema.minimum !== undefined) field.min = String(schema.minimum);
+      if (schema.maximum !== undefined) field.max = String(schema.maximum);
+      if (schema.pattern) field.pattern = schema.pattern;
+      if (schema.minLength !== undefined) field.minLength = schema.minLength;
+      if (schema.maxLength !== undefined) field.maxLength = schema.maxLength;
+      if (defaults[name] !== undefined && defaults[name] !== null) field.value = String(defaults[name]);
+      if (['documentPath', 'expectedContentHash', 'profile', 'expectedBaseVersion', 'proposalDigest', 'reviewDigest'].includes(name)) {
+        field.readOnly = true;
+        if (field.tagName === 'SELECT') field.disabled = true;
+      }
+      label.append(field); form.append(label);
+      fields.set(name, { field, schema, json, boolean });
+    }
+    if (fields.has('expectedBaseVersion')) fields.get('scope').field.addEventListener('change', () => {
+      fields.get('expectedBaseVersion').field.value = inspection.baseVersions[fields.get('scope').field.value];
+      fields.get('approved').field.checked = false;
+      fields.get('reviewDigest').field.value = 'null';
+    });
+    const evidence = document.createElement('pre');
+    evidence.dataset.commandEvidence = '';
+    evidence.setAttribute('role', 'status');
+    evidence.textContent = inspection === null ? 'No command submitted.' : JSON.stringify(inspection, null, 2);
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = command.mutation === 'stages-change' ? 'Stage for review' : 'Submit reviewed input';
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => setOverlay('none'));
+    form.append(submit, cancel);
+    form.addEventListener('input', (event) => {
+      if (fields.has('reviewDigest') && event.target !== fields.get('approved').field) {
+        fields.get('approved').field.checked = false;
+        fields.get('reviewDigest').field.value = 'null';
+      }
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (inFlight || submit.disabled) return;
+      let input;
+      try {
+        input = Object.fromEntries(Array.from(fields, ([name, row]) => {
+          const value = row.boolean ? row.field.checked : row.json ? JSON.parse(row.field.value)
+            : row.schema.type === 'number' || row.schema.type === 'integer' ? Number(row.field.value) : row.field.value;
+          return [name, value];
+        }).filter(([name, value]) => required.includes(name) || value !== ''));
+      } catch { evidence.textContent = 'EDITOR_COMMAND_INPUT_INVALID: complex fields require valid JSON.'; return; }
+      submit.disabled = true;
+      void productAction(async () => {
+        try {
+          if (properties.expectedContentHash && input.expectedContentHash !== projectContentHash) {
+            evidence.textContent = 'EDITOR_COMMAND_STALE_BASE_VERSION: reopen and review the current document.';
+            return;
+          }
+          if (command.mutation === 'stages-change') {
+            setOverlay('none');
+            await stageSceneCommand(commandId, input, command.label, { authoringSnapshot: true });
+            return;
+          }
+          const response = await commandRequest(commandId, input);
+          const diagnostic = responseDiagnostic(response);
+          evidence.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+            : diagnostic.code + ' · ' + diagnostic.message;
+          if (diagnostic !== null) return;
+          if (response.data?.kind === 'sceneaxi.input-action-review') {
+            if (response.data.status === 'review') {
+              fields.get('reviewDigest').field.value = JSON.stringify(response.data.reviewDigest);
+              evidence.textContent += '\\nReview before/after, then explicitly check approved and submit the exact input.';
+            } else {
+              activeInputActionMap = response.data.after; refreshInputBindingLabels(); submit.hidden = true;
+            }
+          } else {
+            submit.hidden = true;
+            if (commandId === 'project-migration-commit') await openProject();
+          }
+        } finally { submit.disabled = false; }
+      });
+    });
+    card.append(title, help, form, evidence); overlay.append(card); shell.append(overlay);
+    setOverlay('command-input');
+    };
+
+    const runEditorCommand = async (commandId) => {
+    if (inputCommands.has(commandId)) return collectCommandInput(commandId);
+    const input = commandId === 'package-inspect' || commandId === 'profile-inspect' || commandId === 'scene-prefab-inspect'
       ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
       : commandId === 'extension-inspect'
         ? { profile: shell.dataset.profile }
@@ -4336,7 +4544,9 @@ if (shell) {
       'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',
       'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
       'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
-      'project-inspect', 'input-action-rebind', 'input-actions-reset',
+      'project-inspect', 'input-actions-inspect', 'input-action-rebind', 'input-actions-reset',
+      'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh', 'viewport-source-set', 'physics-evaluate',
     ].map((id) => [id, () => runEditorCommand(id)])),
   });
 
@@ -4630,6 +4840,7 @@ export function renderDesktopChrome(
   options: DesktopChromeOptions = {},
 ): string {
   const title = options.title ?? "SceneAxi — Engine Desktop";
+
   // The block is emitted in every document but `view.refusal` is non-null only
   // in the below-minimum render, so the fallback is what a browser actually
   // shows once the viewport crosses the breakpoint. It reads the same registry

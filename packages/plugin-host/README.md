@@ -187,6 +187,14 @@ const b = host.getImplementation("dev.sceneaxi.provider.b", capabilityId);
 
 Agent overview and field glossary: [`docs/plugins.md`](../../docs/plugins.md).
 
+## Execution trust boundary and cache integrity
+
+`openPluginHost` is a **trusted-code, same-process** loader, not an untrusted marketplace execution boundary. Static package isolation checks enforce public import/capability contracts; they do not revoke Node builtins, filesystem access, process authority, or network access. Callers must review and trust every candidate before passing a locator. No marketplace activation or arbitrary hostile-code execution is supported.
+
+The host hashes the inspected entrypoint, transitive modules, JSON and package metadata, and descriptor before evaluation. These identities are reserved process-wide before awaiting import, because Node caches both successful and failed module evaluations. Unchanged reloads may reuse that evaluation; edited artifacts refuse `isolation-unverifiable` and clear addressable previous state. Restart the process to adopt edited code. Reinspection after evaluation also refuses a changed graph and exposes no implementation; the suspect cached entrypoint remains refused across hosts even if its files are restored, until process restart. This integrity check is not a security sandbox against adversarial self-modification or concurrent filesystem writers.
+
+`test/seam.test.ts` covers entry/helper/package edits across host instances, 32 unchanged reloads, and evaluation-time mutation. Untrusted execution would require a separately approved isolated-process/OS authority design and versioned message-only capability contracts; broadening the seed registry is not a substitute.
+
 ## Non-goals
 
 No CLI/engine/profile wiring, renderer/physics/storage ports, lifecycle hook

@@ -31,9 +31,11 @@ export default function EnginePage() {
   const sdk = offer.ok ? offer.value : null;
   const sdkRefusal = offer.ok ? null : { reason: offer.reason, message: offer.message };
   const desktopApp = desktopOffer.ok ? desktopOffer.value : null;
+
   const desktopRefusal = desktopOffer.ok
     ? null
     : { reason: desktopOffer.reason, message: desktopOffer.message };
+
   const appImage = desktopApp?.artifacts.find((artifact) => artifact.kind === "AppImage") ?? null;
   const debPackage = desktopApp?.artifacts.find((artifact) => artifact.kind === "deb") ?? null;
 
@@ -140,9 +142,9 @@ export default function EnginePage() {
           <article className="panel panel-roomy tone-accent">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="tag tag-accent">Linux available</span>
+              <span className="tag tag-accent">Recorded Linux build</span>
             </div>
-            <h3 className="card-title">Download the verified Linux bundle</h3>
+            <h3 className="card-title">Inspect the recorded Linux workflow artifact</h3>
             <p className="body-copy">
               The repository workflow run contains{" "}
               <code>{desktopApp.ciArtifactName}</code>: both installers plus{" "}
@@ -151,7 +153,7 @@ export default function EnginePage() {
               <strong>Artifacts</strong>.
             </p>
             <a className="button button-block" href={desktopApp.downloadHref}>
-              Open Linux download
+              Open Linux download record
             </a>
             <p className="meta">
               Version {desktopApp.version} · workflow run {desktopApp.workflowRunId} ·
@@ -159,7 +161,7 @@ export default function EnginePage() {
               {desktopApp.artifactRetentionDays} days
             </p>
             <p className="note">
-              Workflow artifacts expire, so this download is gone on or before{" "}
+              This historical record is not proof of a current public release. Artifact access and checksums must be verified before use. Workflow artifacts expire on or before{" "}
               <strong>{desktopApp.artifactExpiresBy}</strong>.{" "}
               {desktopApp.retentionNote}
             </p>

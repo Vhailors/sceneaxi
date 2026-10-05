@@ -59,6 +59,7 @@ const entry = (
 const naiveAdapter = () => {
   const rows = new Map<string, CreditLedgerEntry>();
   const settlements: CreditsSaleSettlement[] = [];
+
   const adapter: CreditStoreAdapter = Object.freeze({
     ...createInMemoryCreditStore(),
     findAccountByUserId: (userId: string) =>
@@ -71,20 +72,26 @@ const naiveAdapter = () => {
     },
     appendOrReplayEntry(candidate: CreditLedgerEntry): CommittedEntry {
       const existing = rows.get(candidate.idempotencyKey);
+
       if (existing !== undefined) {
         return { entry: existing, replayed: true };
       }
+
       rows.set(candidate.idempotencyKey, candidate);
+
       return { entry: candidate, replayed: false };
     },
     settleCreditsSale(settlement: CreditsSaleSettlement) {
       settlements.push(settlement);
+
       for (const leg of [settlement.buyerEntry, settlement.creatorEntry]) {
         if (leg !== undefined) rows.set(leg.idempotencyKey, leg);
       }
+
       return { replayed: false };
     },
   });
+
   return { adapter, rows, settlements };
 };
 
@@ -101,6 +108,7 @@ describe("the reserved sale namespace", () => {
 
   it("is refused by appendEntry at the shared boundary, not by the adapter", () => {
     const { adapter, rows } = naiveAdapter();
+
     const leg = entry({
       movement: "debit",
       delta: -40,
@@ -124,10 +132,12 @@ describe("the reserved sale namespace", () => {
   it("is refused by appendOrReplayEntry too, so no second door exists", () => {
     const { adapter, rows } = naiveAdapter();
     const store = createCreditStore(adapter);
+
     const leg = entry({
       idempotencyKey: saleEntryKeys("sale_01").creator,
       reason: "creator share",
     });
+
     expect(() => store.appendOrReplayEntry(leg)).toThrow(
       /requires atomic settlement/,
     );
@@ -138,6 +148,7 @@ describe("the reserved sale namespace", () => {
     const { adapter, rows, settlements } = naiveAdapter();
     const store = createCreditStore(adapter);
     const keys = saleEntryKeys("sale_01");
+
     const share = Object.freeze({
       schemaVersion: 1,
       kind: "sceneaxi.creator-share-record",
@@ -171,6 +182,7 @@ describe("the reserved sale namespace", () => {
       }),
       share,
     });
+
     expect(outcome).toEqual({ replayed: false });
     expect(settlements.length).toBe(1);
     expect([...rows.keys()].sort()).toEqual([keys.buyer, keys.creator].sort());
@@ -179,6 +191,7 @@ describe("the reserved sale namespace", () => {
   it("refuses an adapter whose settlement outcome does not say whether it replayed", () => {
     const { adapter } = naiveAdapter();
     const keys = saleEntryKeys("sale_01");
+
     const share = Object.freeze({
       schemaVersion: 1,
       kind: "sceneaxi.creator-share-record",
@@ -192,6 +205,7 @@ describe("the reserved sale namespace", () => {
       basisPoints: 5000,
       occurredAt: "2026-07-25T10:00:00Z",
     }) as CreatorShareRecord;
+
     const settlement = {
       buyerEntry: entry({
         movement: "debit",
@@ -221,6 +235,7 @@ describe("the reserved sale namespace", () => {
           settleCreditsSale: () => answer as never,
         }),
       );
+
       expect(() => store.settleCreditsSale(settlement)).toThrow(
         /returned no settlement outcome/,
       );
@@ -230,6 +245,7 @@ describe("the reserved sale namespace", () => {
   it("refuses a settlement whose legs are not that sale's own keys", () => {
     const { adapter, settlements } = naiveAdapter();
     const store = createCreditStore(adapter);
+
     const share = Object.freeze({
       schemaVersion: 1,
       kind: "sceneaxi.creator-share-record",
@@ -268,6 +284,7 @@ describe("the reserved sale namespace", () => {
   it("refuses legs that do not move the credits their share record claims", () => {
     const { adapter, rows, settlements } = naiveAdapter();
     const keys = saleEntryKeys("sale_01");
+
     const share = Object.freeze({
       schemaVersion: 1,
       kind: "sceneaxi.creator-share-record",
@@ -281,6 +298,7 @@ describe("the reserved sale namespace", () => {
       basisPoints: 5000,
       occurredAt: "2026-07-25T10:00:00Z",
     }) as CreatorShareRecord;
+
     const creatorEntry = entry({
       entryId: "ent_02",
       accountId: "acc_maker",
@@ -289,6 +307,7 @@ describe("the reserved sale namespace", () => {
       reason: "creator share",
       idempotencyKey: keys.creator,
     });
+
     // A buyer leg carrying this sale's own key, but moving one credit against a
     // gross of forty: the creator is still granted their claimed half, so the
     // difference is credits minted into the plane.
@@ -340,7 +359,9 @@ describe("append-or-replay at the shared boundary", () => {
   it("appends once and replays the committed entry on retry", async () => {
     const { adapter, rows } = naiveAdapter();
     const store = createCreditStore(adapter);
+
     const debit = entry({
+      sequence: 2,
       movement: "debit",
       delta: -10,
       balanceAfter: 90,
@@ -352,11 +373,13 @@ describe("append-or-replay at the shared boundary", () => {
       entry: debit,
       replayed: false,
     });
+
     // The retry regenerates its entry id, exactly as a real retrying caller does.
     const retry = await store.appendOrReplayEntry({
       ...debit,
       entryId: "ent_retry",
     });
+
     expect(retry.replayed).toBe(true);
     expect(retry.entry.entryId).toBe(debit.entryId);
     expect(rows.size).toBe(1);
@@ -365,12 +388,14 @@ describe("append-or-replay at the shared boundary", () => {
   it("refuses an adapter that answers with a different entry", () => {
     const { adapter } = naiveAdapter();
     const impostor = entry({ idempotencyKey: "usage:acc_crew:other" });
+
     const store = createCreditStore(
       Object.freeze({
         ...adapter,
         appendOrReplayEntry: () => ({ entry: impostor, replayed: true }),
       }),
     );
+
     expect(() =>
       store.appendOrReplayEntry(entry({ idempotencyKey: "usage:acc_crew:mine" })),
     ).toThrow(/answered with a different entry/);
@@ -379,6 +404,7 @@ describe("append-or-replay at the shared boundary", () => {
   it("refuses an adapter that calls a rewritten row a fresh append", () => {
     const { adapter } = naiveAdapter();
     const requested = entry({ idempotencyKey: "usage:acc_crew:mine" });
+
     const store = createCreditStore(
       Object.freeze({
         ...adapter,
@@ -390,6 +416,7 @@ describe("append-or-replay at the shared boundary", () => {
         }),
       }),
     );
+
     expect(() => store.appendOrReplayEntry(requested)).toThrow(
       /claims a fresh append it did not make/,
     );
@@ -397,6 +424,7 @@ describe("append-or-replay at the shared boundary", () => {
 
   it("refuses a replay of a row that landed on a ledger this request never read", () => {
     const { adapter } = naiveAdapter();
+
     const requested = entry({
       movement: "debit",
       delta: -10,
@@ -405,6 +433,7 @@ describe("append-or-replay at the shared boundary", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "usage:acc_crew:turn_01",
     });
+
     // A concurrent writer committed this same debit, but on top of a grant this
     // caller never saw: same money, different ledger position. The naive adapter
     // calls that a replay — and both callers of this operation would report the
@@ -419,6 +448,7 @@ describe("append-or-replay at the shared boundary", () => {
         }),
       }),
     );
+
     expect(() => store.appendOrReplayEntry(requested)).toThrow(
       /does not extend the ledger this request read/,
     );
@@ -426,6 +456,7 @@ describe("append-or-replay at the shared boundary", () => {
 
   it("accepts a replay that landed on exactly the ledger this request read", async () => {
     const { adapter } = naiveAdapter();
+
     const requested = entry({
       movement: "debit",
       delta: -10,
@@ -434,6 +465,7 @@ describe("append-or-replay at the shared boundary", () => {
       reason: "hosted assistant turn",
       idempotencyKey: "usage:acc_crew:turn_01",
     });
+
     const store = createCreditStore(
       Object.freeze({
         ...adapter,
@@ -447,6 +479,7 @@ describe("append-or-replay at the shared boundary", () => {
         }),
       }),
     );
+
     const committed = await store.appendOrReplayEntry(requested);
     expect(committed.replayed).toBe(true);
     expect(committed.entry.entryId).toBe("ent_first");
@@ -454,12 +487,14 @@ describe("append-or-replay at the shared boundary", () => {
 
   it("refuses an adapter that answers with nothing at all", () => {
     const { adapter } = naiveAdapter();
+
     const store = createCreditStore(
       Object.freeze({
         ...adapter,
         appendOrReplayEntry: () => undefined as never,
       }),
     );
+
     expect(() =>
       store.appendOrReplayEntry(entry({ idempotencyKey: "usage:acc_crew:mine" })),
     ).toThrow(/returned no committed entry/);
@@ -476,6 +511,7 @@ describe("append-or-replay at the shared boundary", () => {
 
   it("resolves an asynchronous adapter through the same checks", async () => {
     const { adapter } = naiveAdapter();
+
     const store = createCreditStore(
       Object.freeze({
         ...adapter,
@@ -483,8 +519,23 @@ describe("append-or-replay at the shared boundary", () => {
           Promise.resolve({ entry: { ...candidate, delta: 1 }, replayed: true }),
       }),
     );
+
     await expect(
       store.appendOrReplayEntry(entry({ idempotencyKey: "usage:acc_crew:mine" })),
     ).rejects.toThrow(/answered with a different entry/);
+  });
+});
+
+
+describe("ledger persistence initial balance", () => {
+  it("rejects a forged first balance before any naive adapter mutation", () => {
+    const { adapter, rows } = naiveAdapter();
+    const store = createCreditStore(adapter);
+
+    for (const invalid of [entry({ delta: 100, balanceAfter: 101 }), entry({ movement: "debit", delta: -500, balanceAfter: 10 })]) {
+      expect(() => store.appendOrReplayEntry(invalid)).toThrow(/derive its balance from zero/);
+      expect(() => store.appendEntry(invalid)).toThrow(/derive its balance from zero/);
+      expect(rows.size).toBe(0);
+    }
   });
 });

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 
 const configuredChrome = process.env.SCENEAXI_CHROME_PATH;
+
 const executablePath =
   configuredChrome ?? (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined);
 
@@ -37,6 +38,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
+      NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://127.0.0.1:4173",
       NEXT_TELEMETRY_DISABLED: "1",
     },
   },

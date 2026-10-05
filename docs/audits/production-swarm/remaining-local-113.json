@@ -1,0 +1,684 @@
+{
+  "generatedFrom": "FINAL.json",
+  "count": 113,
+  "rows": [
+    {
+      "id": "AUTHORING-001",
+      "owner": "integration",
+      "why": "Project propose/apply permits out-of-root document writes",
+      "acceptance": ""
+    },
+    {
+      "id": "AUTHORING-002",
+      "owner": "integration",
+      "why": "Recovery and journal storage escape the project root",
+      "acceptance": ""
+    },
+    {
+      "id": "AUTHORING-003",
+      "owner": "integration",
+      "why": "Native seed accepts invalid document bytes",
+      "acceptance": ""
+    },
+    {
+      "id": "AUTHORING-004",
+      "owner": "integration",
+      "why": "Targeted tests lack negative containment and validity oracles",
+      "acceptance": ""
+    },
+    {
+      "id": "AUTHORING-005",
+      "owner": "integration",
+      "why": "Migration journal reader assumes Linux procfs",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-002",
+      "owner": "integration",
+      "why": "Safe integer/range inputs, finite result and rounding guards, accumulated time bounds, transactional advance across every scene instance; refuse without consuming queued commands or partial state.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-005",
+      "owner": "integration",
+      "why": "Prevalidate full mesh/node/transform batch; cleanup partial roots on every failure; guard all direct mutators; retain previous visible root on failed replacement; reject disconnected/cyclic/duplicate nodes.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-003",
+      "owner": "integration",
+      "why": "Validate complete neutral snapshot/environment before mutation; unique bounded ids, finite renderer-range coordinates and safe ticks; deterministic max framebuffer pixel/dimension budgets.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-006",
+      "owner": "integration",
+      "why": "Explicit terminal owned-context release or reusable renderer/surface owner, with clear remount semantics; no vendor patch, no false lost-context pixel claim.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-004",
+      "owner": "integration",
+      "why": "Private internal core factory plus opaque/numeric public facade; keep one shared renderer and useful public controls.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-007",
+      "owner": "integration",
+      "why": "Total bounded accessor-safe error description with stable fallback; no secret/host-object stringification.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-001",
+      "owner": "integration",
+      "why": "Recommended explicit same-major engine/BOM compatibility and named refusal for unsupported major until migration exists; preserve0.0.0 goldens and document narrower old policy.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-008",
+      "owner": "integration",
+      "why": "Deterministic budgets/refusals and preallocation checks; index shapes/materials, bounded queue/history or versioned digest-preserving checkpoints; measured sustained use.",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-009",
+      "owner": "integration",
+      "why": "MISSING_GENERAL_GAMEPLAY; narrow spawn/move/rarity-roll intentional union",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-010",
+      "owner": "integration",
+      "why": "OLD_CATEGORICAL_CLAIM_REFUTED; real WASM bounded adapter passes; full scene pose/resume incomplete",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-011",
+      "owner": "integration",
+      "why": "CONFIRMED_MISSING_LOCAL_AUDIO_RUNTIME",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-012",
+      "owner": "integration",
+      "why": "OLD_CATEGORICAL_CLAIM_REFUTED; UV+contained PNG RGBA DataTexture implemented; compressed format/pixel holes remain",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-013",
+      "owner": "integration",
+      "why": "NODE_TRS_PLAYBACK_IMPLEMENTED; skeleton/CUBICSPLINE and feature pixel proof absent",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-014",
+      "owner": "integration",
+      "why": "OLD_CATEGORICAL_CLAIM_REFUTED; renderer implementations exist, feature pixel/performance proof incomplete",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-015",
+      "owner": "integration",
+      "why": "OLD_NO_GAMEPAD_CLAIM_REFUTED; standard input sampling/deadzones supported; primary gameplay and physical-device proof missing",
+      "acceptance": ""
+    },
+    {
+      "id": "ENG-017",
+      "owner": "integration",
+      "why": "CATALOG_FORWARDING_IMPLEMENTED; non-null texture slots intentionally refused; feature pixels incomplete",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-01",
+      "owner": "integration",
+      "why": "glTF flat deep node graph exhausts recursive traversal stack",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-02",
+      "owner": "integration",
+      "why": "Indexed triangle primitive rejects4-vertex shared-vertex square",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-03",
+      "owner": "integration",
+      "why": "Current inspected plugin bytes are not bound to cached evaluated implementation",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-04",
+      "owner": "integration",
+      "why": "Deep Scene Document throws through importer public boundary",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-05",
+      "owner": "integration",
+      "why": "In-root destination symlink hot reload overwrites unrelated project file",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-06",
+      "owner": "integration",
+      "why": "Search/filter/sort unnecessarily parked on inventory decision",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-07",
+      "owner": "integration",
+      "why": "One public capability and trusted-only host do not implement untrusted marketplace execution",
+      "acceptance": ""
+    },
+    {
+      "id": "PK-001",
+      "owner": "integration",
+      "why": "No-op reset and same-world selection wrongly advance activity revision",
+      "acceptance": ""
+    },
+    {
+      "id": "PK-002",
+      "owner": "integration",
+      "why": "Kids production-built front door/browser isolation unverified",
+      "acceptance": ""
+    },
+    {
+      "id": "PK-004",
+      "owner": "integration",
+      "why": "Broad Web use cases not independently demonstrated",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-001",
+      "owner": "integration",
+      "why": "Use Object.hasOwn for command child lookup at every depth; never traverse inherited properties.",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-002",
+      "owner": "integration",
+      "why": "Allow bare version success only after rejecting remaining non-global tokens; preserve legal aliases and JSON/text parity.",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-003",
+      "owner": "integration",
+      "why": "Validate finite nonnegative clock/budget and finite parsed timestamp; refuse negative age and invalid freshness configuration before any allow. Preserve currency-before-snapshot ordering and the default24h budget.",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-004",
+      "owner": "integration",
+      "why": "Do not enter process watch mode for help/version or malformed global switches; route introspection through normal dispatch without registering watchers.",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-005",
+      "owner": "integration",
+      "why": "Document watch streaming, SIGINT lifecycle and limitation of synchronous runCli; replace reserved/skeleton wording with implemented refusal semantics.",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-01",
+      "owner": "integration",
+      "why": "play/run and build/export discoverability",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-02",
+      "owner": "integration",
+      "why": "asset remove",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-03",
+      "owner": "integration",
+      "why": "plugin list/load/validate",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-04",
+      "owner": "integration",
+      "why": "evidence show/verify",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-05",
+      "owner": "integration",
+      "why": "catalog submit",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-06",
+      "owner": "integration",
+      "why": "project migrate",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-CAP-07",
+      "owner": "integration",
+      "why": "template init",
+      "acceptance": ""
+    },
+    {
+      "id": "CLI-PACK-01",
+      "owner": "integration",
+      "why": "outsider-runnable distributable CLI",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T01",
+      "owner": "integration",
+      "why": "Sentinel absent from500; state200 after error; expected named diagnostics preserved.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T02",
+      "owner": "integration",
+      "why": "Repeat real Chromium E3 with root replacement, cleared rejected diff and aborted/nonJSON/uncertain Accept, explicit accessible feedback and no pageerror; no writes until accept and CLI byte parity.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T03",
+      "owner": "integration",
+      "why": "GUI effective binding and persisted map actually change, approval/stale/Kids refused; keyboard changes observed; no assertion weakening.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T04",
+      "owner": "integration",
+      "why": "Real GUI→host typed operations stage then Save canonical changes; reject unchanged; bad references/stale hash refused.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T05",
+      "owner": "integration",
+      "why": "GUI source changes real single viewport owner; physics replay deterministic and read-only; invalid/Kids refused.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T06",
+      "owner": "integration",
+      "why": "GUI uses inspected contained locator/digests/approval and real lock changes; escape/stale/Kids refuse, no network marketplace activation.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T07",
+      "owner": "integration",
+      "why": "Actual GUI migration review/commit changes owned fixture; extension id/capability approval reaches host or genuine typed refusal; no arbitrary sandbox claim.",
+      "acceptance": ""
+    },
+    {
+      "id": "SH-T08",
+      "owner": "integration",
+      "why": "120-turn/UTF8/response bounds and concurrent admission; mode capture/ledger/debit/Kids unchanged; honest truncation, no late debit race.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-SEC-01",
+      "owner": "integration",
+      "why": "Validate HTTPS/no-userinfo/approved origin and port before key reads, redirect:error, bounded body parse; reuse existing refusal.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-BYOK-02",
+      "owner": "integration",
+      "why": "Provider-specific injected runtime availability; unsupported OpenRouter unavailable/fixture-only, preserve Remove. Do not invent model pin/live provider.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-COV-03",
+      "owner": "integration",
+      "why": "Extend existing smoke with isolated typed dialog port and actual controls: New/Open/Recent/Save/Undo/Redo, hierarchy/transform, import/reload, Local Ask/Build/approve/apply/cancel/timeout, Play/Export and current registered actions. Keep fixture/live distinction.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-COV-04",
+      "owner": "integration",
+      "why": "Synchronize exact browser-ready/selection result revision, bounded diagnostics, not global data-busy or arbitrary sleep inflation.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-HARD-05",
+      "owner": "integration",
+      "why": "Deterministic inline script hashes, strict local-only CSP, explicit permission denial and main-frame/document IPC sender verification; network stays privileged.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-PRIV-06",
+      "owner": "integration",
+      "why": "Recommended local default: raw dump opt-out unless explicit local consent; retain redacted diagnostics/recovery and no automatic sharing.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-DOC-07",
+      "owner": "integration",
+      "why": "Reconcile actual Local Ask/Build/approve/apply, fixture/live provider state and fresh limited package proof.",
+      "acceptance": ""
+    },
+    {
+      "id": "DL-PERF-08",
+      "owner": "integration",
+      "why": "Existing-smoke/golden bounded maximum asset, repeated import/reload/play/export, teardown/resource plateau and latency assertions; no widened limits.",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-001",
+      "owner": "integration",
+      "why": "Parse flags; add real Windows packaged integrity/signature/runtime/pixels branch; named non-Windows refusal",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-002",
+      "owner": "integration",
+      "why": "Always build --publish never; independent validation/native acceptance before separate explicit draft uploader",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-003",
+      "owner": "integration",
+      "why": "Refuse nonempty output; verify clean HEAD; write exact non-linkable local candidate manifest and independently verified artifact/update facts",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-004",
+      "owner": "integration",
+      "why": "Explicit disabled-by-default verified release/feed policy; redacted failure status; retain signature guards",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-005",
+      "owner": "integration",
+      "why": "Reusable platform-neutral contained exact-set/version/size/hash/update validation, separate from genuine signature/native stage",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-006",
+      "owner": "integration",
+      "why": "Prepare real contained local package job/evidence adapter without authorizing publication; assess offline Web-export portability separately",
+      "acceptance": ""
+    },
+    {
+      "id": "DR-007",
+      "owner": "integration",
+      "why": "Bounded non-signing install/typecheck/staging/default-smoke CI; explicit default-off native candidate branch, no triggered signing/publish",
+      "acceptance": ""
+    },
+    {
+      "id": "UI-001",
+      "owner": "integration",
+      "why": "Route-aware canonical metadata from configured origins, never request Host",
+      "acceptance": ""
+    },
+    {
+      "id": "UI-002",
+      "owner": "integration",
+      "why": "Compatible restrictive script/default/connect policy or explicit launch risk disposition",
+      "acceptance": ""
+    },
+    {
+      "id": "IDENTITY-02",
+      "owner": "integration",
+      "why": "Keep signup closed; implement authenticated export/disable and recovery contracts with explicit unconfigured refusal; add token replay/expiry and reauth tests before enabling endpoints",
+      "acceptance": ""
+    },
+    {
+      "id": "IDENTITY-03",
+      "owner": "integration",
+      "why": "Document operator attestation accurately; specify category-level retention/export/disable and ledger-preserving pseudonymization; no arbitrary legal periods or production deletion",
+      "acceptance": ""
+    },
+    {
+      "id": "IDENTITY-04",
+      "owner": "integration",
+      "why": "Reconcile id 14 and gap wording to current source/test evidence, without claiming deployed proof",
+      "acceptance": ""
+    },
+    {
+      "id": "IDENTITY-05",
+      "owner": "integration",
+      "why": "Add real browser/HTTP tests for same-origin sign-in, hostile/missing/alias Origin, HTTPS cookie attributes, logout replay and cache controls",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-001",
+      "owner": "integration",
+      "why": "New forward migration per-account serialized next-sequence/previousbalance+delta/safeinteger/nonnegative validation; preserve idempotent replay.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-002",
+      "owner": "integration",
+      "why": "Catch bounded form decoding, named400/403 JSON; preserve same-site relative browser303 and fail-closed guards.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-003",
+      "owner": "integration",
+      "why": "Neutral returned-from-checkout notice; only authenticated persisted evidence can claim payment receipt.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-004",
+      "owner": "integration",
+      "why": "Clock-injected durable per-user NEW-attempt budget; replay-free old keys;429/retry-after; no per-process-only production claim.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-005",
+      "owner": "integration",
+      "why": "Refresh validated history inside lock or whole-run session lock; distinguish applied/dryrun statuses.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-006",
+      "owner": "integration",
+      "why": "Authenticated scoped/paginated persisted intent+ledger-anchor history/status, no direct identity/billing page imports or widened matrix.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-007",
+      "owner": "integration",
+      "why": "Local reservation/replay/result coordination and honest default-off UI; no live spend or invented economic values.",
+      "acceptance": ""
+    },
+    {
+      "id": "BD-008",
+      "owner": "integration",
+      "why": "Scoped bounded indexed query and pagination through existing interfaces.",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-001",
+      "owner": "integration",
+      "why": "Triage every current advisory,patch compatible supported releases in all independent locks;verify advisory docs before new version/API use;do not weaken checks or pin matrix",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-002",
+      "owner": "integration",
+      "why": "Verify upstream action commit identities then pin uses to reviewed SHA with version comment;set minimal explicit permissions;record local SBOM/provenance metadata without fake signed attestation",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-003",
+      "owner": "integration",
+      "why": "Snapshot admitted fixture JSON and protect nested payload from caller/returned-result mutation,without network or credential ownership",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-004",
+      "owner": "integration",
+      "why": "Add isolated Kids frozen install/typecheck/production build job using its actual scripts,without deployment/env/shared imports;maintain existing three-site job",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-005",
+      "owner": "integration",
+      "why": "Choose/validate existing supported pnpm9.15.0 policy for deployment and isolated roots;preserve hoisted declarations/Kids build-approval policy;document Node patch recording",
+      "acceptance": ""
+    },
+    {
+      "id": "DOPS-006",
+      "owner": "integration",
+      "why": "Extend reference to supported public engine/Game/provider exports through existing generator;keep Kids and internal authority artifacts outside public SDK/reference where policy requires;validate generated links transactionally and only replace output on success",
+      "acceptance": ""
+    },
+    {
+      "id": "CAT-DURABLE-INTAKE",
+      "owner": "integration",
+      "why": "Durable local intake/quarantine wiring and truthful submission UI",
+      "acceptance": ""
+    },
+    {
+      "id": "BILLING-PRICE-POLICY",
+      "owner": "integration",
+      "why": "Server-owned hosted credit pricing policy boundary",
+      "acceptance": ""
+    },
+    {
+      "id": "BILLING-RESTORE-LOCAL",
+      "owner": "integration",
+      "why": "Repeatable local backup/restore oracle",
+      "acceptance": ""
+    },
+    {
+      "id": "BILLING-REALPG-REGRESSION",
+      "owner": "integration",
+      "why": "Repeatable real PostgreSQL concurrency/fault tests",
+      "acceptance": ""
+    },
+    {
+      "id": "IDENTITY-ADMIN-HARDENING",
+      "owner": "integration",
+      "why": "Admin reauthentication and lifecycle capability hardening",
+      "acceptance": ""
+    },
+    {
+      "id": "SITE-PERSISTENCE",
+      "owner": "integration",
+      "why": "Owned editor project persistence absent",
+      "acceptance": ""
+    },
+    {
+      "id": "OPS-TUTORIAL-ORACLE",
+      "owner": "integration",
+      "why": "Fresh contained user-guide/example commands not exhaustively executed",
+      "acceptance": ""
+    },
+    {
+      "id": "OPS-DOC-REVALIDATION",
+      "owner": "integration",
+      "why": "Owning-doc/backlog descriptions need serial current-source reconciliation",
+      "acceptance": ""
+    },
+    {
+      "id": "AP-PERF",
+      "owner": "integration",
+      "why": "Importer/plugin controlled capacity and fault coverage",
+      "acceptance": ""
+    },
+    {
+      "id": "SITE-CATALOG-IDENTITY",
+      "owner": "integration",
+      "why": "Cross-origin catalog identity remains unconfigured",
+      "acceptance": ""
+    },
+    {
+      "id": "AI-TRANSPORT-LOCAL",
+      "owner": "integration",
+      "why": "Live hosted provider transport implementation absent",
+      "acceptance": ""
+    },
+    {
+      "id": "OPS-DELAYED-CONTRACTS",
+      "owner": "integration",
+      "why": "Delayed F1/asset/evidence/ship contracts need local engineering",
+      "acceptance": ""
+    },
+    {
+      "id": "DELIVERY-PWA-LOCAL",
+      "owner": "integration",
+      "why": "Contained offline PWA export can be implemented locally",
+      "acceptance": ""
+    },
+    {
+      "id": "LOCAL-070",
+      "owner": "integration",
+      "why": "Axis-aligned placement only",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-AUTHORING",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: authoring",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-ENGINE",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: engine",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-ASSETS-PLUGINS",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: assets-plugins",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-PROFILES-KIDS",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: profiles-kids",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-CLI",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: cli",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-SHELLS",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: shells",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-DESKTOP-LINUX",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: desktop-linux",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-DESKTOP-RELEASE",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: desktop-release",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-SITES-UI",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: sites-ui",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-IDENTITY",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: identity",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-BILLING-DATA",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: billing-data",
+      "acceptance": ""
+    },
+    {
+      "id": "COVERAGE-DELIVERY-OPS",
+      "owner": "integration",
+      "why": "Remaining current-source/front-door coverage: delivery-ops",
+      "acceptance": ""
+    }
+  ]
+}

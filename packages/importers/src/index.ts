@@ -101,13 +101,54 @@ export type SceneDocumentImportApplyResult =
       apply: Exclude<ApplyResult, { ok: true }>;
     }>;
 
-function deepFreeze<T extends object>(value: T): T {
-  for (const nested of Object.values(value)) {
-    if (nested !== null && typeof nested === "object") {
-      deepFreeze(nested);
+// Preflight before recursive shared services; no new document dialect.
+const SCENE_DOCUMENT_MAXIMUM_BYTES = 8 * 1024 * 1024;
+
+const SCENE_DOCUMENT_MAXIMUM_DEPTH = 64;
+
+const SCENE_DOCUMENT_MAXIMUM_VALUES = 250_000;
+
+function withinDocumentBudget(value: unknown): boolean {
+  const pending = [{ value, depth: 0 }];
+  let count = 0;
+
+  while (pending.length > 0) {
+    const current = pending.pop();
+
+    if (current === undefined) break;
+
+    if (++count > SCENE_DOCUMENT_MAXIMUM_VALUES || current.depth > SCENE_DOCUMENT_MAXIMUM_DEPTH) return false;
+
+    if (current.value !== null && typeof current.value === "object") {
+      const children: unknown[] = Object.values(current.value);
+
+      if (count + pending.length + children.length > SCENE_DOCUMENT_MAXIMUM_VALUES) return false;
+
+      for (const child of children) pending.push({ value: child, depth: current.depth + 1 });
     }
   }
-  return Object.freeze(value);
+
+  return true;
+}
+
+function deepFreeze<T extends object>(value: T): T {
+  const pending: object[] = [value];
+  const seen = new Set<object>();
+
+  while (pending.length > 0) {
+    const current = pending.pop();
+
+    if (current === undefined || seen.has(current)) continue;
+    seen.add(current);
+
+    for (const nested of Object.values(current)) {
+      if (nested !== null && typeof nested === "object") pending.push(nested);
+    }
+
+    Object.freeze(current);
+  }
+
+  return value;
 }
 
 /**
@@ -131,7 +172,12 @@ export function proposeSceneDocumentImport(
     };
   }
 
+  if (new TextEncoder().encode(input.sourceText).byteLength > SCENE_DOCUMENT_MAXIMUM_BYTES) {
+    return { ok: false, stage: "validate", diagnostics: [{ code: "invalid-document", message: "External SceneAxi document exceeds the 8 MiB input limit." }] };
+  }
+
   const jsonParse = parseUnambiguousJson(input.sourceText);
+
   if (!jsonParse.ok) {
     return {
       ok: false,
@@ -147,7 +193,12 @@ export function proposeSceneDocumentImport(
     };
   }
 
+  if (!withinDocumentBudget(jsonParse.value)) {
+    return { ok: false, stage: "validate", diagnostics: [{ code: "invalid-document", message: "External SceneAxi document exceeds depth 64 or 250000 JSON values." }] };
+  }
+
   const parsed = parseDocumentText(input.sourceText);
+
   if (!parsed.ok) {
     return {
       ok: false,
@@ -174,6 +225,7 @@ export function proposeSceneDocumentImport(
     newValue: sourceDocument.data,
     ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
   });
+
   if (!proposed.ok) {
     return {
       ok: false,
@@ -197,12 +249,14 @@ export function applySceneDocumentImport(
   input: SceneDocumentImportInput,
 ): SceneDocumentImportApplyResult {
   const planned = proposeSceneDocumentImport(input);
+
   if (!planned.ok) return planned;
 
   const applied = apply({
     proposal: planned.proposal,
     ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
   });
+
   if (!applied.ok) {
     return Object.freeze({
       ok: false,

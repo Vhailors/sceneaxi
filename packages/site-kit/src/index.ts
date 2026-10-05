@@ -33,6 +33,7 @@ export const seam: PackageSeam = Object.freeze({
  * `@sceneaxi/schemas` and `@sceneaxi/authoring-core` directly.
  */
 export { COMMERCE_ACTIVATION_GATE } from "@sceneaxi/schemas";
+
 export type {
   AiGenerationDisclosure,
   AssetPackageRef,
@@ -51,6 +52,7 @@ export type {
   TransitionRecord,
   Vector3,
 } from "@sceneaxi/schemas";
+
 export type {
   MinimumE2Inspector,
   MinimumE2SaveResult,
@@ -443,3 +445,16 @@ export {
   type ChangeReviewResolution,
   type ChangeReviewRow,
 } from "./change-review.js";
+
+/** Canonical export uses the schema serializer, not a view-layer JSON encoder. */
+export { serializeDocument as serializeEditorDocument } from "@sceneaxi/schemas";
+
+export { buildOfflineWebExport, type OfflineWebExport } from "./offline-web-export.js";
+
+export { browseSiteCatalog } from "./catalog-browse.js";
+
+export { verifySiteAdminReauthentication } from "./admin-reauth.js";
+
+export { createSitePurchaseHistoryPort, type SitePurchaseHistoryPort, type SitePurchaseHistoryRequest, type SitePurchaseHistory, type SitePurchaseHistoryItem } from "./purchase-history.js";
+
+export { createDurableCatalogTestPipelineProvider, CATALOG_REGISTRY_MAX_BYTES, CATALOG_REGISTRY_MAX_EVENTS } from "./catalog-durable.js";

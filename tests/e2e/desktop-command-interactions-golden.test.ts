@@ -52,18 +52,15 @@ function projectStatus(hasActiveProject: boolean) {
 
 /** Commands whose outcome dialog must show the engine's own answer, not a chrome-side refusal. */
 const ENGINE_ANSWERED_COMMANDS = new Set([
-  "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
+  "project-migration-recover", "workspace-layout-apply",
 ]);
 
-/**
- * Commands whose registered input needs a review flow the GUI does not collect yet
- * (digests, approvals, locators; go-live item 53). Their controls send no form values,
- * so the registry validator refuses them before the engine: pinned exactly, so a GUI
- * that starts collecting the input has to move the id out of this set.
- */
+/** Inputs now require a visible form and explicit user submission. */
 const INPUT_REQUIRED_COMMANDS = new Set([
   "package-install", "package-remove", "project-migration-commit", "extension-start",
-  "input-action-rebind", "input-actions-reset",
+  "input-action-rebind", "input-actions-reset", "scene-prefab-define",
+  "scene-prefab-instance", "scene-prefab-override", "scene-prefab-refresh",
+  "viewport-source-set", "physics-evaluate",
 ]);
 
 function engineResponse(
@@ -77,19 +74,36 @@ function engineResponse(
   const payload = request["payload"] as Record<string, unknown> | undefined;
   const action = request["action"];
   const op = payload?.["op"];
+
   if (action === "command") {
     // The real bridge validates every invocation against the shared registry before
     // routing it; the harness must too, or a malformed input looks like a success.
     const validated = validateEditorCommandInvocation(payload);
+
     if (!validated.ok) return { ok: false, reason: validated.reason, message: validated.message };
     const commandId = payload?.["commandId"];
     const input = payload?.["input"] as Record<string, unknown> | undefined;
+
+    if (commandId === "input-actions-inspect") {
+      return { ok: true, data: { baseVersions: { project: CONTENT_HASH, workspace: CONTENT_HASH } } };
+    }
+
+    if (commandId === "project-migration-propose") {
+      return { ok: true, data: { proposal: { proposalDigest: CONTENT_HASH } } };
+    }
+
+    if (INPUT_REQUIRED_COMMANDS.has(String(commandId))) {
+      return { ok: false, reason: "DESKTOP_COMMAND_TEST_ANSWERED", message: `The validated fixture host answered ${String(commandId)}.` };
+    }
+
     if (commandId === "project-build") {
       return { ok: false, reason: "PROJECT_BUILD_SIGNING_MISSING", message: "Linux signing is not configured." };
     }
+
     if (ENGINE_ANSWERED_COMMANDS.has(String(commandId))) {
       return { ok: false, reason: "DESKTOP_COMMAND_TEST_ANSWERED", message: `The engine answered ${String(commandId)}.` };
     }
+
     const translated = commandId === "project-save" || commandId === "change-review-accept"
       ? { action: "authoring", payload: { op: "accept" } }
       : commandId === "change-review-reject"
@@ -111,6 +125,7 @@ function engineResponse(
                   commandId === "project-git-stage" || commandId === "project-git-commit-prepare"
                 ? { action: "project-git", payload: { op: commandId, input } }
               : null;
+
     if (["physics-apply", "environment-apply", "material-apply", "effect-apply"].includes(String(commandId))) {
       return {
         ok: true,
@@ -137,8 +152,10 @@ function engineResponse(
         },
       };
     }
+
     if (translated !== null) return engineResponse(translated, state);
   }
+
   if (action === "authoring" && op === "status") {
     return {
       ok: true,
@@ -155,6 +172,7 @@ function engineResponse(
       },
     };
   }
+
   // A whole `DesktopSnapshot`, the shape the real session returns: the surface
   // refuses a snapshot it cannot validate rather than projecting a partial one.
   if (action === "authoring" && op === "propose") {
@@ -175,8 +193,10 @@ function engineResponse(
       },
     };
   }
+
   if (action === "authoring" && op === "accept") {
     state.undoAvailability = "available";
+
     return {
       ok: true,
       action,
@@ -192,30 +212,37 @@ function engineResponse(
       },
     };
   }
+
   if (action === "authoring" && op === "undo") {
     state.undoAvailability = "unavailable";
     state.redoAvailability = "available";
+
     return {
       ok: true,
       action,
       data: { ok: true, restoredPaths: ["scene.json"] },
     };
   }
+
   if (action === "authoring" && op === "redo") {
     state.undoAvailability = "available";
     state.redoAvailability = "unavailable";
+
     return {
       ok: true,
       action,
       data: { ok: true, transactionId: "1700000000000-0123456789abcdef", restoredPaths: ["scene.json"] },
     };
   }
+
   if (action === "run-control") {
     return { ok: true, action: "command", data: { completed: true } };
   }
+
   if (action === "catalog-inspect") {
     return { ok: true, action: "command", data: { kind: "sceneaxi.test-catalog", catalog: {} } };
   }
+
   if (action === "open-path") {
     return {
       ok: true,
@@ -227,6 +254,7 @@ function engineResponse(
       },
     };
   }
+
   if (action === "ship" && op === "export-web") {
     return {
       ok: true,
@@ -246,10 +274,12 @@ function engineResponse(
       },
     };
   }
+
   if (action === "project-git") {
     if (state.projectGitResponse !== undefined) {
       return { ok: true, action: "command", data: state.projectGitResponse };
     }
+
     const repositoryState = {
       schemaVersion: 1,
       kind: "sceneaxi.project-git-state",
@@ -267,6 +297,7 @@ function engineResponse(
       clean: false,
       undoScope: "sceneaxi-document-only",
     };
+
     return {
       ok: true,
       action: "command",
@@ -285,9 +316,11 @@ function engineResponse(
         : repositoryState,
     };
   }
+
   if (action === "profile") {
     return { ok: true, action, data: payload };
   }
+
   return {
     ok: false,
     reason: "DESKTOP_COMMAND_TEST_UNEXPECTED",
@@ -299,19 +332,23 @@ function engineResponse(
 async function settle(window: HappyWindow) {
   for (let turn = 0; turn < 40; turn += 1) {
     await Promise.resolve();
+
     const projectState = window.document.querySelector("[data-project-state]")
       ?.getAttribute("data-project-state");
+
     const projectTransitionPending =
       projectState === "opening" ||
       projectState === "recovering" ||
       projectState === "undoing" ||
       projectState === "redoing";
+
     if (
       turn >= 10 &&
       window.document.querySelector("[data-busy]") === null &&
       !projectTransitionPending
     ) return;
   }
+
   throw new Error("desktop command did not settle");
 }
 
@@ -329,6 +366,7 @@ async function harness(
   windows.push(window);
   const calls: HostCall[] = [];
   const requests: Record<string, unknown>[] = [];
+
   const state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
@@ -338,6 +376,7 @@ async function harness(
     redoAvailability: "unavailable",
     ...(projectGitResponse === undefined ? {} : { projectGitResponse }),
   };
+
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
   Object.defineProperty(window, "sceneaxiDesktopLinux", {
@@ -350,9 +389,11 @@ async function harness(
         const typed = clone(request) as Record<string, unknown>;
         const action = String(typed["action"]);
         calls.push({ plane: "project", action, op: null });
+
         if (action === "status") {
           return clone({ ok: true, data: { status: projectStatus(hasActiveProject) } });
         }
+
         return clone({
           ok: true,
           data: {
@@ -372,6 +413,7 @@ async function harness(
             ? payload["commandId"]
             : typeof payload?.["op"] === "string" ? payload["op"] : null,
         });
+
         return clone(engineResponse(typed, state));
       },
     },
@@ -380,7 +422,9 @@ async function harness(
   const html = renderDesktopChrome(
     desktopVisualView(createDesktopVisualState({ profile })),
   );
+
   const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+
   if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
   window.document.write(html.replace(match[0], ""));
   window.document.addEventListener("sceneaxi:desktop-viewport-play", (event) => {
@@ -391,12 +435,15 @@ async function harness(
   window.eval(match[1]);
   await settle(window);
   calls.splice(0);
+
   return { window, calls, requests };
 }
 
 function element(window: HappyWindow, selector: string) {
   const found = window.document.querySelector(selector) as HappyHTMLElement | null;
+
   if (found === null) throw new Error(`missing command control ${selector}`);
+
   return found;
 }
 
@@ -417,7 +464,9 @@ function shortcut(window: HappyWindow, key: string, target?: HappyHTMLElement, s
     bubbles: true,
     cancelable: true,
   });
+
   (target ?? (window.document.body as unknown as HappyHTMLElement)).dispatchEvent(event);
+
   return event;
 }
 
@@ -428,7 +477,9 @@ function tab(window: HappyWindow, target: HappyHTMLElement, shiftKey: boolean) {
     bubbles: true,
     cancelable: true,
   });
+
   target.dispatchEvent(event);
+
   return event;
 }
 
@@ -436,18 +487,22 @@ async function prepare(command: DesktopInteractionCommand, window: HappyWindow) 
   if (command.id === "project-save" || command.id === "edit-undo" || command.id === "edit-redo") {
     await click(window, "#web-stage-html");
   }
+
   if (command.id === "edit-undo") {
     await click(window, '#project-save[data-command="project-save"]');
   }
+
   if (command.id === "edit-redo") {
     await click(window, '#project-save[data-command="project-save"]');
     await click(window, '#menu-command-edit-undo');
   }
+
   if (command.id === "project-git-stage" || command.id === "project-git-commit-prepare") {
     await click(window, '#menu-command-project-git-status');
     const path = element(window, '[data-project-git-path][value="scene.json"]') as unknown as HTMLInputElement;
     path.checked = true;
   }
+
   if (command.id === "project-git-commit-prepare") {
     const message = element(window, "[data-project-git-message]") as unknown as HTMLInputElement;
     message.value = "feat: prepare";
@@ -505,29 +560,69 @@ async function invoke(
     await settle(window);
   }
 
+  if (INPUT_REQUIRED_COMMANDS.has(command.id)) {
+    const form = element(window, `[data-command-input="${command.id}"]`);
+    expect(form.closest('[role="dialog"]')?.getAttribute("aria-modal")).toBe("true");
+    expect(calls).not.toContainEqual(expectedEffect(command));
+
+    const values: Record<string, unknown> = {
+      documentPath: "scene.json", expectedContentHash: CONTENT_HASH, profile: "web",
+      expectedBaseVersion: CONTENT_HASH, proposalDigest: CONTENT_HASH,
+      scope: "project", actionId: "play.primary", binding: { device: "keyboard", key: "p", modifiers: [] },
+      reviewDigest: null, approved: true, definitionId: "fixture-prefab",
+      instanceIds: ["root"], parentInstanceId: "root", instanceId: "root", sourceInstanceId: "root",
+      instanceKey: "fixture-copy", propertyId: "translation-x", newValue: 2,
+      steps: 1, source: "scene", locator: "packages/fixture", manifest: {},
+      digest: CONTENT_HASH, packageId: "fixture-package", seamId: "networking",
+    };
+
+    for (const field of form.querySelectorAll("[data-command-field]")) {
+      const name = field.getAttribute("data-command-field");
+
+      if (name === null || !(name in values)) continue;
+      const input = field as unknown as HTMLInputElement;
+      const value = values[name];
+
+      if (input.type === "checkbox") input.checked = Boolean(value);
+      else input.value = typeof value === "object" ? JSON.stringify(value) : String(value);
+    }
+
+    form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+    await settle(window);
+    const submitted = requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id);
+    expect(submitted).toBeDefined();
+    expect(validateEditorCommandInvocation(submitted?.payload).ok).toBe(true);
+  }
+
   expect(calls).toContainEqual(expectedEffect(command));
+
   if (command.id === "project-build") {
     expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
       .toMatchObject({ payload: { input: { profile: "web", target: "linux" } } });
     expect(element(window, "[data-outcome-code]").textContent).toBe("PROJECT_BUILD_SIGNING_MISSING");
   }
+
   if (INPUT_REQUIRED_COMMANDS.has(command.id)) {
-    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
+    expect(element(window, "[data-command-evidence]").textContent + element(window, "[data-project-status]").textContent).toContain("DESKTOP_COMMAND_TEST_ANSWERED");
   }
+
   if (command.id === "workspace-layout-apply") {
     expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
       .toMatchObject({ payload: { input: { profile: expect.any(String), leftVisible: expect.any(Boolean), inspectorVisible: expect.any(Boolean) } } });
   }
+
   if (ENGINE_ANSWERED_COMMANDS.has(command.id)) {
     expect(requests.some((request) => (request.payload as { commandId?: string }).commandId === command.id)).toBe(true);
     expect(element(window, "[data-outcome-code]").textContent).toBe("DESKTOP_COMMAND_TEST_ANSWERED");
   }
+
   if (command.id === "run-play") {
     expect(element(window, ".shell").dataset.mode).toBe("run");
     expect(element(window, "[data-project-status]").textContent).toContain(
       "Played composed scene",
     );
   }
+
   if (command.id === "ship-export-web") {
     expect(element(window, ".shell").dataset.mode).toBe("ship");
     expect(element(window, "[data-project-status]").textContent).toContain(
@@ -537,6 +632,7 @@ async function invoke(
       `sha256:${"c".repeat(64)}`,
     );
   }
+
   if (
     command.id === "project-git-status" || command.id === "project-git-diff" ||
     command.id === "project-git-stage" || command.id === "project-git-commit-prepare"
@@ -565,6 +661,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
 
       it(`does not invoke ${command.id} from text entry`, async () => {
         const commandKey = command.key;
+
         if (commandKey === null) throw new Error(`${command.id} has no accelerator`);
         const { window, calls } = await harness();
         await prepare(command, window);
@@ -578,6 +675,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
         const inherited = window.document.createElement("span") as unknown as HappyHTMLElement;
         editable.append(inherited);
         shell.append(input, editable, plaintext);
+
         for (const target of [input, editable, plaintext, inherited]) {
           const event = shortcut(window, commandKey, target, command.id === "edit-redo");
           await settle(window);
@@ -610,10 +708,13 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const mutation = textarea(window, '[data-catalog-mutation="physics"]');
     mutation.value = JSON.stringify({ kind: "world-set", gravityY: -9.81, stepMs: 16, seed: 1 });
     await click(window, "#physics-stage");
+
     const request = requests.find((candidate) => {
       const payload = candidate["payload"] as Record<string, unknown> | undefined;
+
       return payload?.["commandId"] === "physics-apply";
     });
+
     expect(request).toMatchObject({ payload: { input: { mutation: { kind: "world-set" } } } });
     expect(element(window, "[data-change-proposal]").hidden).toBe(false);
     expect(element(window, "[data-change-diff]").textContent).toContain("Physics change staged");
@@ -626,10 +727,13 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       const mutation = textarea(window, `[data-catalog-mutation="${kind}"]`);
       mutation.value = JSON.stringify({ kind: "set" });
       await click(window, `#${kind}-stage`);
+
       const request = requests.find((candidate) => {
         const payload = candidate["payload"] as Record<string, unknown> | undefined;
+
         return payload?.["commandId"] === `${kind}-apply`;
       });
+
       expect(request, `${kind} GUI apply command`).toMatchObject({
         payload: { input: { mutation: { kind: "set" } } },
       });
@@ -651,6 +755,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
   it("dispatches inspector reads for all four registered catalogs", async () => {
     const { window, calls } = await harness();
     await click(window, "#mode-build");
+
     for (const kind of ["physics", "environment", "material", "effect"] as const) {
       await click(window, `#${kind}-inspect`);
       expect(calls).toContainEqual({ plane: "engine", action: "command", op: `${kind}-inspect` });
@@ -673,6 +778,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       "editor.project.save",
       { device: "keyboard", code: "KeyB", modifiers: ["primary"] },
     );
+
     if (!reviewed.ok || !("map" in reviewed)) throw new Error("rebind fixture refused");
     const { window, calls } = await harness("web", "unavailable", true, undefined, reviewed.map);
     await click(window, "#web-stage-html");
@@ -727,6 +833,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       clean: true,
       undoScope: "sceneaxi-document-only",
     });
+
     await click(window, '[data-menu-trigger="file"]');
     await click(window, "#menu-command-project-git-status");
     expect(element(window, "[data-project-status]").textContent).toContain(
@@ -740,6 +847,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
 
   it("stages exact evidence paths without lossy text parsing", async () => {
     const exactPath = " notes,2026.txt";
+
     const repositoryState = {
       schemaVersion: 1,
       kind: "sceneaxi.project-git-state",
@@ -757,18 +865,25 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       clean: false,
       undoScope: "sceneaxi-document-only",
     };
+
     const { window, requests } = await harness("web", "unavailable", true, repositoryState);
     await click(window, '#menu-command-project-git-status');
+
     const path = [...window.document.querySelectorAll('[data-project-git-path]')]
       .find((candidate) => (candidate as unknown as HTMLInputElement).value === exactPath) as unknown as HTMLInputElement | undefined;
+
     expect(path).toBeDefined();
+
     if (path === undefined) return;
     path.checked = true;
     await click(window, '#menu-command-project-git-stage');
+
     const invocation = requests.find((request) => {
       const payload = request["payload"] as Record<string, unknown> | undefined;
+
       return payload?.["commandId"] === "project-git-stage";
     });
+
     expect(invocation).toMatchObject({
       payload: { input: { paths: [exactPath] } },
     });
@@ -799,6 +914,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(palette.contains(window.document.activeElement)).toBe(true);
 
     const last = stops[stops.length - 1];
+
     if (last === undefined) throw new Error("palette rendered no rows");
     last.focus();
     const wrap = tab(window, last, false);
@@ -829,6 +945,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       value: { request: () => new Promise(() => {}) },
     });
     shortcut(window, "p");
+
     for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
     expect(element(window, "#project-save").getAttribute("aria-disabled")).toBe("true");
     expect(element(window, "#menu-command-project-save").getAttribute("aria-disabled")).toBe(
@@ -838,6 +955,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const pill = element(window, "[data-project-state]").dataset.projectState;
 
     shortcut(window, "s");
+
     for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
     expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(false);
     expect(element(window, "[data-outcome-code]").textContent).toBe(
@@ -853,6 +971,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const { window } = await harness();
     await click(window, "#web-stage-html");
     await click(window, '#project-save[data-command="project-save"]');
+
     const host = (
       window as unknown as {
         sceneaxiDesktopLinux: {
@@ -861,22 +980,27 @@ describe("desktop command menu, palette, and accelerator parity", () => {
         };
       }
     ).sceneaxiDesktopLinux;
+
     Object.defineProperty(window, "sceneaxiDesktopLinux", {
       configurable: true,
       value: {
         project: host.project,
         request: async (request: unknown) => {
           const typed = request as { action?: unknown; payload?: { commandId?: unknown } };
+
           if (typed.action === "command" && typed.payload?.commandId === "run-play") {
             return new Promise(() => {});
           }
+
           return host.request(request);
         },
       },
     });
 
     shortcut(window, "p");
+
     for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+
     for (const selector of ["#menu-command-edit-undo", "#palette-edit-undo"]) {
       const undo = element(window, selector);
       expect(undo.getAttribute("aria-disabled")).toBe("true");
@@ -919,6 +1043,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(panel.hidden).toBe(false);
     const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
     const last = items[items.length - 1];
+
     if (last === undefined) throw new Error("File menu rendered no items");
     last.focus();
 
@@ -943,9 +1068,11 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
     const first = items[0];
     const second = items[1];
+
     if (first === undefined || second === undefined) {
       throw new Error("File menu rendered too few items");
     }
+
     first.dispatchEvent(
       new window.FocusEvent("focusout", { bubbles: true, relatedTarget: second }),
     );
@@ -1039,6 +1166,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
 
   it("ignores a Shift-modified chord that no menu advertises", async () => {
     const { window, calls } = await harness();
+
     const event = new window.KeyboardEvent("keydown", {
       key: "o",
       ctrlKey: true,
@@ -1046,6 +1174,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       bubbles: true,
       cancelable: true,
     });
+
     (window.document.body as unknown as HappyHTMLElement).dispatchEvent(event);
     await settle(window);
     expect(event.defaultPrevented).toBe(false);
@@ -1071,11 +1200,13 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, "#menu-panel-file").contains(window.document.activeElement)).toBe(
       true,
     );
+
     const escape = new window.KeyboardEvent("keydown", {
       key: "Escape",
       bubbles: true,
       cancelable: true,
     });
+
     (window.document.activeElement as unknown as HappyHTMLElement).dispatchEvent(escape);
     expect(element(window, "#menu-panel-file").hidden).toBe(true);
     expect(window.document.activeElement).toBe(trigger);
@@ -1093,22 +1224,28 @@ describe("desktop command menu, palette, and accelerator parity", () => {
   it("moves between menu items with the arrow keys its role advertises", async () => {
     const { window } = await harness();
     await click(window, '[data-menu-trigger="file"]');
+
     const items = [
       ...element(window, "#menu-panel-file").querySelectorAll('[role="menuitem"]'),
     ] as HappyHTMLElement[];
+
     expect(items.length).toBeGreaterThan(1);
     const first = items[0];
     const second = items[1];
     const last = items[items.length - 1];
+
     if (first === undefined || second === undefined || last === undefined) {
       throw new Error("File menu rendered no items");
     }
+
     first.focus();
+
     const down = new window.KeyboardEvent("keydown", {
       key: "ArrowDown",
       bubbles: true,
       cancelable: true,
     });
+
     first.dispatchEvent(down);
     expect(down.defaultPrevented).toBe(true);
     expect(window.document.activeElement).toBe(second);
@@ -1118,6 +1255,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       bubbles: true,
       cancelable: true,
     });
+
     second.dispatchEvent(up);
     expect(window.document.activeElement).toBe(first);
 
@@ -1126,6 +1264,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       bubbles: true,
       cancelable: true,
     });
+
     first.dispatchEvent(end);
     expect(window.document.activeElement).toBe(last);
   });

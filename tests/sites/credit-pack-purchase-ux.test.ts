@@ -184,7 +184,8 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
       "utf8",
     );
 
-    expect(account).toContain("Payment received. Credits appear once confirmed in your ledger.");
+    expect(account).toContain("This return link is not proof of payment.");
+    expect(account).not.toContain("Payment received.");
     expect(pricing).toContain("No payment was completed. No credits were added.");
     expect(pricing).not.toContain('title="Billing mode"');
     expect(pricing).not.toContain('term: "Checkout"');

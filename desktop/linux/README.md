@@ -53,6 +53,24 @@ mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
 (`backend three`, `surface webgl-canvas` where a drawing buffer exists).
 
+The production-swarm retry ran both the current built runtime and a genuinely
+rebuilt unpacked Linux application under Xvfb. Receipts are
+`dist-build/smoke-runtime-proof.json` and `dist-build/smoke-packaged-proof.json`;
+these prove isolated typed New/Open/Recent dialogs, Save/Undo/Redo, hierarchy and
+transform, import/reload, offline Local Ask/Build/approve/apply, cancel and the real
+poll timeout, Play and Export. They also verify strict CSP enforcement, denied
+permissions, six foreign-sender IPC refusals, exact browser result revisions,
+12 import/reload/Play/Export cycles within the unchanged four-second budget,
+a resource plateau, and pagehide teardown deleting actual GPU buffers/programs.
+The 8 MiB asset golden proves byte-boundary staging and rejection without canonical
+mutation; it is not a claim of maximum-scene rendering or live-provider success.
+
+To preserve an older local candidate, stage `electron-builder --linux dir --publish
+never --config.directories.output=dist-build/retry-package`, then run
+`SCENEAXI_SMOKE_PACKAGED_ROOT=dist-build/retry-package/linux-unpacked xvfb-run -a
+pnpm smoke --packaged`. The override must remain inside this application root.
+No signing, upload, publication, or Windows/macOS native certification is implied.
+
 The bound Build inspector also projects the accepted composition as versioned
 hierarchy v1: distinct stable artifact and object ids, parent/child depth,
 ordered multi-selection, bounded local-artifact create/remove, and explicit
@@ -96,9 +114,19 @@ response likewise adopt and poll the bridge's retained exact job before offering
 fresh work. Assistant **Agent** uses the
 privileged no-network rarity fixture through the same Model Provider Port, then
 stages the canonical result in the existing Change Review; it does not mount a
-second artifact or accept provider entropy. Ask refuses clearly rather than
-pretending it produces build output. The shell visual model owns the manipulator controls
-and tokens; the renderer only binds their Mount API effects.
+second artifact or accept provider entropy. Local **Ask** returns a read-only result;
+**Build** stages an artifact in Change Review and never silently approves a document
+write. Accept and Save are explicit authoring actions. BYOK availability is
+provider-specific: an injected runner for one provider does not make another provider
+ready, and missing secure storage or transport refuses by name. No-network fixtures
+are not live provider or billing proof. The shell visual model owns the manipulator
+controls and tokens; the renderer only binds their Mount API effects.
+
+Current-source serial integration runtime smoke and three freshly packaged
+`linux-unpacked` runs passed (`docs/audits/production-swarm/integration-pass-2-linux-*.log`).
+This supersedes the builder's earlier startup failure only for the exercised paths;
+remaining command/IPC/privacy acceptance is tracked separately in `FINAL.json`.
+These are local unsigned, unpublished artifacts, not release authorization.
 
 Rarity v1 authoring is available only to projects created through **New Project**
 in this release, because that starter owns the required stable product identity
