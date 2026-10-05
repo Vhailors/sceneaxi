@@ -22,4 +22,12 @@ Decisions, failed approaches, traps, and every branch-protection bypass (repo, P
 - During sign-off, a stale `next start` kept port 3201 and served the old CSS. Check the port before trusting a local screenshot.
 
 ### Branch-protection bypasses
-(none yet)
+- 2026-10-05, 11:29:36Z to 11:29:42Z UTC: Vhailors/sceneaxi PR #328 (`redesign-impeccable`), merged as `fb4a85a5`.
+  - Why: the required checks `gate` and `engine-sdk` were still in progress, and `gate` also fails on an unchanged `main`. `gh pr merge --admin` was refused because `enforce_admins` is on.
+  - Done under G4: `enforce_admins` was lifted for this one merge and restored in the same command sequence. Verified afterwards: `enforce_admins=true` and required checks `gate,engine-sdk`, unchanged.
+  - Evidence: the local gate, compared stage by stage with `main`, showed no new failures (PR body).
+- 2026-10-05: Vhailors/sceneaxi, the PR from branch `redesign-status` (this STATUS/LOG update, docs only), merged with the same G4 procedure. Its exact window and merge SHA are in portfolio-meta `areas/sceneaxi/runs.md`.
+
+### Deploy notes
+- The first deploy round promoted with an empty `/api/health` commit: a CLI deploy from a worktree carries no git metadata. Redeployed with `--build-env SCENEAXI_BUILD_COMMIT=fb4a85a5…`; health now names the build.
+- The deploy review flagged 3 Verification mismatches (catalog 404s, the SDK archive). The previous production had them too, so they were filed as #329 and #330 rather than blocking.
