@@ -690,6 +690,47 @@ The two labels ADR 0017 retired by name, `Experimental Three preview` and
 `test/visual-model.test.ts`, in every state, so neither they nor the dropped
 sentence can return by review slip.
 
+### Redesign 2026-10 (DV-D1 to DV-D9, DV-P5 to DV-P7)
+
+Approved in `docs/redesign/DIRECTION.md` §8 and §8.1. The values are data in
+`src/visual-tokens.ts` (`CHROME_RADIUS`, `TYPE_SIZE`, `SPACING`/`SPACING_SCALE`,
+`ELEVATION`, `MOTION_SYSTEM`, `MOTION_CUSTOM_PROPERTIES`,
+`MOTION_REDUCED_CUSTOM_PROPERTIES`), and each DV-D row below is also a `DEVIATIONS`
+entry (`dv-d1-…` to `dv-d9-…`). Colours, families and `METRICS` do not change.
+
+| Id | Old | New | Why |
+|---|---|---|---|
+| DV-D1 | `--r-panel: 18px` | `CHROME_RADIUS.panel` 16px (card 13, control 10 unchanged) | the card radius ceiling is 16px |
+| DV-D2 | micro labels 8–10px | `TYPE_SIZE.floor` 11px for text; `aria-hidden` glyphs excepted; `.scene-entity-identity code` and `.asset-browser-card span` stay 10px (`visual-refinement.test.ts`, Request R1) | legibility; `.panel-head` already pins 11px |
+| DV-D3 | `SPACING` 4, 8, 12, 16, 24 | adds `block` 32, `gutter` 44, `band` 72 (`--space-8`, `--space-11`, `--space-18`) | one spacing scale on every surface |
+| DV-D4 | `0 0 60px -10px` / `0 24px 60px` shadows with a 1px edge | `ELEVATION.float` `0 10px 14px -6px` over `SCRIM.shadow`, edge kept | a 1px edge plus a ≥16px blur is the banned ghost elevation |
+| DV-D5 | colour transitions `.14s ease`; `rise .3s ease-out` and `rise .16s ease-out` with a `translateY(7px)` keyframe | instant paint; translate, clip-path and keyframe motion on `MOTION_SYSTEM` durations, out-quart/quint/expo curves and 4/8/16px distances | motion contract; still no `transform:scale(` and press stays the pinned `box-shadow:inset` |
+| DV-D6 | no loop timing; `assistant-bars 0.9s ease-in-out`, `sweep 1.1s linear` | `MOTION_SYSTEM.duration.loop` 1200ms, `MOTION_SYSTEM.delay.loading` 300ms; both loops on `var(--motion-duration-loop) var(--motion-ease-out-quart) infinite` | a loop is a progress signal; rulings R-1 and R-2 (`docs/redesign/RULINGS.md`) |
+| DV-D7 | Play ring grows from `circle(50%)` | grows from `circle(25%)` (`dv-d7-play-ring-origin`) | at 50% the circle already covers a 24px button, so nothing visibly grows; ruling R-6 |
+| DV-D8 | capability sentences truncated with an ellipsis | drawn with the details layer only; visually hidden (1px clip) while details are closed, still in the accessibility tree (`dv-d8-capability-sentences`) | a truncated sentence reads as broken copy; text and hooks unchanged; ruling R-6 |
+| DV-D9 | web-preview `.site-eyebrow` uppercase, tracked accent label | neutral sentence-case chip, 1px `--line`, `--text-2` (`dv-d9-site-eyebrow-chip`) | removes the eyebrow pattern; text unchanged, test pins win; ruling R-6 |
+
+**Port rows (ruling R-9).**
+
+- **DV-P5.** The pinned `MOTION`, `RADIUS`, `SPACE`, `TYPE_SCALE` and `DENSITY` groups
+  keep their values (`test/visual-tokens.test.ts`). The v5 groups whose names collide
+  land under port names: `MOTION_SYSTEM` (v5 `MOTION`) and `CHROME_RADIUS` (v5
+  `RADIUS`). `TYPE_SIZE` lands beside `TYPE_SCALE`. `SPACE` keeps `5: 20`, and no
+  restyled rule reads `--space-5`.
+- **DV-P6** is withdrawn: chrome headings stay 15/17px, and `TYPE_SCALE` is not used to
+  resize them.
+- **DV-P7.** Main's refinement pass removes the five assistant pending loops
+  (`assistant-breathe`, `-spin`, `-glow`, `-dot`, `-card`) from the rendered chrome. They
+  stay removed; only `assistant-bars` and `sweep` move to the R-1 tokens.
+
+**Motion on this surface.** The chrome emits `MOTION_CUSTOM_PROPERTIES` in its
+`:root` (the sites' two `scale` tokens are deliberately absent: the desktop never
+scales). Under `prefers-reduced-motion: reduce` the pinned blanket
+`animation-duration:.001ms` rule stays first and `MOTION_REDUCED_CUSTOM_PROPERTIES`
+follows it. `opacity` animates only inside `@keyframes`; anything shown and
+hidden by the `hidden` attribute enters by a keyframe on `:not([hidden])` and
+leaves at once. The chrome rules themselves belong to `src/chrome/**` (lane-desktop).
+
 ## What is verified where
 
 - **Node gates** (`pnpm gate`) cover the whole model — mode/dock-tab derivation,

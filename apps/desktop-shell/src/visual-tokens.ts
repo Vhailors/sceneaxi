@@ -385,6 +385,72 @@ export const DEVIATIONS = Object.freeze([
     reason:
       "captain D7/D12: desktop is its own visual authority; sites stay on Foundations v2",
   }),
+  // Redesign 2026-10 (docs/redesign/DIRECTION.md §8; recorded in
+  // docs/engine-desktop-surface.md). The values live in CHROME_RADIUS, TYPE_SIZE,
+  // SPACING, ELEVATION and MOTION_SYSTEM below (port names per DV-P5: the pinned
+  // MOTION, RADIUS, SPACE and TYPE_SCALE keep their values); the chrome reads them.
+  Object.freeze({
+    id: "dv-d1-panel-radius",
+    archive: "--r-panel: 18px",
+    shipped: "CHROME_RADIUS.panel 16px",
+    reason: "the card radius ceiling is 16px",
+  }),
+  Object.freeze({
+    id: "dv-d2-text-floor",
+    archive: "micro labels at 8–10px",
+    shipped: "TYPE_SIZE.floor 11px for text (aria-hidden glyphs excepted); .scene-entity-identity code and .asset-browser-card span stay 10px",
+    reason:
+      "legibility; .panel-head already pins 11px. The two 10px selectors are pinned by visual-refinement.test.ts and stay until Request R1 lifts them",
+  }),
+  Object.freeze({
+    id: "dv-d3-spacing-scale",
+    archive: "SPACING 4, 8, 12, 16, 24",
+    shipped: "SPACING adds 32, 44, 72 (--space-8, --space-11, --space-18); SPACE keeps its pinned 5: 20, which no restyled rule reads",
+    reason: "one spacing scale on every surface; structural METRICS are unchanged",
+  }),
+  Object.freeze({
+    id: "dv-d4-float-shadow",
+    archive: "overlay and drawer shadows 0 0 60px -10px / 0 24px 60px with a 1px edge",
+    shipped: "ELEVATION.float 0 10px 14px -6px over SCRIM.shadow, edge kept",
+    reason: "a 1px edge plus a blur of 16px or more is the banned ghost elevation",
+  }),
+  Object.freeze({
+    id: "dv-d5-motion-curves",
+    archive: "colour transitions .14s ease; rise .3s ease-out and rise .16s ease-out with a 7px keyframe",
+    shipped: "instant paint; translate, clip-path and keyframe motion on MOTION_SYSTEM durations, out-quart/quint/expo curves and 4/8/16px distances; no scale",
+    reason:
+      "motion contract: transform/opacity/clip-path/filter only, quart/quint/expo curves, on-token distances, inside the chrome's no transform:scale( pin and the pinned press without moving glyphs",
+  }),
+  Object.freeze({
+    id: "dv-d6-loading-loop",
+    archive: "no loop timing; assistant-bars 0.9s ease-in-out infinite and sweep 1.1s linear infinite",
+    shipped: "MOTION_SYSTEM.duration.loop 1200ms and MOTION_SYSTEM.delay.loading 300ms, emitted as --motion-duration-loop / --motion-delay-loading; lane-desktop will retime assistant-bars and sweep onto var(--motion-duration-loop) var(--motion-ease-out-quart) infinite (until then the chrome still ships 0.9s ease-in-out and 1.1s linear)",
+    reason:
+      "a loop is a progress signal, not a transition; accepted by the run contract owner 2026-10-04 as rulings R-1 and R-2 (docs/redesign/RULINGS.md): indeterminate indicators only, transform/opacity only, static under reduced motion",
+  }),
+  // DV-D7 to DV-D9: lane-desktop deviations, accepted by ruling R-6
+  // (docs/redesign/RULINGS.md, 2026-10-04).
+  Object.freeze({
+    id: "dv-d7-play-ring-origin",
+    archive: "Play ring clip-path grows from circle(50%)",
+    shipped: "Play ring clip-path grows from circle(25%)",
+    reason:
+      "at 50% the circle already covers a 24px-tall button, so nothing visibly grows; accepted by ruling R-6",
+  }),
+  Object.freeze({
+    id: "dv-d8-capability-sentences",
+    archive: "capability sentences truncated with an ellipsis",
+    shipped: "capability sentences drawn with the details layer only; visually hidden (1px clip) while details are closed",
+    reason:
+      "a truncated sentence reads as broken copy; the text and its hooks are unchanged and stay in the accessibility tree; accepted by ruling R-6",
+  }),
+  Object.freeze({
+    id: "dv-d9-site-eyebrow-chip",
+    archive: "web-preview .site-eyebrow as an uppercase, tracked accent label",
+    shipped: "neutral sentence-case chip: 1px --line frame, --text-2, no tracking",
+    reason:
+      "removes the eyebrow pattern from the mock page; its text is unchanged and any test pin on it still wins; accepted by ruling R-6",
+  }),
 ]);
 
 /**
@@ -493,8 +559,133 @@ export const MOTION = Object.freeze({
   out: "cubic-bezier(.4,0,1,1)",
 });
 
-/** A 4px rhythm for panel content; structural archive metrics stay separate. */
-export const SPACING = Object.freeze({ unit: 4, small: 8, medium: 12, large: 16, section: 24 });
+/**
+ * Text sizes in px (Cinematic Pro, fixed; product UI is not fluid).
+ *
+ * `floor` is DV-D2: no text below 11px, `aria-hidden` glyph marks excepted. The
+ * one standing exception is `pinnedException`, the two selectors
+ * `visual-refinement.test.ts` pins at 10px; no rule may override them. Beside the
+ * pinned `TYPE_SCALE`, which does not size chrome headings (DV-P6 withdrawn).
+ */
+export const TYPE_SIZE = Object.freeze({
+  floor: 11,
+  panelHead: 11,
+  ui: 12,
+  mono: 12,
+  body: 13,
+  heading: 15,
+  headingLarge: 17,
+  pinnedException: 10,
+});
+
+/**
+ * A 4px rhythm for panel content; structural archive metrics stay separate.
+ * DV-D3 extends it to the sites' eight steps: `block`, `gutter` and `band` are
+ * `--space-8`, `--space-11` and `--space-18`.
+ */
+export const SPACING = Object.freeze({
+  unit: 4,
+  small: 8,
+  medium: 12,
+  large: 16,
+  section: 24,
+  block: 32,
+  gutter: 44,
+  band: 72,
+});
+
+/** The spacing scale under the site names, so the chrome emits the same variables. */
+export const SPACING_SCALE = Object.freeze({
+  "--space-1": SPACING.unit,
+  "--space-2": SPACING.small,
+  "--space-3": SPACING.medium,
+  "--space-4": SPACING.large,
+  "--space-6": SPACING.section,
+  "--space-8": SPACING.block,
+  "--space-11": SPACING.gutter,
+  "--space-18": SPACING.band,
+});
+
+/**
+ * Chrome corner radii in px (v5 `RADIUS`, port name per DV-P5; the pinned `RADIUS`
+ * above is the ui-kit scale and keeps its values). DV-D1: `panel` was 18px; 16px is
+ * the card radius ceiling.
+ */
+export const CHROME_RADIUS = Object.freeze({ panel: 16, card: 13, control: 10 });
+
+/**
+ * The one outer shadow: floating layers (overlay card, palette, drawers). DV-D4
+ * replaces the 60px blur with a tight 14px one; the 1px edge stays. The ink is
+ * `SCRIM.shadow`, so it still moves with `SURFACE.backdrop`.
+ */
+export const ELEVATION = Object.freeze({
+  float: `0 10px 14px -6px ${SCRIM.shadow}`,
+});
+
+/**
+ * The motion system, shared with the sites (`FOUNDATION_MOTION_SYSTEM` in
+ * `packages/site-kit/src/design-tokens.ts`, copied here because the dependency
+ * matrix forbids the import, see `FOUNDATIONS_V2_SOURCE`). v5 named it `MOTION`;
+ * DV-P5 lands it as `MOTION_SYSTEM` because the pinned `MOTION` above keeps its
+ * values. Durations and delays in ms, distances in px.
+ *
+ * Rules the chrome keeps while reading these: only transform, opacity (inside
+ * `@keyframes` only), clip-path and filter animate; **no `scale()` anywhere**, so
+ * the sites' two `scale` tokens are not part of this table; anything toggled by
+ * `hidden` enters by a keyframe and leaves at once. `duration.loop` and
+ * `delay.loading` are the one exception to the 120–320ms band (DV-D6, ruling R-1).
+ */
+export const MOTION_SYSTEM = Object.freeze({
+  duration: Object.freeze({
+    press: 120,
+    micro: 160,
+    state: 200,
+    panel: 280,
+    panelExit: 200,
+    route: 320,
+    loop: 1200,
+  }),
+  delay: Object.freeze({ loading: 300 }),
+  ease: Object.freeze({
+    outQuart: "cubic-bezier(0.25, 1, 0.5, 1)",
+    outQuint: "cubic-bezier(0.22, 1, 0.36, 1)",
+    outExpo: "cubic-bezier(0.16, 1, 0.3, 1)",
+  }),
+  stagger: Object.freeze({ step: 40, max: 200 }),
+  distance: Object.freeze({ sm: 4, md: 8, lg: 16 }),
+});
+
+/** `MOTION_SYSTEM` under the shared custom-property names, in the order the sites emit them. */
+export const MOTION_CUSTOM_PROPERTIES: readonly (readonly [string, string])[] = Object.freeze([
+  Object.freeze(["--motion-duration-press", `${MOTION_SYSTEM.duration.press}ms`] as const),
+  Object.freeze(["--motion-duration-micro", `${MOTION_SYSTEM.duration.micro}ms`] as const),
+  Object.freeze(["--motion-duration-state", `${MOTION_SYSTEM.duration.state}ms`] as const),
+  Object.freeze(["--motion-duration-panel", `${MOTION_SYSTEM.duration.panel}ms`] as const),
+  Object.freeze(["--motion-duration-panel-exit", `${MOTION_SYSTEM.duration.panelExit}ms`] as const),
+  Object.freeze(["--motion-duration-route", `${MOTION_SYSTEM.duration.route}ms`] as const),
+  Object.freeze(["--motion-duration-loop", `${MOTION_SYSTEM.duration.loop}ms`] as const),
+  Object.freeze(["--motion-delay-loading", `${MOTION_SYSTEM.delay.loading}ms`] as const),
+  Object.freeze(["--motion-ease-out-quart", MOTION_SYSTEM.ease.outQuart] as const),
+  Object.freeze(["--motion-ease-out-quint", MOTION_SYSTEM.ease.outQuint] as const),
+  Object.freeze(["--motion-ease-out-expo", MOTION_SYSTEM.ease.outExpo] as const),
+  Object.freeze(["--motion-stagger-step", `${MOTION_SYSTEM.stagger.step}ms`] as const),
+  Object.freeze(["--motion-stagger-max", `${MOTION_SYSTEM.stagger.max}ms`] as const),
+  Object.freeze(["--motion-distance-sm", `${MOTION_SYSTEM.distance.sm}px`] as const),
+  Object.freeze(["--motion-distance-md", `${MOTION_SYSTEM.distance.md}px`] as const),
+  Object.freeze(["--motion-distance-lg", `${MOTION_SYSTEM.distance.lg}px`] as const),
+]);
+
+/**
+ * What `prefers-reduced-motion: reduce` overrides, after the chrome's pinned blanket
+ * `animation-duration:.001ms` rule (`chrome.test.ts`), which stays first.
+ */
+export const MOTION_REDUCED_CUSTOM_PROPERTIES: readonly (readonly [string, string])[] =
+  Object.freeze([
+    Object.freeze(["--motion-distance-sm", "0px"] as const),
+    Object.freeze(["--motion-distance-md", "0px"] as const),
+    Object.freeze(["--motion-distance-lg", "0px"] as const),
+    Object.freeze(["--motion-stagger-step", "0ms"] as const),
+  ]);
 
 /**
  * Region metrics, in archive pixels at the reference width.
