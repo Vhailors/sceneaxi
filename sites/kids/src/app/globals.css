@@ -1,5 +1,8 @@
 /* SAFETY: isolated presentation only. Foundations neutrals remain local copies;
- * no package import, storage, network, activity action or reducer changes. */
+ * no package import, storage, network, activity action or reducer changes.
+ * Spacing and motion values are local copies of the Foundations tokens (DIRECTION.md
+ * §4, §6.1); the Kids site may not import them. Colour tokens stay exactly the pinned
+ * ten (tests/sites/kids-surface.test.ts). */
 :root {
   color-scheme: dark;
   --bg-base: #07080a;
@@ -13,7 +16,37 @@
   --danger: #ff4d5e;
   --radius: 16px;
   --focus: #edeff2;
-  font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-11: 44px;
+  --space-18: 72px;
+
+  --motion-duration-press: 120ms;
+  --motion-duration-micro: 160ms;
+  --motion-duration-state: 200ms;
+  --motion-duration-panel: 280ms;
+  --motion-duration-panel-exit: 200ms;
+  --motion-duration-route: 320ms;
+  --motion-duration-loop: 1200ms;
+  --motion-delay-loading: 300ms;
+  --motion-ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --motion-ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-stagger-step: 40ms;
+  --motion-stagger-max: 200ms;
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 8px;
+  --motion-distance-lg: 16px;
+  --motion-scale-press: 0.97;
+  --motion-scale-enter: 0.98;
+
+  /* DV-K1: the unloaded Inter is gone; no webfont may load under the Kids CSP. */
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
 }
 
 * {
@@ -23,6 +56,7 @@
 html {
   min-width: 320px;
   background: var(--bg-base);
+  scrollbar-color: var(--line) var(--bg-base);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -31,8 +65,14 @@ body {
   min-height: 100vh;
   color: var(--fg);
   background:
-    radial-gradient(circle at 12% 0%, rgb(167 139 250 / 16%), transparent 31rem),
+    radial-gradient(circle at 12% 0%, rgb(167 139 250 / 14%), transparent 32rem),
     var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--kids) 42%, transparent);
 }
 
 button,
@@ -40,75 +80,137 @@ summary {
   font: inherit;
 }
 
-button {
-  min-height: 54px;
-  color: var(--fg);
-  background: var(--bg-control);
-  border: 2px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-button:hover:not(:disabled) {
-  border-color: var(--kids);
-}
-
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 
+/* ---------- Controls: rest, hover, focus-visible, active, disabled ----------
+ * Loading: n/a. Every Kids action is a synchronous local reducer call; nothing waits.
+ * Hover and press are a violet state layer (::before) under the label, so no colour
+ * token is added. Colour and border changes are instant; only opacity and transform move. */
+button {
+  position: relative;
+  isolation: isolate;
+  min-height: 54px;
+  color: var(--fg);
+  background: var(--bg-control);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
+}
+
+button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: calc(var(--radius) - 2px);
+  background: color-mix(in srgb, var(--kids) 18%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-duration-micro) var(--motion-ease-out-quart);
+}
+
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    border-color: var(--kids);
+  }
+
+  button:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+}
+
+button:focus-visible:not(:disabled)::before {
+  opacity: 1;
+  transition-duration: var(--motion-duration-press);
+}
+
+button:active:not(:disabled) {
+  transform: scale(var(--motion-scale-press));
+  transition-duration: var(--motion-duration-press);
+}
+
+button:active:not(:disabled)::before {
+  opacity: 1;
+  background: color-mix(in srgb, var(--kids) 30%, transparent);
+  transition-duration: var(--motion-duration-press);
+}
+
+/* Disabled is painted, never faded: dashed line, quiet label, no motion. */
 button:disabled {
   cursor: not-allowed;
   color: var(--fg-2);
-  border-color: var(--line);
-  opacity: 1;
+  background: var(--bg-panel);
+  border: 2px dashed var(--line);
 }
 
+button:disabled::before {
+  opacity: 0;
+}
+
+/* ---------- Page ---------- */
 main {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1180px, calc(100% - var(--space-8)));
   margin: 0 auto;
-  padding: 44px 0 64px;
+  padding: var(--space-11) 0 var(--space-18);
 }
 
 .intro {
-  max-width: 720px;
-  margin-bottom: 32px;
+  max-width: 760px;
+  margin-bottom: var(--space-8);
 }
 
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 20px;
-  color: var(--kids);
-  font-size: 1rem;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+  color: var(--fg);
+  font-size: 1.125rem;
   font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.wordmark-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--bg-base);
+  background: var(--kids);
+  border-radius: 12px;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 h1 {
   margin: 0;
-  font-size: clamp(2.25rem, 7vw, 4.5rem);
-  line-height: 1.05;
+  font-size: clamp(2.5rem, 1.6rem + 3.8vw, 4.5rem);
+  font-weight: 850;
+  line-height: 1.04;
   letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
-.intro > p:last-child {
-  max-width: 58ch;
-  margin: 20px 0 0;
+.lede {
+  max-width: 52ch;
+  margin: var(--space-4) 0 0;
   color: var(--fg-2);
-  font-size: 1.18rem;
-  line-height: 1.6;
+  font-size: 1.25rem;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
+/* ---------- Studio: stage left, choices right from 1024px ---------- */
 .studio {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  gap: 28px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
 }
 
 .stage-wrap,
@@ -116,9 +218,15 @@ h1 {
   min-width: 0;
 }
 
+.stage-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
 .stage {
   position: relative;
-  min-height: 500px;
+  flex: 1 1 auto;
+  min-height: 440px;
   overflow: hidden;
   border: 2px solid var(--line);
   border-radius: var(--radius);
@@ -137,11 +245,25 @@ h1 {
   background: linear-gradient(#1c5b76 0 62%, #123b55 62%);
 }
 
+.stage.is-playing {
+  border-color: var(--kids);
+}
+
+/* The world the child just left, faded out over the new one (row 20 crossfade). */
+.world-departure {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .sky-symbol {
   position: absolute;
-  top: 30px;
-  right: 34px;
+  top: var(--space-8);
+  right: var(--space-8);
   font-size: 4rem;
+  line-height: 1;
   filter: drop-shadow(0 4px 4px rgb(0 0 0 / 22%));
 }
 
@@ -157,40 +279,47 @@ h1 {
 
 .stage-hint {
   position: absolute;
-  inset: 44% auto auto 50%;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: calc(100% - 48px);
-  display: grid;
-  place-items: center;
-  margin: 0;
-  padding: 16px 24px;
+  top: 42%;
+  left: var(--space-6);
+  right: var(--space-6);
+  width: fit-content;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-6);
+  color: var(--fg);
   background: var(--bg-panel);
-  border: 1px solid var(--fg-2);
+  border: 2px dashed var(--fg-2);
   border-radius: var(--radius);
-  color: rgb(237 239 242 / 78%);
-  font-size: 1.1rem;
+  font-size: 1.125rem;
   font-weight: 750;
+  text-align: center;
 }
 
 .mode-badge {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  padding: 8px 12px;
+  top: var(--space-4);
+  left: var(--space-4);
+  padding: var(--space-2) var(--space-3);
   color: var(--bg-base);
   background: var(--kids);
   border-radius: 999px;
-  font-size: 0.88rem;
+  font-size: 1.125rem;
   font-weight: 850;
+  line-height: 1.2;
 }
 
-.placed-piece {
+.placed-piece,
+.leaving-piece {
   position: absolute;
   z-index: 2;
-  font-size: clamp(3.25rem, 7vw, 5.25rem);
+  font-size: clamp(3.25rem, 2.4rem + 3.2vw, 5.25rem);
   line-height: 1;
   transform-origin: 50% 100%;
+}
+
+.leaving-piece {
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .piece-one { left: 10%; bottom: 17%; }
@@ -200,12 +329,24 @@ h1 {
 .piece-five { right: 30%; bottom: 31%; }
 .piece-six { left: 50%; bottom: 20%; }
 
+/* Row 20, the Kids moment: a piece lands. Replaces the old 160ms arrive keyframe. */
+.placed-piece {
+  animation: piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
+}
+
+/* DV-K2 (ruling R-3): play-float is product content motion, kept at its timing.
+ * Only under .is-playing, transform only, sine-like ease-in-out, static under reduce.
+ * piece-land stays first in the list so starting or stopping play never replays it. */
 .is-playing .placed-piece:nth-child(odd) {
-  animation: play-float 1.8s ease-in-out infinite alternate;
+  animation:
+    piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards,
+    play-float 1.8s ease-in-out infinite alternate;
 }
 
 .is-playing .placed-piece:nth-child(even) {
-  animation: play-float 1.55s ease-in-out 120ms infinite alternate-reverse;
+  animation:
+    piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards,
+    play-float 1.55s ease-in-out 120ms infinite alternate-reverse;
 }
 
 @keyframes play-float {
@@ -213,43 +354,107 @@ h1 {
   to { transform: translateY(-16px) rotate(3deg); }
 }
 
+@keyframes piece-land {
+  from {
+    opacity: 0;
+    transform: scale(var(--motion-scale-enter)) translateY(var(--motion-distance-md));
+  }
+}
+
+/* ---------- Play row ---------- */
 .play-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--space-4);
   align-items: center;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .play-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-width: 190px;
+  gap: var(--space-3);
+  min-width: 208px;
   min-height: 60px;
-  padding: 0 24px;
+  padding: 0 var(--space-6);
   color: var(--bg-base);
   background: var(--kids);
-  font-weight: 900;
+  border-color: var(--kids);
+  font-size: 1.25rem;
+  font-weight: 850;
 }
 
-.play-button:hover:not(:disabled) {
-  border-color: var(--fg);
+.play-button::before,
+.choice.is-selected::before {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.play-button:active::before,
+.choice.is-selected:active::before {
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+@media (hover: hover) {
+  .play-button:hover:not(:disabled) {
+    border-color: var(--fg);
+  }
+}
+
+.play-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .activity-message {
-  min-height: 3lh;
   display: flex;
   align-items: center;
+  min-height: 3lh;
   margin: 0;
   color: var(--fg-2);
-  font-size: 0.98rem;
+  font-size: 1.125rem;
   line-height: 1.45;
 }
 
+.activity-message.is-refused {
+  color: var(--fg);
+}
+
+/* Row 10: the new line arrives and its tone underline draws once.
+ * Violet when the world changed, red (the refusal law) when the play space said no. */
+.message-text {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.message-text::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--kids);
+}
+
+.is-refused .message-text::after {
+  background: var(--danger);
+}
+
+/* ---------- Builder ---------- */
 .builder {
-  padding: 24px;
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  padding: var(--space-6);
   background: var(--bg-panel);
   border: 2px solid var(--line);
   border-radius: var(--radius);
@@ -257,20 +462,22 @@ h1 {
 
 fieldset {
   min-width: 0;
-  margin: 0 0 28px;
+  margin: 0;
   padding: 0;
   border: 0;
 }
 
 legend {
-  margin-bottom: 16px;
-  font-size: 1.05rem;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: 1.25rem;
   font-weight: 850;
+  letter-spacing: -0.01em;
 }
 
 .choice-row {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .world-choices {
@@ -284,24 +491,43 @@ legend {
 .choice {
   display: flex;
   min-width: 0;
-  min-height: 84px;
-  padding: 12px 8px;
+  min-height: 98px;
+  padding: var(--space-3) var(--space-1);
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 0.82rem;
+  gap: var(--space-2);
+  font-size: 1.125rem;
   font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.choice-label {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 .choice-symbol {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   flex: none;
-  font-size: 1.8rem;
+  font-size: 2.25rem;
   line-height: 1;
+  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
+}
+
+@media (hover: hover) {
+  .choice:hover:not(:disabled) .choice-symbol {
+    transform: translateY(calc(-1 * var(--motion-distance-sm)));
+  }
+}
+
+.choice:disabled .choice-symbol {
+  filter: grayscale(1) brightness(0.8);
 }
 
 .choice.is-selected {
@@ -310,97 +536,246 @@ legend {
   border-color: var(--kids);
 }
 
-.piece-count {
-  font-variant-numeric: tabular-nums;
-  margin: 12px 0 0;
-  color: var(--fg-2);
-  font-size: 0.86rem;
+/* Selected is also a shape, not only a colour: a dot draws in the corner. */
+.choice.is-selected::after {
+  content: "";
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bg-base);
+  clip-path: circle(50% at 50% 50%);
 }
 
+/* ---------- Step progress ---------- */
+.piece-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.piece-meter {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.meter-dot {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--fg-2);
+  border-radius: 50%;
+}
+
+.meter-dot::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: var(--kids);
+  clip-path: circle(0% at 50% 50%);
+  transition: clip-path var(--motion-duration-state) var(--motion-ease-out-quint);
+}
+
+.meter-dot.is-filled::before {
+  clip-path: circle(50% at 50% 50%);
+}
+
+.piece-count {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Undo / start over ---------- */
 .edit-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .edit-actions button {
-  flex: 1 1 130px;
-  padding: 0 16px;
+  flex: 1 1 140px;
+  padding: 0 var(--space-4);
+  font-size: 1.125rem;
   font-weight: 750;
 }
 
+/* ---------- Grown-ups disclosure (outside the child's main flow) ---------- */
 .grownups {
-  margin-top: 24px;
-  padding-top: 20px;
+  padding-top: var(--space-6);
   color: var(--fg-2);
   border-top: 1px solid var(--line);
 }
 
 .grownups summary {
-  width: fit-content;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
   color: var(--fg);
+  border: 2px solid var(--line);
+  border-radius: 12px;
   cursor: pointer;
+  font-size: 1.125rem;
   font-weight: 750;
+  list-style: none;
+  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
 }
 
-.grownups summary:hover,
+.grownups summary::-webkit-details-marker {
+  display: none;
+}
+
+.grownups summary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--kids) 18%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-duration-micro) var(--motion-ease-out-quart);
+}
+
+.grownups summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--motion-duration-state) var(--motion-ease-out-quint);
+}
+
+.grownups[open] summary::after {
+  margin-top: 4px;
+  transform: rotate(-135deg);
+}
+
+@media (hover: hover) {
+  .grownups summary:hover {
+    border-color: var(--fg-2);
+  }
+
+  .grownups summary:hover::before {
+    opacity: 1;
+  }
+}
+
+.grownups summary:focus-visible::before,
+.grownups summary:active::before {
+  opacity: 1;
+  transition-duration: var(--motion-duration-press);
+}
+
+.grownups summary:active {
+  transform: scale(var(--motion-scale-press));
+  transition-duration: var(--motion-duration-press);
+}
+
 .grownups[open] summary {
-  background: var(--bg-control);
   border-color: var(--fg-2);
 }
 
-/* SAFETY: paint only; keyboard activation, pressed state and reducers are unchanged. */
-button:active:not(:disabled) {
-  box-shadow: inset 0 -3px 0 var(--fg-2);
-}
-
-.choice.is-selected {
-  box-shadow: inset 0 -3px 0 var(--bg-base);
-}
-
 .grownups p {
-  max-width: 50ch;
-  margin: 12px 0 0;
-  font-size: 0.92rem;
+  max-width: 52ch;
+  margin: var(--space-3) 0 0;
+  font-size: 1.125rem;
   line-height: 1.55;
   text-wrap: pretty;
 }
 
-@media (max-width: 900px) {
+/* ---------- Loading fallback (row 18) ---------- */
+.loading-intro {
+  width: min(1180px, calc(100% - var(--space-8)));
+  max-width: none;
+  margin: 0 auto;
+  padding: var(--space-11) 0 var(--space-18);
+}
+
+.loading-intro .lede {
+  max-width: 52ch;
+}
+
+.loading-bar {
+  position: relative;
+  display: block;
+  width: min(320px, 100%);
+  height: 2px;
+  margin-top: var(--space-6);
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.loading-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--kids);
+  border-radius: 2px;
+}
+
+/* ---------- Layout ---------- */
+@media (min-width: 1024px) {
   .studio {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1.25fr) minmax(400px, 0.75fr);
+    gap: var(--space-8);
+    align-items: stretch;
   }
 
   .stage {
-    min-height: 440px;
+    min-height: 520px;
   }
 }
 
 @media (max-width: 560px) {
   main {
-    width: min(100% - 32px, 1180px);
-    padding-top: 28px;
+    width: min(100% - var(--space-8), 1180px);
+    padding: var(--space-8) 0 var(--space-11);
+  }
+
+  .loading-intro {
+    width: min(100% - var(--space-8), 1180px);
+    padding: var(--space-8) 0 var(--space-11);
+  }
+
+  .wordmark {
+    margin-bottom: var(--space-4);
+  }
+
+  .lede {
+    font-size: 1.125rem;
   }
 
   .stage {
-    min-height: 320px;
+    min-height: 340px;
+  }
+
+  .sky-symbol {
+    top: var(--space-6);
+    right: var(--space-6);
+    font-size: 3.25rem;
   }
 
   .builder {
-    padding: 16px;
+    padding: var(--space-4);
   }
 
-  .world-choices {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .world-choices .choice {
-    min-height: 96px;
-    flex-direction: column;
+  .world-choices .choice-label {
+    font-size: 1.0625rem;
   }
 
   .piece-choices {
@@ -416,18 +791,153 @@ button:active:not(:disabled) {
   }
 }
 
-/* Motion confirms a press/addition; play animation remains the existing activity. */
+/* ---------- Motion (DIRECTION.md §6.3 rows 1, 2, 3, 10, 18, 20) ---------- */
 @media (prefers-reduced-motion: no-preference) {
-  button { transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease; }
-  button:active:not(:disabled) { transform: translateY(1px); }
-  .placed-piece { animation: piece-arrive 160ms ease-out; }
+  /* Gentle first-paint entrance; content is visible by default, never gated. */
+  main > .intro > *,
+  .studio > * {
+    animation: rise-in var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
+  }
+
+  main > .intro > :nth-child(2) {
+    animation-delay: var(--motion-stagger-step);
+  }
+
+  main > .intro > :nth-child(3),
+  .studio > :first-child {
+    animation-delay: calc(2 * var(--motion-stagger-step));
+  }
+
+  .studio > :last-child {
+    animation-delay: calc(3 * var(--motion-stagger-step));
+  }
+
+  /* World change: the old world fades away over the new one; the sky settles in. */
+  .world-departure {
+    animation: fade-away var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
+  }
+
+  .sky-symbol {
+    animation: settle-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
+  }
+
+  /* Undo and start over: the piece fades and shrinks back. */
+  .leaving-piece {
+    animation: piece-leave var(--motion-duration-panel-exit) var(--motion-ease-out-quart) backwards;
+  }
+
+  /* Play pressed: the stage brightens once and settles. */
+  .stage.is-playing {
+    animation: stage-light var(--motion-duration-route) var(--motion-ease-out-expo);
+  }
+
+  .mode-badge,
+  .stage-hint {
+    animation: settle-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
+  }
+
+  .message-text {
+    animation: settle-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
+  }
+
+  .message-text::after {
+    animation: tone-draw var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
+  }
+
+  /* Selection: the picked symbol settles and the corner dot draws. */
+  .choice.is-selected .choice-symbol {
+    animation: pick-settle var(--motion-duration-panel) var(--motion-ease-out-expo);
+  }
+
+  .choice.is-selected::after {
+    animation: dot-draw var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
+  }
+
+  /* Six of six: the meter brightens once, left to right. */
+  .piece-meter.is-full .meter-dot::before {
+    animation: meter-full var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
+  }
+
+  .piece-meter.is-full .meter-dot:nth-child(2)::before { animation-delay: var(--motion-stagger-step); }
+  .piece-meter.is-full .meter-dot:nth-child(3)::before { animation-delay: calc(2 * var(--motion-stagger-step)); }
+  .piece-meter.is-full .meter-dot:nth-child(4)::before { animation-delay: calc(3 * var(--motion-stagger-step)); }
+  .piece-meter.is-full .meter-dot:nth-child(5)::before { animation-delay: calc(4 * var(--motion-stagger-step)); }
+  .piece-meter.is-full .meter-dot:nth-child(6)::before { animation-delay: var(--motion-stagger-max); }
+
+  .grownups[open] p {
+    animation: settle-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
+  }
+
+  /* Indeterminate loading bar (ruling R-1): starts after the loading delay. */
+  .loading-bar::after {
+    animation: loading-run var(--motion-duration-loop) var(--motion-ease-out-quart)
+      var(--motion-delay-loading) infinite backwards;
+  }
 }
 
-@keyframes piece-arrive {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-md));
+  }
 }
 
+@keyframes settle-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-sm));
+  }
+}
+
+@keyframes fade-away {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes piece-leave {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-sm)) scale(var(--motion-scale-enter));
+  }
+}
+
+@keyframes stage-light {
+  from { filter: brightness(1.12); }
+  to { filter: brightness(1); }
+}
+
+@keyframes tone-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0); }
+}
+
+@keyframes pick-settle {
+  from { transform: translateY(var(--motion-distance-sm)) scale(var(--motion-scale-enter)); }
+}
+
+@keyframes dot-draw {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(50% at 50% 50%); }
+}
+
+@keyframes meter-full {
+  from { filter: brightness(1.45); }
+  to { filter: brightness(1); }
+}
+
+@keyframes loading-run {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+/* Reduced motion: distances and scales collapse to zero, and the blanket rule stops
+ * every keyframe and transition (the production spec pins 0.001ms and one iteration).
+ * Colour, state and the static 40% loading bar still show. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -435,6 +945,17 @@ button:active:not(:disabled) {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  :root {
+    --motion-distance-sm: 0px;
+    --motion-distance-md: 0px;
+    --motion-distance-lg: 0px;
+    --motion-scale-press: 1;
+    --motion-scale-enter: 1;
+    --motion-stagger-step: 0ms;
   }
 }

@@ -635,3 +635,31 @@ make `proven` unreachable for a refuse-only profile, for a profile that has not 
 conformance, for an operation outside the row's own list, and for a row with no committed
 evidence. Adversarial inputs for all four are in
 `tests/sites/umbrella-profile-matrix.test.ts`.
+
+## Redesign 2026-10 (DIRECTION v6, port of the approved v5 onto `dffefbab`)
+
+Lane report: `docs/redesign/lanes/lane-umbrella.md`. What changed visually, in short:
+
+- Opaque masthead bench with a scroll-linked `::after` hairline (no glass); nav current item is a
+  2px accent indicator that draws from its centre; a phone keeps the nav on one scrolling row of
+  44px targets so the masthead stays two rows (≤104px at 390, overview pin).
+- No eyebrows anywhere: state words are status chips after their heading (`.title-row`). The
+  release marker keeps class `badge` and sits after the H1 (DV-P8).
+- State panels lose the side rail for a 1px tone frame, a tone chip and a 2px tone underline that
+  draws once (DV-F6, row 13).
+- Buttons: 8%/12% `currentColor` state layers, focus halo, painted disabled (dashed), R-1 loading
+  bar. Transitions ride D-4 `--motion-fast`/`--motion-base` + `--ease-standard` (DV-P2); state
+  transforms are only `translateX(3px)` arrows and the proof-capture `scale(1.015)` (DV-P3).
+- Viewport frames (hero, `/open`, proof captures): 1px `--line-strong`, radius 9, no shadow
+  (DV-P12). The JS-off pending hero panel is a plain neutral gradient, no grid lines (DV-P10).
+- Route entrances differ by type: Persuade heads rise once, the canvas opens its aperture, docs are
+  static with a rail indicator, Operate routes draw only their state underline.
+
+Measured on a production build (`next start -p 3201`, headless Chromium 1223, DPR 1): overflow 0 on
+22 states × 390/768/1440; smallest text 11px; worst text contrast 5.16:1; 0 `.eyebrow`; 0
+`backdrop-filter`. `/` at 1440×900: stage 674×504, rail top 691, 9 rendered sizes
+(11, 13, 14, 15, 16, 17, 18, 42, 66). Shots: `E/after/umbrella/` (E =
+`/home/devuser/Documents/Reports/sceneaxi-redesign-main`).
+
+Visual specs: no spec calls `toHaveScreenshot` and no snapshot files exist, so nothing was
+re-recorded. `first-release.visual.spec.ts` passes 11/11 on this tree.

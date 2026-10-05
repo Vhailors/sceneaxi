@@ -63,7 +63,7 @@ export function renderDesktopChrome(
 <meta name="sceneaxi-visual-source" content="${escapeHtml(`${VISUAL_SOURCE.member} · sha256 ${VISUAL_SOURCE.sha256}`)}">
 <meta name="sceneaxi-pixels-drawn" content="false">
 <title>${escapeHtml(title)}</title>
-<style>${styles()}</style>
+<style>${styles(view)}</style>
 </head>
 <body>
 <div class="window-refusal" role="alert">

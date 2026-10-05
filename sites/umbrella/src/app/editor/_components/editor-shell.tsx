@@ -23,7 +23,8 @@
  * leave and nothing else. That is the same refuse-only behaviour the desktop
  * chrome records, and every code and state it prints comes off the view.
  */
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type {
   EditorShellControl,
   EditorShellView,
@@ -39,6 +40,60 @@ const inertControlAriaDisabled = { "aria-disabled": true } as const;
 import { WebExperienceEditor } from "./web-experience-editor.js";
 
 type ModeId = EditorShellView["modes"][number]["id"];
+
+/**
+ * One selection indicator per strip (motion row 17). When the selection inside
+ * `strip` moves, the newly selected item's indicator pseudo-element starts where
+ * the previous one sat and glides over with `translate` + `clip-path` on the
+ * panel tokens, so the reader follows one bar instead of watching one vanish and
+ * another draw. The stylesheet's centre draw stays the fallback for a first paint
+ * or a strip whose previous item is gone; under reduced motion nothing runs and
+ * the indicator appears in place. View state only: it reads the DOM the render
+ * already produced and decides nothing.
+ */
+function useIndicatorGlide(
+  strip: RefObject<HTMLElement | null>,
+  selector: string,
+  pseudoElement: "::before" | "::after",
+  axis: "x" | "y",
+  selectionKey: string,
+) {
+  const previous = useRef<Element | null>(null);
+
+  useLayoutEffect(() => {
+    const root = strip.current;
+    const current = root?.querySelector(selector) ?? null;
+    const before = previous.current;
+    previous.current = current;
+
+    if (root == null || current === null || before === null) return;
+    if (before === current || !before.isConnected) return;
+    if (typeof current.animate !== "function") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const tokens = getComputedStyle(root);
+    const duration = Number.parseFloat(tokens.getPropertyValue("--motion-duration-panel"));
+    const easing = tokens.getPropertyValue("--motion-ease-out-expo").trim();
+
+    if (!Number.isFinite(duration) || easing === "") return;
+
+    const from = before.getBoundingClientRect();
+    const to = current.getBoundingClientRect();
+    const shift = axis === "x" ? from.left - to.left : from.top - to.top;
+    const trim = Math.max(0, axis === "x" ? to.width - from.width : to.height - from.height);
+
+    current.animate(
+      [
+        {
+          transform: axis === "x" ? `translateX(${shift}px)` : `translateY(${shift}px)`,
+          clipPath: axis === "x" ? `inset(0 ${trim}px 0 0)` : `inset(0 0 ${trim}px 0)`,
+        },
+        { transform: "none", clipPath: "inset(0)" },
+      ],
+      { duration, easing, pseudoElement },
+    );
+  }, [strip, selector, pseudoElement, axis, selectionKey]);
+}
 
 type DockTabId = EditorShellView["modes"][number]["dockTabs"][number];
 
@@ -482,6 +537,14 @@ export function EditorShell({
   const dockTabs = activeMode.dockTabs;
   const shownDockTab: DockTabId = dockTabs.includes(dockTab) ? dockTab : (dockTabs[0] ?? "console");
 
+  // One gliding indicator per strip: the mode-rail needle, the view-tab and the dock-tab underline.
+  const railRef = useRef<HTMLElement | null>(null);
+  const viewTabsRef = useRef<HTMLDivElement | null>(null);
+  const dockTabsRef = useRef<HTMLDivElement | null>(null);
+  useIndicatorGlide(railRef, '.ed-rail-mode[aria-pressed="true"]', "::before", "y", mode);
+  useIndicatorGlide(viewTabsRef, '[role="tab"][aria-selected="true"]', "::after", "x", selectedViewportSource?.id ?? "");
+  useIndicatorGlide(dockTabsRef, '[role="tab"][aria-selected="true"]', "::after", "x", shownDockTab);
+
   return (
     /*
       Every href the shell renders is rebuilt in the mode and the profile the
@@ -593,7 +656,7 @@ export function EditorShell({
 
         <div className="ed-body" inert={paletteOpen}>
           {/* ---------------------------------------------- mode rail ------ */}
-          <nav className="ed-rail" aria-label="Editor modes">
+          <nav className="ed-rail" ref={railRef} aria-label="Editor modes">
             <span className="ed-rail-mark" aria-hidden="true" />
             {view.modes.map((entry) => (
               <ShellButton
@@ -762,7 +825,7 @@ export function EditorShell({
 
               {/* ---------------------------------------- viewport column --- */}
               <section className="ed-viewport-col" aria-label="Viewport">
-                <div className="ed-viewtabs" role="tablist" aria-label="Viewport source">
+                <div className="ed-viewtabs" ref={viewTabsRef} role="tablist" aria-label="Viewport source">
                   {view.viewport.sources.map((source) => (
                     <ShellButton
                       key={source.id}
@@ -828,7 +891,7 @@ export function EditorShell({
                 {/* ------------------------------------------- dock -------- */}
                 <div className="ed-dock">
                   <div className="ed-dock-strip">
-                    <div role="tablist" aria-label="Dock panels" className="ed-dock-tabs">
+                    <div role="tablist" aria-label="Dock panels" className="ed-dock-tabs" ref={dockTabsRef}>
                       {dockTabs.map((tab) => (
                         <button
                           key={tab}

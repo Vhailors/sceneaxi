@@ -63,10 +63,15 @@ export default async function EditorPage({
     });
 
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor is not open for this request</h1>
+          <div className="title-row">
+            <h1>The editor is not open for this request</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel
           tone="deny"
@@ -102,10 +107,15 @@ export default async function EditorPage({
 
   if (!state.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>That editor link was refused</h1>
+          <div className="title-row">
+            <h1>That editor link was refused</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Link refused" reason={state.reason}>
           <p>{state.message}</p>
@@ -127,10 +137,15 @@ export default async function EditorPage({
 
   if (!webState.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Web Experience editor</p>
-          <h1>That web editor state was refused</h1>
+          <div className="title-row">
+            <h1>That web editor state was refused</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Web Experience editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Web state refused" reason={webState.reason}>
           <p>{webState.message}</p>
@@ -145,10 +160,15 @@ export default async function EditorPage({
 
   if (!render.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor session could not start</h1>
+          <div className="title-row">
+            <h1>The editor session could not start</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={render.reason}>
           <p>{render.message}</p>
@@ -164,10 +184,15 @@ export default async function EditorPage({
 
   if (!starter.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor session could not start</h1>
+          <div className="title-row">
+            <h1>The editor session could not start</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={starter.reason}>
           <p>{starter.message}</p>

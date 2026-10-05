@@ -13,6 +13,10 @@ import { digestSigil } from "../../lib/digest-sigil.js";
  *
  * `card` is the grid plate; `lead` is the hero's first record, framed by the link around
  * it; `detail` is the listing page's figure, framed on its own with the record stats.
+ *
+ * The detail figure carries one decorative read line: on first paint it passes over the
+ * frame once while the mark is drawn in from the digest, then rests out of sight. The
+ * chips and stats are text and stay visible throughout.
  */
 export function DigestFigure({
   digest,
@@ -36,14 +40,13 @@ export function DigestFigure({
   const legend =
     sigil === null ? null : (
       <span className="plate-legend" title={digest}>
-        Record mark · <strong>{sigil.shortDigest}</strong>
+        <span className="plate-legend-label">Record mark · </span><strong>{sigil.shortDigest}</strong>
       </span>
     );
 
   return (
-    <span className={`plate plate-${variant}`}>
+    <span className={`plate plate-${variant}`} data-sigil={sigil === null ? "unreadable" : "drawn"}>
       <span className="plate-media" aria-hidden="true">
-        <span className="plate-grid" />
         {sigil !== null && (
           <span
             className="plate-mark"
@@ -61,6 +64,7 @@ export function DigestFigure({
             }
           />
         )}
+        {sigil !== null && variant === "detail" && <span className="plate-scan" />}
       </span>
 
       {sigil === null && <span className="plate-empty">digest unreadable — no mark drawn</span>}

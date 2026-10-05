@@ -29,8 +29,10 @@ export default async function LedgerSupportPage({ searchParams }: {
 
   if (!result.ok) {
     return (
-      <div className="page">
-        <h1>Ledger support</h1>
+      <div className="page page-narrow page-state">
+        <div className="page-head">
+          <h1>Ledger support</h1>
+        </div>
         <StatePanel tone="deny" title="Ledger support refused" reason={result.reason}>
           <p>{result.message}</p>
         </StatePanel>
@@ -43,7 +45,7 @@ export default async function LedgerSupportPage({ searchParams }: {
   const view = result.value;
 
   return (
-    <div className="page ledger-support">
+    <div className="page page-state ledger-support">
       <div className="page-head">
         <h1>Ledger support</h1>
         <p className="lede">Administrator only. Read a member&apos;s history or append one support adjustment. Existing entries cannot be changed.</p>
@@ -53,7 +55,7 @@ export default async function LedgerSupportPage({ searchParams }: {
           <p>{SITE_REFUSALS[refused]}</p>
         </StatePanel>
       )}
-      <form method="get" action="/admin/ledger" className="stack">
+      <form method="get" action="/admin/ledger" className="stack form-card">
         <div className="row">
           <div className="field">
             <label htmlFor="lookup-kind">Look up by</label>
@@ -74,14 +76,14 @@ export default async function LedgerSupportPage({ searchParams }: {
       ) : (
         <>
           <h2>{view.user.email}</h2>
-          <dl className="dl">
+          <dl className="dl dl-machine">
             <div className="dl-row"><dt>User id</dt><dd>{view.user.userId}</dd></div>
             <div className="dl-row"><dt>Account</dt><dd>{view.state.account.accountId}</dd></div>
             <div className="dl-row"><dt>Derived balance</dt><dd>{view.state.balance} credits</dd></div>
           </dl>
           <h2>Append adjustment</h2>
           <p>Positive credits add to the balance. Negative credits subtract from it. A debit below zero refuses. This does not issue a money refund or resolve a dispute.</p>
-          <form method="post" action="/api/admin/ledger" className="stack">
+          <form method="post" action="/api/admin/ledger" className="stack form-card">
             <input type="hidden" name="userId" value={view.user.userId} />
               <div className="field">
                 <label htmlFor="admin-password">Confirm administrator password</label>
@@ -104,7 +106,7 @@ export default async function LedgerSupportPage({ searchParams }: {
           </form>
           <h2>Ledger entries</h2>
           {view.state.entries.length === 0 ? <p>No ledger entries.</p> : (
-            <ol className="stack">
+            <ol className="ledger-rows" aria-label="Ledger entries, append-only">
               {view.state.entries.map((entry) => (
                 <li key={entry.entryId}>
                   <details>
@@ -117,7 +119,7 @@ export default async function LedgerSupportPage({ searchParams }: {
           )}
           <h2>Checkout intents</h2>
           {view.checkoutIntents.length === 0 ? <p>No checkout intents.</p> : (
-            <ul className="stack">
+            <ul className="ledger-rows" aria-label="Checkout intents">
               {view.checkoutIntents.map((intent) => (
                 <li key={intent.intentId}>
                   <details>
@@ -131,7 +133,7 @@ export default async function LedgerSupportPage({ searchParams }: {
           <h2>Reconciliation records</h2>
           <p className="note">Read-only provider evidence. A support adjustment does not mark a reconciliation record resolved. Refund and dispute decisions remain with the operator.</p>
           {view.reconciliations.length === 0 ? <p>No reconciliation records.</p> : (
-            <ul className="stack">
+            <ul className="ledger-rows" aria-label="Reconciliation records">
               {view.reconciliations.map((record) => (
                 <li key={`${record.mode}:${record.eventId}`}>
                   <details>

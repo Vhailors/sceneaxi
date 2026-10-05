@@ -9,6 +9,7 @@ import {
 } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, catalogCanonical } from "../lib/site-config.js";
 import { catalogFacets } from "../lib/catalog-facts.js";
+import { FormBusy } from "./_components/form-busy.js";
 import { ListingCard } from "./_components/listing-card.js";
 import { LeadPlate } from "./_components/listing-tile.js";
 import { PublishSlot } from "./_components/publish-slot.js";
@@ -57,7 +58,8 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
       <select id="catalog-sort" name="sort" defaultValue={sort}>
         <option value="inventory">Inventory order</option><option value="title">Title</option><option value="newest">Newest</option>
       </select>
-      <button type="submit" aria-controls={refused ? undefined : "catalogue"}>Apply filters</button> <a href="/">Clear filters</a>
+      <button className="button button-quiet" type="submit" aria-controls={refused ? undefined : "catalogue"}>Apply filters</button> <a href="/">Clear filters</a>
+      <FormBusy />
     </form>
   );
 
@@ -85,14 +87,13 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
 
   return (
     <>
-      <section className="hero">
+      {/* The H1 speaks for itself: the `heroKicker` string stays in site-config but is not
+          rendered as a label above it (DIRECTION §7.3). The TEST notice sits directly under
+          the actions, so it is read before any listing. */}
+      <section className="hero" aria-labelledby="hero-heading">
         <div className="shell hero-inner">
           <div className="hero-copy">
-            <p className="kicker">
-              <span className="kicker-dot" aria-hidden="true" />
-              {CATALOG_SITE_BRAND.heroKicker}
-            </p>
-            <h1>{CATALOG_SITE_BRAND.tagline}</h1>
+            <h1 id="hero-heading">{CATALOG_SITE_BRAND.tagline}</h1>
             <p className="lede">{CATALOG_SITE_BRAND.audience}</p>
             <div className="hero-actions">
               <a className="button button-xl" href="#catalogue">
@@ -105,6 +106,14 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
                 {CATALOG_SITE_BRAND.heroSecondaryCta}
               </a>
             </div>
+            <StatePanel tone="warn" level={2} title="TEST catalog · purchases refuse here">
+              <p>
+                These are committed TEST fixture listings. Browse and detail are available;
+                asset delivery and payment completion are not. The catalog sites own no
+                billing stack, collect no payment details, and cannot report a purchase as
+                complete.
+              </p>
+            </StatePanel>
           </div>
 
           {lead !== undefined && (
@@ -112,7 +121,7 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
               <h2 className="sr-only">
                 In the {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()} now
               </h2>
-              <ul className="hero-plates">
+              <ul className="hero-plates" data-count={featured.length}>
                 {featured.map((listing) => <li key={listing.itemId}><LeadPlate listing={listing} /></li>)}
               </ul>
             </div>
@@ -120,38 +129,42 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
         </div>
       </section>
 
-      <section className="facts">
+      {/* At a glance: term → value evidence on one wrapping line, not a ruled grid of big
+          numbers. */}
+      <section className="facts" aria-labelledby="facts-heading">
         <div className="shell">
-          <h2 className="sr-only">At a glance</h2>
-          <ul className="facts-list">
-            <li className="fact">
-              <span className="fact-value">{listings.length}</span>
-              <span className="fact-label">
+          <h2 className="sr-only" id="facts-heading">At a glance</h2>
+          <dl className="facts-list">
+            <div className="fact">
+              <dt className="fact-label">
                 {word} in this {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()}
-              </span>
-            </li>
-            <li className="fact">
-              <span className="fact-value">{priceModes.length}</span>
-              <span className="fact-label">
-                price {priceModes.length === 1 ? "mode" : "modes"} ·{" "}
-                {priceModes.map((row) => row.name.toLowerCase()).join(", ")}
-              </span>
-            </li>
-            <li className="fact">
-              <span className="fact-value">{CREATOR_SHARE_RULE.creatorPercent}%</span>
-              <span className="fact-label">creator share</span>
-            </li>
-            <li className="fact">
-              <span className="fact-value">{SITE_CATALOG_MODE.toUpperCase()} mode</span>
-              <span className="fact-label">purchases refuse by name</span>
-            </li>
-          </ul>
+              </dt>
+              <dd className="fact-value">{listings.length}</dd>
+            </div>
+            <div className="fact">
+              <dt className="fact-label">price {priceModes.length === 1 ? "mode" : "modes"}</dt>
+              <dd className="fact-value">
+                {priceModes.length} · {priceModes.map((row) => row.name.toLowerCase()).join(", ")}
+              </dd>
+            </div>
+            <div className="fact">
+              <dt className="fact-label">creator share</dt>
+              <dd className="fact-value">{CREATOR_SHARE_RULE.creatorPercent}%</dd>
+            </div>
+            <div className="fact">
+              <dt className="fact-label">{SITE_CATALOG_MODE.toUpperCase()} mode</dt>
+              <dd className="fact-value">purchases refuse by name</dd>
+            </div>
+          </dl>
         </div>
       </section>
 
       <div className="shell browse">
         <aside className="rail" aria-label="What this catalogue holds" tabIndex={0}>
-            <p className="prose">All inventory · {inventory.length} fixture records. Counts do not change with filters.</p>
+          <div className="rail-lead">
+            <h2 className="rail-heading">All inventory</h2>
+            <p className="rail-intro">{inventory.length} fixture records. Counts do not change with filters.</p>
+          </div>
           {facets.map((facet) => (
             <div className="rail-group" key={facet.title}>
               <h2 className="rail-title">{facet.title}</h2>
@@ -187,7 +200,7 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
 
         <div className="results">
             {renderSearchControls()}
-            {listings.length === 0 && <section role="status" aria-labelledby="catalog-empty"><h2 id="catalog-empty">{inventory.length === 0 ? "No listings in this catalogue yet" : "No matching listings"}</h2><p>{inventory.length === 0 ? "There are no committed fixture records on this surface. Asset delivery and purchases remain unavailable." : "Try a different title, item ID, creator or price mode."}</p>{inventory.length > 0 && <a href="/">Clear filters</a>}</section>}
+            {listings.length === 0 && <section className="results-empty" role="status" aria-labelledby="catalog-empty"><h2 id="catalog-empty">{inventory.length === 0 ? "No listings in this catalogue yet" : "No matching listings"}</h2><p>{inventory.length === 0 ? "There are no committed fixture records on this surface. Asset delivery and purchases remain unavailable." : "Try a different title, item ID, creator or price mode."}</p>{inventory.length > 0 && <a href="/">Clear filters</a>}</section>}
           <div className="results-head" id="catalogue" role="status" aria-live="polite" aria-atomic="true">
             <p className="results-count">
               {listings.length} <span className="results-word">{word}</span>
@@ -197,7 +210,7 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
             </p>
           </div>
 
-          <ul className="cards">
+          <ul className="cards" data-count={listings.length}>
             {listings.map((listing) => (
               <ListingCard listing={listing} key={listing.itemId} />
             ))}
@@ -213,30 +226,24 @@ export default async function CataloguePage({ searchParams }: { readonly searchP
           <section className="pricing" id="pricing" aria-labelledby="pricing-title">
             <div className="pricing-copy">
               <h2 id="pricing-title">{CATALOG_SITE_BRAND.heroSecondaryCta}</h2>
-              <p className="lede">
+              <p className="prose">
                 A {CATALOG_SITE_BRAND.listingWord} may be priced in credits, money, or both.
                 The display keeps the seller&apos;s choice exactly; it does not convert
                 currencies. Creators receive {CREATOR_SHARE_RULE.creatorPercent}% in the
                 established share model.
               </p>
             </div>
+            {/* The share rule as one worked line, in mono tabular figures (DIRECTION §7.3). */}
             <div className="share">
-              <p className="share-figure">
-                <span className="share-num">{CREATOR_SHARE_RULE.creatorPercent}%</span>
-                <span className="share-label">creator share</span>
+              <p className="share-figure worked">
+                <strong className="share-num">{CREATOR_SHARE_RULE.creatorPercent}%</strong>{" "}
+                <span className="share-label">creator share</span>{" "}
+                <span className="worked-op">+</span>{" "}
+                <span>{CREATOR_SHARE_RULE.platformPercent}% platform share</span>
               </p>
               <p className="mono-note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
             </div>
           </section>
-
-          <StatePanel tone="warn" title="TEST catalog · purchases refuse here">
-            <p>
-              These are committed TEST fixture listings. Browse and detail are available;
-              asset delivery and payment completion are not. The catalog sites own no
-              billing stack, collect no payment details, and cannot report a purchase as
-              complete.
-            </p>
-          </StatePanel>
         </div>
       </div>
     </>

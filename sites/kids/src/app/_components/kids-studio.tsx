@@ -19,17 +19,62 @@ const piecePositionClasses = [
   "piece-six",
 ] as const;
 
+/** The line under the Play button. `serial` re-runs its entrance even when the words repeat. */
+type ActivityNote = {
+  readonly text: string;
+  readonly refused: boolean;
+  readonly serial: number;
+};
+
+/**
+ * Presentation only: what just left the stage, kept one render longer so it can fade
+ * out instead of vanishing. It never feeds the reducer and is not activity state.
+ */
+type StageDeparture = {
+  readonly serial: number;
+  readonly worldId: string | null;
+  readonly pieces: readonly { readonly symbol: string; readonly slot: number }[];
+};
+
 export function KidsStudio() {
   const [activity, setActivity] = useState(createKidsActivityState);
-  const [message, setMessage] = useState("Your sunny meadow is ready.");
+  const [note, setNote] = useState<ActivityNote>({
+    text: "Your sunny meadow is ready.",
+    refused: false,
+    serial: 0,
+  });
+  const [departure, setDeparture] = useState<StageDeparture | null>(null);
 
   const world = KIDS_ACTIVITY_WORLDS.find((candidate) => candidate.id === activity.worldId);
   if (world === undefined) throw new Error("The curated Kids world is missing.");
 
+  const pieceCount = activity.pieceIds.length;
+
+  function symbolFor(pieceId: string) {
+    return KIDS_ACTIVITY_PIECES.find((candidate) => candidate.id === pieceId)?.symbol ?? "";
+  }
+
   function run(request: KidsActivityRequest) {
     const decision = applyKidsActivityAction(activity, request);
-    setMessage(decision.message);
-    if (decision.ok) setActivity(decision.state);
+    const serial = note.serial + 1;
+    setNote({ text: decision.message, refused: !decision.ok, serial });
+    if (decision.ok) {
+      const next = decision.state;
+      const keptCount = next.pieceIds.length;
+      const leaving =
+        keptCount < activity.pieceIds.length
+          ? activity.pieceIds
+              .slice(keptCount)
+              .map((pieceId, offset) => ({ symbol: symbolFor(pieceId), slot: keptCount + offset }))
+          : [];
+      const leavingWorld = next.worldId !== activity.worldId ? activity.worldId : null;
+      setDeparture(
+        leaving.length > 0 || leavingWorld !== null
+          ? { serial, worldId: leavingWorld, pieces: leaving }
+          : null,
+      );
+      setActivity(next);
+    }
   }
 
   return (
@@ -40,7 +85,14 @@ export function KidsStudio() {
           role="group"
           aria-label={`${world.label}. ${activity.pieceIds.length} of ${KIDS_ACTIVITY_PIECE_LIMIT} pieces added.`}
         >
-          <div className="sky-symbol" aria-hidden="true">
+          {departure?.worldId != null && (
+            <div
+              className={`world-departure world-${departure.worldId}`}
+              key={`world-${departure.serial}`}
+              aria-hidden="true"
+            />
+          )}
+          <div className="sky-symbol" key={`sky-${activity.worldId}`} aria-hidden="true">
             {world.symbol}
           </div>
           <div className="horizon" aria-hidden="true" />
@@ -54,10 +106,24 @@ export function KidsStudio() {
               );
             })}
           </div>
+          {departure !== null && departure.pieces.length > 0 && (
+            <div className="leaving-pieces" key={`leaving-${departure.serial}`} aria-hidden="true">
+              {departure.pieces.map((piece) => (
+                <span
+                  className={`leaving-piece ${piecePositionClasses[piece.slot]}`}
+                  key={piece.slot}
+                >
+                  {piece.symbol}
+                </span>
+              ))}
+            </div>
+          )}
           {activity.pieceIds.length === 0 && (
             <p className="stage-hint">Add your first piece</p>
           )}
-          <span className="mode-badge">{activity.mode === "play" ? "Playing" : "Building"}</span>
+          <span className="mode-badge" key={activity.mode}>
+            {activity.mode === "play" ? "Playing" : "Building"}
+          </span>
         </div>
 
         <div className="play-row">
@@ -69,11 +135,18 @@ export function KidsStudio() {
               run({ action: activity.mode === "play" ? "play.stop" : "play.start" })
             }
           >
-            <span aria-hidden="true">{activity.mode === "play" ? "■" : "▶"}</span>
+            <span className="play-glyph" aria-hidden="true">
+              {activity.mode === "play" ? "■" : "▶"}
+            </span>
             {activity.mode === "play" ? "Stop" : "Play my world"}
           </button>
-          <p className="activity-message" aria-live="polite">
-            {message}
+          <p
+            className={note.refused ? "activity-message is-refused" : "activity-message"}
+            aria-live="polite"
+          >
+            <span className="message-text" key={note.serial}>
+              {note.text}
+            </span>
           </p>
         </div>
       </div>
@@ -93,7 +166,7 @@ export function KidsStudio() {
                 <span className="choice-symbol" aria-hidden="true">
                   {choice.symbol}
                 </span>
-                <span>{choice.label}</span>
+                <span className="choice-label">{choice.label}</span>
               </button>
             ))}
           </div>
@@ -113,13 +186,25 @@ export function KidsStudio() {
                 <span className="choice-symbol" aria-hidden="true">
                   {piece.symbol}
                 </span>
-                <span>{piece.label}</span>
+                <span className="choice-label">{piece.label}</span>
               </button>
             ))}
           </div>
-          <p className="piece-count">
-            {activity.pieceIds.length} of {KIDS_ACTIVITY_PIECE_LIMIT} pieces
-          </p>
+          <div className="piece-progress">
+            <span
+              className={
+                pieceCount >= KIDS_ACTIVITY_PIECE_LIMIT ? "piece-meter is-full" : "piece-meter"
+              }
+              aria-hidden="true"
+            >
+              {Array.from({ length: KIDS_ACTIVITY_PIECE_LIMIT }, (_, slot) => (
+                <span className={slot < pieceCount ? "meter-dot is-filled" : "meter-dot"} key={slot} />
+              ))}
+            </span>
+            <p className="piece-count">
+              {activity.pieceIds.length} of {KIDS_ACTIVITY_PIECE_LIMIT} pieces
+            </p>
+          </div>
         </fieldset>
 
         <div className="edit-actions">

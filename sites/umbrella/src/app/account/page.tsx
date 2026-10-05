@@ -74,9 +74,8 @@ export default async function AccountPage({
     const history = resolved.principal === null ? null : await plane.purchaseHistory.read(historyRequest);
 
   return (
-    <div className="page">
+    <div className="page page-state">
       <div className="page-head">
-        <p className="eyebrow">Account</p>
         <h1>Your SceneAxi account</h1>
         <p className="lede">
           Signing in can unlock the Minimum E2 web editor. Hosted AI remains disabled. New accounts
@@ -116,7 +115,7 @@ export default async function AccountPage({
             </StatePanel>
           ) : resolved.credits.ok ? (
             <>
-              <dl className="dl">
+              <dl className="dl dl-balance">
                 <div className="dl-row">
                   <dt>Balance</dt>
                   <dd>
@@ -151,7 +150,7 @@ export default async function AccountPage({
           )}
 
           <h2>Purchase and intent history</h2>
-          {history !== null && (history.ok ? <section aria-label="Purchase history">
+          {history !== null && (history.ok ? <section aria-label="Purchase history" className="history">
             {history.value.purchases.length === 0 ? <p role="status">No purchase intents on this page.</p> : <ul>{history.value.purchases.map(item => <li key={item.intentId}>
               <code>{item.intentId}</code> — {item.itemId} — <time dateTime={item.createdAt}>{item.createdAt}</time> — {item.mode} — {item.status} — {item.credits} credits
             </li>)}</ul>}
@@ -221,15 +220,11 @@ export default async function AccountPage({
 
       <h2>How credits work here</h2>
       <p className="prose prose-wide">{CREDIT_LEDGER_COPY.model}</p>
-      <div className="grid grid-2">
+      <div className="prose-block" data-content="credit-ledger-facts">
         {CREDIT_LEDGER_FACTS.map((fact) => (
-          <article className="note-card" key={fact.title}>
-            <h3>
-              <span className="dot" aria-hidden="true" />
-              {fact.title}
-            </h3>
-            <p>{fact.body}</p>
-          </article>
+          <p key={fact.title}>
+            <strong>{fact.title}.</strong> {fact.body}
+          </p>
         ))}
       </div>
       <div className="actions">

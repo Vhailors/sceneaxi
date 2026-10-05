@@ -94,8 +94,10 @@ export function uiKitStyles(): string {
 .ui-control{height:var(--ui-control);cursor:pointer}
 .ui-control:not([aria-disabled="true"]):hover{background:${SURFACE.hover};border-color:${LINE.hover}}
 .ui-control[aria-pressed="true"],.ui-tab[aria-selected="true"]{background:${ACCENT.surface};color:${ACCENT.base};border-color:${ACCENT.line}}
-.ui-control[aria-disabled="true"],.ui-splitter[aria-disabled="true"]{color:${INERT.text};cursor:not-allowed}
+.ui-control:not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px ${LINE.hover}}
+.ui-control[aria-disabled="true"],.ui-splitter[aria-disabled="true"]{color:${INERT.text};border-style:dashed;cursor:not-allowed}
 .ui-control:focus-visible,.ui-splitter:focus-visible{outline:2px solid ${ACCENT.base};outline-offset:2px}
+.ui-input:not([readonly]):focus-visible{border-color:${ACCENT.base}}
 .ui-tab:focus-visible,.ui-segment .ui-control:focus-visible{outline-offset:-2px}
 .ui-icon-wrap{position:relative;display:inline-flex;vertical-align:middle}
 .ui-icon-button{display:inline-flex;align-items:center;justify-content:center;width:var(--ui-icon);height:var(--ui-icon);padding:var(--space-1)}

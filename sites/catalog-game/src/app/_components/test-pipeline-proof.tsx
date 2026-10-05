@@ -6,8 +6,9 @@
  * validated record is bound to. A refusal renders the refusal line instead of a
  * listing projection, because a proof this page cannot obtain is not one it may draw.
  *
- * The four states are step cards in the order the projection records them. Each card's
- * state, reason, time and human verdict are the stored record's own; a digest is printed
+ * The four states are rows of an ordered list, in the order the projection records them;
+ * the list carries the order, so no step number is drawn. Each row's state, status chip,
+ * reason, time and human verdict are the stored record's own; a digest is printed
  * shortened, with the full value in `title`, never as a raw hash in the running text.
  */
 import type { CatalogPipelineReadModel, SiteResult } from "@sceneaxi/site-kit";
@@ -43,11 +44,10 @@ export function TestPipelineProof({
         <>
           <ol className="flow">
             <li className="flow-step">
+              <h3 className="flow-state">{pipeline.value.intake.pipelineState}</h3>
               <span className="flow-head">
-                <span className="flow-num" />
                 <span className="chip">recorded</span>
               </span>
-              <h3 className="flow-state">{pipeline.value.intake.pipelineState}</h3>
               <p className="flow-note">
                 Read back with {pipeline.value.intake.history.length} stored transitions.
               </p>
@@ -64,15 +64,14 @@ export function TestPipelineProof({
             </li>
             {pipeline.value.listed.history.map((record) => (
               <li className="flow-step" key={`${record.from}-${record.to}`}>
+                <h3 className="flow-state">{record.to}</h3>
                 <span className="flow-head">
-                  <span className="flow-num" />
                   {record.to === pipeline.value.listed.pipelineState ? (
                     <span className="chip chip-accent">{pipeline.value.listed.mode}</span>
                   ) : (
                     <span className="chip">recorded</span>
                   )}
                 </span>
-                <h3 className="flow-state">{record.to}</h3>
                 <p className="flow-note">{record.reason}</p>
                 <p className="flow-at">
                   {record.humanVerdict !== undefined && (

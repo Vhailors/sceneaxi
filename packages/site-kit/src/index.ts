@@ -334,6 +334,15 @@ export {
 
 export { FOUNDATIONS_SOURCE, FOUNDATIONS_VERSION, FOUNDATION_ACCENT_RULE, FOUNDATION_BUTTON_SIZES, FOUNDATION_COLORS, FOUNDATION_COLOR_LAWS, FOUNDATION_CONTRAST_MINIMUMS, FOUNDATION_CONTRAST_ROLES, FOUNDATION_FONT_STACKS, FOUNDATION_MOTION, FOUNDATION_NEUTRAL_TOKENS, FOUNDATION_RADII, FOUNDATION_SPACING, FOUNDATION_SPACING_RULE, FOUNDATION_STATUSES, FOUNDATION_SURFACES, FOUNDATION_SURFACE_ACCENTS, FOUNDATION_SURFACE_RULE, FOUNDATION_TYPE_SCALE, contrastRatio, foundationsBaseCss, foundationsCss, foundationsStatusCss, foundationsSurfacesCss, foundationsVariablesCss, meetsContrast, resolveSurfaceAccent, type FoundationColor, type FoundationColorGroup, type FoundationContrastRole, type FoundationFamily, type FoundationStatus, type FoundationStatusId, type FoundationSurface, type FoundationSurfaceAccent, type FoundationSurfaceAccentId, type FoundationTypeStep, type FoundationsCssOptions } from "./design-tokens.js";
 
+// Redesign 2026-10 (DV-P1, DV-F1): the motion system ships beside D-4, not inside it.
+export {
+  FOUNDATION_MOTION_SYSTEM,
+  FOUNDATION_MOTION_SYSTEM_REDUCED,
+  FOUNDATION_TEXT_FLOOR_PX,
+  foundationsMotionCss,
+  type FoundationMotionToken,
+} from "./design-tokens.js";
+
 export {
   el,
   escapeHtml,

@@ -52,9 +52,8 @@ export default async function LoginPage({
 
   if (current.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Sign in</p>
           <h1>You are already signed in</h1>
         </div>
         <StatePanel
@@ -77,7 +76,7 @@ export default async function LoginPage({
               Open the editor
             </a>
           </p>
-          <form method="post" action="/api/logout">
+          <form method="post" action="/api/logout" className="form-inline">
             <button className="button button-quiet" type="submit">
               Sign out
             </button>
@@ -86,13 +85,13 @@ export default async function LoginPage({
         <section aria-labelledby="account-controls">
           <h2 id="account-controls">Account controls</h2>
           <p>Sign in again within five minutes and confirm your current password for each sensitive action.</p>
-          <form method="post" action="/api/auth/account/export">
+          <form method="post" action="/api/auth/account/export" className="form-plain">
             <label htmlFor="export-password">Current password for export</label>{" "}
             <input id="export-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />{" "}
             <button className="button button-quiet" type="submit">Download identity and billing records</button>
           </form>
           <p>This bounded export contains identity, credit account, ledger and checkout records, not a complete legal privacy export.</p>
-          <form method="post" action="/api/auth/account/disable">
+          <form method="post" action="/api/auth/account/disable" className="form-plain">
             <label htmlFor="disable-password">Current password to disable access</label>{" "}
             <input id="disable-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />
             <p><label><input name="confirm" type="checkbox" value="disable-access" required /> I understand this disables access and revokes all my sessions. It does not erase identity or financial records.</label></p>
@@ -106,9 +105,8 @@ export default async function LoginPage({
 
   if (!plane.wired.login) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Sign in</p>
           <h1>Sign-in is not activated on this deployment</h1>
         </div>
         <StatePanel
@@ -137,10 +135,9 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="page">
+    <div className="page page-narrow page-state">
       <div className="auth-layout">
       <div className="page-head">
-        <p className="eyebrow">Sign in</p>
         <h1>Sign in to SceneAxi</h1>
         <p className="lede">
           Signing in establishes identity for access checks. Editor access still needs an entitlement; hosted AI remains default-off. Your role is
@@ -156,7 +153,7 @@ export default async function LoginPage({
             </StatePanel>
           )}
 
-          <form className="auth-card" method="post" action="/api/login">
+          <form className="auth-card form-card" method="post" action="/api/login">
             {next !== LOGIN_DEFAULT_DESTINATION && (
               <input type="hidden" name="next" value={next} />
             )}

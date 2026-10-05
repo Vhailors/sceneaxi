@@ -30,7 +30,7 @@ export function HelpDocPage({ slug }: { readonly slug: string }) {
         </div>
       </nav>
 
-      <article className="docs-main">
+      <article className="docs-main docs-article" data-doc={doc.slug}>
         <nav aria-label="Breadcrumb">
           <ol className="crumbs">
             <li>
@@ -46,13 +46,16 @@ export function HelpDocPage({ slug }: { readonly slug: string }) {
             <p>{section.body}</p>
           </section>
         ))}
-        <nav className="doc-links" aria-label="Related links">
+        <nav className="doc-links guide-list guide-list-compact" aria-label="Related links">
           {doc.links.map((link) => (
-            <a href={link.href} key={link.href}>
-              {link.label}
-              <span className="glyph" aria-hidden="true">
-                {link.href.startsWith("https://") ? "↗" : "→"}
+            <a className="guide-link" href={link.href} key={link.href}>
+              <span className="guide-title">
+                {link.label}
+                <span className="glyph" aria-hidden="true">
+                  {link.href.startsWith("https://") ? "↗" : "→"}
+                </span>
               </span>
+              <code className="guide-route">{link.href}</code>
             </a>
           ))}
         </nav>

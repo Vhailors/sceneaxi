@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 export const dynamic = "force-dynamic";
 
 import { Archivo, JetBrains_Mono } from "next/font/google";
+import { foundationsMotionCss } from "@sceneaxi/site-kit";
 import {
   CATALOG_SITE_BRAND,
   catalogCanonical,
@@ -46,6 +47,14 @@ const jetbrainsMono = JetBrains_Mono({
  * the floor under a type, not a runtime path the site relies on.
  */
 const foundations = foundationsStylesheet(CATALOG_SITE_FOUNDATION_SURFACE);
+
+/**
+ * The redesign's motion layer (DIRECTION v6 DV-P1): the `--motion-*` tokens, the shared
+ * one-shot keyframes and their reduced-motion overrides, emitted by site-kit beside the
+ * Foundations sheet rather than inside it. Generated text from a frozen table; no request
+ * value reaches it.
+ */
+const motion = foundationsMotionCss();
 
 /**
  * The chrome copy this storefront words differently from its sibling. It is the only
@@ -104,6 +113,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
         ) : (
           <meta name="sceneaxi-foundations-refused" content={foundations.reason} />
         )}
+          <style data-sceneaxi-motion="v6" dangerouslySetInnerHTML={{ __html: motion }} />
       </head>
       <body>
         <a className="skip-link" href="#main">
@@ -145,7 +155,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
 
             <div className="footer-cols">
               <div className="footer-col">
-                <p className="micro">Browse</p>
+                <p className="footer-heading">Browse</p>
                 <ul>
                   <li>
                     <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
@@ -156,7 +166,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </ul>
               </div>
               <div className="footer-col">
-                <p className="micro">{STORE_COPY.publishGroup}</p>
+                <p className="footer-heading">{STORE_COPY.publishGroup}</p>
                 <ul>
                   <li>
                     <a href="/publish">{STORE_COPY.publishLabel}</a>
@@ -167,7 +177,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </ul>
               </div>
               <div className="footer-col">
-                <p className="micro">SceneAxi</p>
+                <p className="footer-heading">SceneAxi</p>
                 <ul>
                   <li>
                     {umbrella.ok ? (

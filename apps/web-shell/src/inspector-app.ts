@@ -797,44 +797,105 @@ export function inspectorPageHtml(projectRoot: string): string {
 <title>SceneAxi inspector — ${root}</title>
 <style>
   :root { color-scheme: light dark; }
+  /* Local copies of the Foundations spacing and motion tokens (DIRECTION.md 4 and 6.1); no import is allowed here. Colours stay system colours. */
+  :root { --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; --ink-2: color-mix(in srgb, CanvasText 72%, Canvas); --ink-3: color-mix(in srgb, CanvasText 60%, Canvas); --line: color-mix(in srgb, CanvasText 45%, Canvas); --line-soft: color-mix(in srgb, CanvasText 18%, Canvas); --well: color-mix(in srgb, CanvasText 4%, Canvas); }
+  :root { --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-11: 44px; --space-18: 72px; }
+  :root { --motion-duration-press: 120ms; --motion-duration-micro: 160ms; --motion-duration-state: 200ms; --motion-duration-panel: 280ms; --motion-duration-panel-exit: 200ms; --motion-duration-route: 320ms; --motion-duration-loop: 1200ms; --motion-delay-loading: 300ms; --motion-ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1); --motion-ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); --motion-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1); --motion-stagger-step: 40ms; --motion-stagger-max: 200ms; --motion-distance-sm: 4px; --motion-distance-md: 8px; --motion-distance-lg: 16px; --motion-scale-press: 0.97; --motion-scale-enter: 0.98; }
   * { box-sizing: border-box; }
-  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 24px; background: Canvas; color: CanvasText; }
-  h1 { font-size: 1.1rem; margin: 0 0 4px; }
-  .root { margin: 0 0 20px; overflow-wrap: anywhere; }
-  form { display: grid; gap: 12px; max-width: 46rem; min-width: 0; }
-  label { display: grid; gap: 4px; min-width: 0; }
-  input { font: inherit; width: 100%; min-width: 0; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid currentColor; border-radius: 4px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
-  button { font: inherit; min-height: 36px; padding: 8px 12px; cursor: pointer; background: ButtonFace; color: ButtonText; border: 1px solid currentColor; border-radius: 4px; }
+  body { font: 15px/1.5 var(--sans); margin: 0; padding: 24px; background: Canvas; color: CanvasText; }
+  h1 { font-size: 1.625rem; line-height: 1.25; letter-spacing: -0.01em; margin: 0; }
+  .shell { max-width: 102rem; margin: 0 auto; min-width: 0; }
+  .masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin: 0 0 32px; min-width: 0; }
+  .root { margin: 0; flex: 1 1 20rem; min-width: 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+  .root code { font: 13px/1.7 var(--mono); color: CanvasText; padding: 2px 8px; background: var(--well); border: 1px solid var(--line-soft); border-radius: 6px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .workbench { display: grid; gap: 24px; min-width: 0; }
+  .controls { min-width: 0; }
+  form { display: grid; gap: 16px; max-width: 46rem; min-width: 0; }
+  label { display: grid; gap: 4px; min-width: 0; font-size: 13px; font-weight: 600; }
+  input { font: 400 14px/1.4 var(--mono); width: 100%; min-width: 0; min-height: 38px; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid var(--line); border-radius: 6px; font-variant-numeric: tabular-nums; }
+  :where(input):hover, :where(input):focus { border-color: FieldText; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 0; }
+  button { font: inherit; font-weight: 600; min-height: 38px; padding: 8px 16px; cursor: pointer; background: Canvas; color: CanvasText; border: 1px solid currentColor; border-radius: 6px; position: relative; isolation: isolate; -webkit-tap-highlight-color: transparent; transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart); }
+  button::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: currentColor; opacity: 0; pointer-events: none; transition: opacity var(--motion-duration-micro) var(--motion-ease-out-quart); }
+  #propose:not(:disabled) { background: CanvasText; color: Canvas; border-color: CanvasText; }
   button[disabled] { cursor: not-allowed; border-style: dashed; }
+  button:disabled { color: var(--ink-3); border-color: var(--ink-3); background: Canvas; transition: none; }
+  button:disabled::before { transition: none; }
+  #edit[aria-busy="true"] button[disabled] { cursor: progress; }
   :is(button,input,select,textarea,a[href],summary,[tabindex]):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; scroll-margin: 12px; }
+  @media (forced-colors: none) { #propose:not(:disabled):focus-visible { outline-color: CanvasText; } }
   @media (forced-colors: active) { :focus-visible { outline-color: Highlight; } }
   :is(input,select,textarea):user-invalid { border-color: #b3261e; }
   [aria-invalid="true"] { border-color: #b3261e; border-width: 2px; }
   button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
-  button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 4px; }
-  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }
-  pre { border: 1px solid currentColor; border-radius: 4px; padding: 16px; max-width: 60rem; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; tab-size: 2; line-height: 1.65; }
+  @media (hover: hover) { button:not(:disabled):hover::before { opacity: .08; } }
+  button:not(:disabled):active { transform: scale(var(--motion-scale-press)); transition-duration: var(--motion-duration-press); }
+  button:not(:disabled):active::before { opacity: .12; transition-duration: var(--motion-duration-press); }
+  #recover:not([hidden]), #reconcile:not([hidden]) { animation: control-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  pre { border: 1px solid var(--line); border-radius: 8px; padding: 16px; max-width: 72rem; min-width: 0; margin: 0; position: relative; overflow: clip; background: var(--well); font-family: var(--mono); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; tab-size: 2; line-height: 1.65; }
   pre:empty { min-height: 3rem; border-style: dashed; }
   pre[aria-busy="true"] { border-inline-start-width: 3px; }
+  pre[aria-busy="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-top: 2px solid currentColor; transform-origin: left center; transform: scaleX(0); animation: busy-fill var(--motion-duration-loop) var(--motion-ease-out-quart) var(--motion-delay-loading) infinite backwards; }
+  #diff::before { content: ""; position: absolute; inset: 0; background: inherit; opacity: 0; pointer-events: none; }
+  #diff[data-tick="a"]::before { animation: cover-fade-a var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #diff[data-tick="b"]::before { animation: cover-fade-b var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #diff[data-state="applied"][data-tick="a"]::before { animation: cover-wipe-a var(--motion-duration-route) var(--motion-ease-out-expo) backwards; }
+  #diff[data-state="applied"][data-tick="b"]::before { animation: cover-wipe-b var(--motion-duration-route) var(--motion-ease-out-expo) backwards; }
   code { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  code { font-family: var(--mono); }
   @media (prefers-color-scheme: dark) { :is(input,select,textarea):user-invalid { border-color: #FF4D5E; } [aria-invalid="true"] { border-color: #FF4D5E; } }
   @media (forced-colors: active) { :is(input,select,textarea):user-invalid, [aria-invalid="true"] { border-color: Mark; } }
-  #review-help { max-width: 46rem; overflow-wrap: anywhere; }
+  #review-help { max-width: 46rem; margin: 16px 0 0; font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
   .actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-  .phase { font-weight: 700; }
-  #note:not(:empty) { display: block; margin-top: 8px; padding: 8px 12px; border-left: 2px solid currentColor; overflow-wrap: anywhere; }
+  .status { margin: 16px 0 0; min-width: 0; }
+  .phase { display: inline-block; font: 600 13px/1.5 var(--mono); padding: 1px 12px; border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .phase[data-phase="reviewing"] { background: CanvasText; color: Canvas; border-color: CanvasText; }
+  .phase[data-phase="applied"] { border-color: CanvasText; }
+  .phase[data-phase="unknown"] { color: #b3261e; border-color: currentColor; }
+  @media (prefers-color-scheme: dark) { .phase[data-phase="unknown"] { color: #FF4D5E; } }
+  .phase[data-tick="a"] { animation: settle-a var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  .phase[data-tick="b"] { animation: settle-b var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #note:not(:empty) { display: block; width: fit-content; max-width: 100%; margin-top: 8px; padding: 4px 0 8px; position: relative; overflow-wrap: anywhere; }
+  #note:not(:empty)::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-top: 2px solid color-mix(in srgb, currentColor 35%, transparent); }
+  #note.refused:not(:empty)::after { border-top-color: currentColor; }
+  #note:not(:empty)[data-tick="a"] { animation: settle-a var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #note:not(:empty)[data-tick="b"] { animation: settle-b var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #note:not(:empty)[data-tick="a"]::after { animation: draw-a var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
+  #note:not(:empty)[data-tick="b"]::after { animation: draw-b var(--motion-duration-state) var(--motion-ease-out-quint) backwards; }
   .refused { color: #b3261e; }
   /* Foundations danger paint remains legible on the browser's dark Canvas. */
   @media (prefers-color-scheme: dark) { .refused { color: #FF4D5E; } }
-  footer { margin-top: 32px; max-width: 46rem; overflow-wrap: anywhere; }
+  footer { margin-top: 44px; max-width: 46rem; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+  footer code { color: CanvasText; }
+  @media (min-width: 960px) { .workbench { grid-template-columns: minmax(18rem, 26rem) minmax(0, 72rem); gap: 32px 44px; align-items: start; } #diff { min-height: 14rem; } }
   @media (max-width: 480px) { body { padding: 16px; } .actions button { flex: 1 1 auto; } }
+  @media (max-width: 480px) { input, button { min-height: 44px; } input { font-size: 16px; } .masthead { margin-bottom: 24px; } }
+  @keyframes settle-a { from { opacity: 0; transform: translateY(var(--motion-distance-sm)); } }
+  @keyframes settle-b { from { opacity: 0; transform: translateY(var(--motion-distance-sm)); } }
+  @keyframes control-in { from { opacity: 0; transform: translateY(var(--motion-distance-sm)); } }
+  @keyframes draw-a { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+  @keyframes draw-b { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+  @keyframes cover-fade-a { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes cover-fade-b { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes cover-wipe-a { from { opacity: 1; clip-path: inset(0); } to { opacity: 1; clip-path: inset(0 0 0 100%); } }
+  @keyframes cover-wipe-b { from { opacity: 1; clip-path: inset(0); } to { opacity: 1; clip-path: inset(0 0 0 100%); } }
+  @keyframes busy-fill { from { transform: scaleX(0); opacity: 1; } 75% { transform: scaleX(1); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    :root { --motion-distance-sm: 0px; --motion-distance-md: 0px; --motion-distance-lg: 0px; --motion-scale-press: 1; --motion-scale-enter: 1; --motion-stagger-step: 0ms; }
+    #diff::before, #note:not(:empty)::after { animation: none !important; }
+    pre[aria-busy="true"]::after { animation: none; transform: scaleX(0.4); }
+  }
 </style>
 </head>
 <body>
+<main class="shell">
+<header class="masthead">
 <h1>SceneAxi inspector</h1>
 <p class="root">Serving <code>${root}</code> — local authoring only, loopback only.</p>
+</header>
 
+<div class="workbench">
+<div class="controls">
 <form id="edit" aria-busy="false">
   <label>Document path (relative to the project root)
     <input id="documentPath" value="scene.json" required />
@@ -855,18 +916,29 @@ export function inspectorPageHtml(projectRoot: string): string {
 </form>
 
 <p id="review-help">Accept and Reject are unavailable until you Propose an edit and review its exact diff.</p>
-<p>Phase: <span class="phase" id="phase">idle</span> <span id="note" role="status" aria-live="polite" aria-atomic="true"></span></p>
+<p class="status">Phase: <span class="phase" id="phase" data-phase="idle">idle</span> <span id="note" role="status" aria-live="polite" aria-atomic="true"></span></p>
+</div>
 <pre id="diff" aria-label="Proposal diff" aria-busy="false" tabindex="0">No proposal yet. Propose an edit to review its diff before anything is written.</pre>
+</div>
 
 <footer>
   Nothing is written until you accept. This page is a protocol client of
   <code>@sceneaxi/authoring-core</code>; the same operation through the CLI
   produces byte-identical documents.
 </footer>
+</main>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const state = { phase: "idle", reviewToken: null, busy: false, uncertain: false, recoveryPending: false };
+
+// Visual-only motion hooks: flipping data-tick restarts a one-shot CSS animation; nothing reads them back.
+function settle(el) { el.dataset.tick = el.dataset.tick === "a" ? "b" : "a"; }
+function showPhase(phase) {
+  if ($("phase").dataset.phase === phase) return;
+  $("phase").dataset.phase = phase;
+  settle($("phase"));
+}
 
 function phaseExplanation() {
   if (state.recoveryPending) return "Apply outcome is pending. Resolve pending apply before another edit; do not retry Accept.";
@@ -900,9 +972,15 @@ function render(payload) {
     if (Object.hasOwn(payload, "reviewToken")) state.reviewToken = payload.reviewToken;
     state.phase = snapshot.phase ?? state.phase;
     $("phase").textContent = state.phase;
+    showPhase(state.phase);
+    const previousDiff = $("diff").textContent;
     $("diff").textContent = snapshot.renderedDiff
       ? (state.phase === "applied" ? "Applied change (history):\\n" : "") + snapshot.renderedDiff
       : "No current proposal. Propose an edit to review before anything is written.";
+    if ($("diff").textContent !== previousDiff) {
+      $("diff").dataset.state = state.phase === "applied" ? "applied" : "update";
+      settle($("diff"));
+    }
     state.recoveryPending = snapshot.journalRecoveryPending === true;
     $("recover").hidden = !state.recoveryPending;
   }
@@ -910,6 +988,8 @@ function render(payload) {
     state.uncertain = true;
     state.reviewToken = null;
     $("diff").textContent = "This review is stale. Read authoritative state and review the current diff before accepting.";
+    $("diff").dataset.state = "update";
+    settle($("diff"));
   }
   $("note").textContent = payload.ok
     ? phaseExplanation()
@@ -917,6 +997,7 @@ function render(payload) {
       (state.uncertain ? " Read authoritative state before another operation." :
        state.recoveryPending ? " " + phaseExplanation() : " Review the inputs and diagnostic before trying again.");
   $("note").className = payload.ok ? "" : "refused";
+  settle($("note"));
   controls();
 }
 
@@ -927,6 +1008,7 @@ async function call(path, body) {
   state.busy = true;
   $("note").textContent = "Waiting for authoritative response. No operation will be retried automatically.";
   $("note").className = "";
+  settle($("note"));
   controls();
   try {
     const response = await fetch(path, {
@@ -943,9 +1025,13 @@ async function call(path, body) {
     state.uncertain = true;
     state.reviewToken = null;
     $("phase").textContent = "unknown";
+    showPhase("unknown");
     $("diff").textContent = "Current outcome unknown. Read authoritative state before another operation.";
+    $("diff").dataset.state = "update";
+    settle($("diff"));
     $("note").textContent = " — connection or response failed; outcome unknown. No write was retried. Read authoritative state.";
     $("note").className = "refused";
+    settle($("note"));
   } finally {
     state.busy = false;
     controls();
@@ -975,6 +1061,7 @@ $("edit").addEventListener("submit", (event) => {
   } catch (error) {
     $("note").textContent = " — new value must be valid JSON: " + error.message;
     $("note").className = "refused";
+    settle($("note"));
     $("newValue").setAttribute("aria-invalid", "true");
     $("newValue").setCustomValidity("New value must be valid JSON.");
     $("newValue").focus();
