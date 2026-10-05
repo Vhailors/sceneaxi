@@ -8,7 +8,7 @@ function createElementDataset(): DOMStringMap { return {}; }
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
-import { runInNewContext } from "node:vm";
+import { createContext, runInContext } from "node:vm";
 import { createAudioPlaybackPort, createSculptMountApi } from "@sceneaxi/engine-presentation";
 import { describe, expect, it } from "vitest";
 
@@ -113,13 +113,13 @@ function host(mode: Mode = "ready") {
 
   class CustomEventPort extends Event { constructor(type: string, readonly detail: ViewportProtocolInput) { super(type); } }
 
-  const modules = {
+  const modules: Record<string, unknown> = {
     "@sceneaxi/engine-presentation": { createAudioPlaybackPort, createSculptMountApi() { return mounts; }, createThreeRenderLoop(options: { onFrame: () => void }) { frame = options.onFrame;
 
  return { start() {}, stop() { calls.loopStop++; } }; }, createThreeSculptPresentationBackend() { calls.backendCreate++;
 
  return backend; }, releaseThreeCanvas() { calls.release++; } },
-    "@sceneaxi/schemas": { DEFAULT_INPUT_ACTION_MAP: {} },
+
     "@sceneaxi/authoring-core/rarity-evidence": { formatSafeRarityEvidence() { return null; } },
     "../lib/bridge-contract.js": { DESKTOP_BRIDGE_GLOBAL: "sceneaxiDesktopLinux", DESKTOP_ACTIVE_DOCUMENT_PATH: "scene.json" },
     "../../lib/bridge-contract.js": { DESKTOP_ACTIVE_DOCUMENT_PATH: "scene.json", DESKTOP_VIEWPORT_PLAY_EVENT: "play", DESKTOP_VIEWPORT_STOP_EVENT: "stop", DESKTOP_RARITY_PROPOSAL_EVENT: "rarity", PIXELS_META_NAME: "pixels" },
@@ -161,15 +161,15 @@ function host(mode: Mode = "ready") {
 
  return raf.length; }, cancelAnimationFrame() {},
     sceneaxiDesktopLinux: {
-      inputActions: () => mode === "input" ? inputWait.promise : Promise.resolve({ ok: true, data: { map: {} } }),
+      inputActions: () => mode === "input" ? inputWait.promise : Promise.resolve(jsonReply({ ok: true, data: { map: schemas.DEFAULT_INPUT_ACTION_MAP } })),
       async request(input: { action: string }) {
         requests.push(input.action);
 
-        if (input.action === "scene") return mode === "scene" ? sceneWait.promise : scene;
+        if (input.action === "scene") return mode === "scene" ? sceneWait.promise : jsonReply(scene);
 
-        if (input.action === "open-path") return mode === "open" ? openWait.promise : open;
+        if (input.action === "open-path") return mode === "open" ? openWait.promise : jsonReply(open);
 
-        if (input.action === "audio-asset") return mode === "request" ? audioWait.promise : audioResponse;
+        if (input.action === "audio-asset") return mode === "request" ? audioWait.promise : jsonReply(audioResponse);
 
         if (input.action === "frame-report") return frameWait.promise;
         throw Error("unexpected IPC: " + input.action);
@@ -177,18 +177,34 @@ function host(mode: Mode = "ready") {
     },
   };
 
-  function load(path: string) {
-    const source = readFileSync(new URL("../src/renderer/" + path, import.meta.url), "utf8");
-    const exports = {};
-    const code = typescript.transpileModule(source, { compilerOptions: { module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022 } }).outputText;
-    runInNewContext(code, { ...globals, exports, require(id: string) { if (!(id in modules)) throw Error("unwired dependency: " + id);
+  const context = createContext(globals);
+    const sourceModules = new Map<string, Record<string, unknown>>();
+    const parseReply = runInContext("value => JSON.parse(value)", context) as (value: string) => unknown;
+    function jsonReply<Value>(value: Value): Value {
+      return parseReply(JSON.stringify(value)) as Value;
+    }
+    const schemaRoot = new URL("../../../packages/schemas/src/", import.meta.url);
+    const schemas = { ...load("document.ts", schemaRoot), ...load("input-action-registry.ts", schemaRoot) };
+    modules["@sceneaxi/schemas"] = schemas;
 
- return Object.getOwnPropertyDescriptor(modules, id)?.value; } });
+    function load(path: string, from = new URL("../src/renderer/", import.meta.url)): Record<string, unknown> {
+      const url = new URL(path, from);
+      const cached = sourceModules.get(url.href);
+      if (cached) return cached;
+      const exports: Record<string, unknown> = {};
+      sourceModules.set(url.href, exports);
+      const source = readFileSync(url, "utf8");
+      const code = typescript.transpileModule(source, { compilerOptions: { module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022 } }).outputText;
+      const evaluate = runInContext(`(function (exports, require) {\n${code}\n})`, context, { filename: url.pathname }) as (exports: Record<string, unknown>, require: (id: string) => unknown) => void;
+      evaluate(exports, (id: string) => {
+        if (Object.hasOwn(modules, id)) return Object.getOwnPropertyDescriptor(modules, id)?.value;
+        if (!id.startsWith(".")) throw Error("unwired dependency: " + id);
+        return load(id.replace(/\.js$/, ".ts"), url);
+      });
+      return exports;
+    }
 
-    return exports;
-  }
-
-  const overlay = load("features/overlay-report.ts");
+    const overlay = load("features/overlay-report.ts");
   Object.assign(modules, { "./features/overlay-report.js": overlay, "./overlay-report.js": overlay });
   Object.assign(modules, { "./features/audio-playback.js": load("features/audio-playback.ts") });
   Object.assign(modules, { "./features/play-loop.js": load("features/play-loop.ts") });
@@ -210,14 +226,14 @@ function host(mode: Mode = "ready") {
  return controls; },
     rejectFrame() { frameWait.reject(Error("frame sentinel")); },
     rejectReadiness() { (mode === "input" ? inputWait : sceneWait).reject(Error("readiness sentinel")); },
-    play() { document.dispatchEvent(new CustomEventPort("sceneaxi:desktop-audio-invalidate", { profile: "game" })); document.dispatchEvent(new CustomEventPort("play", { mountable: { audioClips: [clip] }, initialDigest: "a".repeat(64), tickDigests: ["b".repeat(64)] })); },
+    play() { document.dispatchEvent(new CustomEventPort("sceneaxi:desktop-audio-invalidate", jsonReply({ profile: "game" }))); document.dispatchEvent(new CustomEventPort("play", jsonReply({ mountable: { audioClips: [clip] }, initialDigest: "a".repeat(64), tickDigests: ["b".repeat(64)] }))); },
     clickPlay() { const controls = stage.children.find(child => child.dataset.audioPlayback === "true");
 
  if (!controls) throw Error("actual audio controls missing"); const button = controls.children[1];
 
  if (!button) throw Error("actual play button missing"); button.dispatchEvent(new Event("click")); },
     stop() { document.dispatchEvent(new CustomEventPort("stop", null)); },
-    resolveAll() { inputWait.resolve({ ok: true, data: { map: {} } }); sceneWait.resolve(scene); openWait.resolve(open); audioWait.resolve(audioResponse); digestWait.resolve(Uint8Array.from(createHash("sha256").update(bytes).digest()).buffer); resumeWait.resolve(undefined); decodeWait.resolve({}); frameWait.resolve({ ok: true }); },
+    resolveAll() { inputWait.resolve(jsonReply({ ok: true, data: { map: schemas.DEFAULT_INPUT_ACTION_MAP } })); sceneWait.resolve(jsonReply(scene)); openWait.resolve(jsonReply(open)); audioWait.resolve(jsonReply(audioResponse)); digestWait.resolve(Uint8Array.from(createHash("sha256").update(bytes).digest()).buffer); resumeWait.resolve(undefined); decodeWait.resolve({}); frameWait.resolve(jsonReply({ ok: true })); },
   };
 }
 

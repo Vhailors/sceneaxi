@@ -22,6 +22,16 @@ Design decisions behind this: [ADR 0018](adr/0018-sites-tier-three-vercel-one-ne
 provider clients stay injected adapters outside hermetic core; production SDKs are
 confined to the umbrella install root).
 
+## Local acceptance gate
+
+`pnpm gate` uses the root `pnpm@12.6.0` pin, performs `pnpm install
+--frozen-lockfile` in desktop/linux and desktop/windows, and installs/builds all
+four independent site roots (umbrella, catalog-game, catalog-web, kids). The gate
+therefore requires writable node_modules; frozen lockfiles must stay unchanged.
+Kids is built locally only, not deployed or activated. The desktop installs are
+required because the root typecheck includes native update-policy sources whose
+external dependencies belong to their independent desktop install roots.
+
 ## Vercel project map
 
 | Site | Directory | Package | Vercel project | Owns |
@@ -256,11 +266,33 @@ provider account, and none of it asserts that production is activated.
 
 ## Verification
 
-The umbrella exposes `GET /api/health` for deployment checks. It returns only each
-plane's `wired`, `absent`, or `misconfigured` state and the build commit; `ok` is false
-only when a plane is misconfigured. An absent plane is reported explicitly without making
-liveness fail. The response never includes environment values and is sent with
-`Cache-Control: no-store`. Structured server diagnostics are JSON lines emitted to the
+The umbrella exposes `GET /api/health` for deployment checks. It retains each
+plane's `wired`, `absent`, or `misconfigured` state, construction diagnostics, the build
+commit and twelve individual `variables` states (`absent`, `present-valid`, or
+`present-malformed`); `ok` is false only when a plane is misconfigured. An absent plane
+is reported explicitly without making liveness fail. The public payload includes neither
+deployment environment key names nor their values and is sent with `Cache-Control: no-store`.
+The exhaustive one-to-one public diagnostic mapping is:
+
+| Internal deployment key (private configuration report) | Public `variables` label |
+|---|---|
+| `DATABASE_URL` | `database` |
+| `BETTER_AUTH_ORIGIN` | `identityOrigin` |
+| `BETTER_AUTH_SECRET` | `identitySigning` |
+| `SCENEAXI_ADMIN_EMAIL` | `administratorEmail` |
+| `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | `administratorBootstrap` |
+| `STRIPE_SECRET_KEY` | `paymentApi` |
+| `STRIPE_WEBHOOK_SECRET` | `paymentWebhook` |
+| `SCENEAXI_BILLING_MODE` | `billingMode` |
+| `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | `umbrellaOrigin` |
+| `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | `gameCatalogOrigin` |
+| `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | `webCatalogOrigin` |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | `editorPreview` |
+
+Each label preserves the corresponding internal state exactly; no aggregate counts
+replace diagnostics. Internal inspection/classification remains keyed by the twelve
+original deployment names. Consumers use these public labels, never environment keys.
+Structured server diagnostics are JSON lines emitted to the
 Vercel function's stdout/stderr and are available in that deployment's function logs.
 Events cover provider construction failures, Better Auth warnings, webhook outcomes,
 checkout/login/logout/intake/admin refusals, and health misconfiguration. They include

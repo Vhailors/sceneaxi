@@ -26,6 +26,7 @@ export default defineConfig(
     // Node-run tooling: gate scripts and the workspace binaries under bin/.
     files: [
       "scripts/**/*.mjs",
+      "docs/audits/**/*.mjs",
       "packages/*/bin/**/*.mjs",
       "apps/*/bin/**/*.mjs",
       "eslint.config.mjs",

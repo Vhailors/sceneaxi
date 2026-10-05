@@ -1485,13 +1485,28 @@ async function start(): Promise<void> {
     }
 
     let capacityStarted = performance.now();
-    await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="web"]')?.getAttribute('aria-disabled') !== 'true', 'profile switch admitted'); await click('[data-action="profile"][data-value="web"]'); await wait(() => document.querySelector('[data-action="web-inject-asset"]')?.getAttribute('aria-disabled') !== 'true', 'Web import admitted'); await click('[data-action="web-inject-asset"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === false, 'GUI import review'); return true;`);
+    const previousCapacityPickerPath = smokeGuiAssetPickerPath;
+      smokeGuiAssetPickerPath = smokeAssetSource;
+      try {
+        await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="web"]')?.getAttribute('aria-disabled') !== 'true', 'profile switch admitted'); await click('[data-action="profile"][data-value="web"]'); await wait(() => document.querySelector('[data-action="web-inject-asset"]')?.getAttribute('aria-disabled') !== 'true', 'Web import admitted'); await click('[data-action="web-inject-asset"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === false, 'GUI import review'); return true;`);
+      } finally {
+        smokeGuiAssetPickerPath = previousCapacityPickerPath;
+      }
 
   assetCapacity.phaseMs.import = performance.now() - capacityStarted;
 
     if (readFileSync(guiDocument, "utf8") !== guiSaved) fail("GUI import wrote before approval.");
     capacityStarted = performance.now();
-  await gui(`await click('[data-action="change-accept"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'import apply'); return true;`);
+  await gui(`
+      await click('[data-action="change-accept"]');
+      await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'import apply');
+      await wait(() => {
+        const state = document.querySelector('[data-project-state]')?.dataset.projectState;
+        if (state === 'refused' || state === 'recovering') throw new Error('SMOKE_IMPORT_PERSISTENCE_' + state);
+        return state === 'saved' && document.querySelector('[data-action="change-accept"]')?.dataset.busy !== 'true';
+      }, 'import persistence');
+      return true;
+    `);
   assetCapacity.phaseMs.apply = performance.now() - capacityStarted;
     console.error("SMOKE_PHASE maximum-asset canonical reload");
   let guiImported = readFileSync(guiDocument, "utf8");

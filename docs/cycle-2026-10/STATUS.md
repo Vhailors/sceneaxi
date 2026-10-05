@@ -1,5 +1,6 @@
 # Cycle 2026-10 status
 
+
 Each orchestration owns its own section. Edit only your own section.
 
 ## UI/UX redesign (impeccable + microanimations)
@@ -34,3 +35,58 @@ Known pre-existing problems on `main` (`dffefbab`), outside the redesign:
 - Running `pnpm install` inside `sites/*` with pnpm 12 rewrites the site lockfiles.
 
 Evidence: `~/Documents/Reports/sceneaxi-redesign-main/` (before, after, final and deploy). Rulings: `docs/redesign/RULINGS.md`.
+
+
+<!-- BEGIN SECOND-CONTEXT WEB-SCENEAXI PORTFOLIO -->
+## Second context — web-sceneaxi portfolio
+
+**Execution:** `orun-3-4742ee61` · **Continuation:** observed registry `orun-6-28ce3464` (parent `orun-5-6933929c`), current sole code writer `bg-32` · **Phase:** BASELINE bounded fix r3/3, IN PROGRESS after independent r2 FAIL · **Product outcomes verified:** 0/7 (0%). Original nested executor timed out exactly 3600020ms after child start at the one-hour graph-node limit, NOT an operator stop. No independent rounds ran before that timeout. Arbitration-r1.json now supplies three bounded fix assertions; this continuation addresses those assertions, not publication. Continuation limit is 21600000ms; durable checkpoint required if reached. Existing candidate/rescue/seven audit artifacts retained in the same W/namespace; no rewrite or new worktree.
+
+**W:** `/home/devuser/Documents/Projects/worktrees/sceneaxi-portfolio-cycle-2026-10`
+**Branch:** `cycle/sceneaxi-portfolio-2026-10`
+**Fresh origin/main base:** `2cef2033232a9540d95fbb51ba6bc39acc9d6eae`
+**Evidence root:** `/home/devuser/Documents/Reports/sceneaxi-portfolio-cycle-2026-10`
+
+| Outcome | Current second-context verdict | Verification / next |
+|---|---|---|
+| O1 canonical tree / redesign | NOT PASS; archive subcriterion remotely verified | Rescue `ffe2c903344304bb6cc480a8a478261a5030bb0f`; peer redesign ownership exclusive, coordination UNCONFIRMED; no landed/merge/deploy claim |
+| O2 green baseline + four site builds | IN PROGRESS, NOT PASS | Incomplete owned candidate recovered; current targeted oracle, four frozen builds, full gate/lint/typecheck/build and actual runtime still required. Earlier after-commands.json is historical, not current PASS. |
+| O3 Linux/SDK public release + clean install | NOT RUN | Release, anonymous download, checksums, clean Ubuntu install and real runtime evidence required |
+| O4 Windows/macOS unsigned native runtime | NOT RUN | S3 allowed; evidence must come from actual native builds/runtime, not packaging mocks |
+| O5 seven surfaces + 219 desktop controls / flows | NOT RUN | Seven read-only audits next, then serial fixes with named refusals preserved |
+| O6 deterministic Sculpt batch | NOT RUN | S4 Sculpt; two-run digest proof and real composed scene/capture required |
+| O7 reversible Kids restriction / policy | NOT RUN | S2 reversible restriction; privacy/isolation preserved; protected integration gaps are peer/technical dependencies |
+
+### Landed / running / next
+
+- **Remote backup published, not merged:** unique rescue ref `rescue/sceneaxi-only-copy-v5-2026-10-orun-3-4742ee61-9b6b452f8b` → `ffe2c903344304bb6cc480a8a478261a5030bb0f`. Its second parent `b141b75673d834c8c5e6214ae086f135e86ab181` preserves staged-only versions. Exact working tree has 2,410 blobs; no candidate Git blob >=50 MiB.
+- **OLD preserved:** original source/index/HEAD/production-swarm branch and ignored source/assets unchanged; full before/after digests recorded. Own ignored Empryo bookkeeping drift is explicitly classified, never represented as byte-identical harness metadata. No OLD repoint, cleanup or foreign-session write.
+- **Ignored copies:** 98,434 ignored files remain locally intact and inventoried/digested; not claimed remotely backed up. See ignored-only preservation report for source/assets and oversized outputs.
+- **Fresh-base proof:** fetch/prune and remote default main verified before creating a new dedicated W; clean at creation, 0 ahead / 0 behind. Only this section and own LOG created inside W.
+- **Candidate committed locally:** repair rebased as b01c17f4 on origin/main 2cef2033; no push/merge/deploy. Peer UI/UX sections preserved verbatim (raw peer-section-preservation.json). Strict schema exactly matches baseline; no production widening.
+- **Running:** primary completed the single approved AST smoke readiness patch and explicitly returned ALL W source ownership to bg-28. Existing hidden-review wait now also awaits actual saved state and Accept idle, with bounded timeout/named save errors; canonical disk assertion unchanged. Rebuild/exact smoke/current receipts next. No additional full gate while primary verifies ownership classification of the protected golden helper; this is a technical dependency, not an operator exclusion.
+- **R2 observed, not accepted PASS:** targeted 8 files/554 tests and traceability exit0; rebased real Electron GUI canvas/pixelsDrawn true/drawCalls16/three instances/four Play ticks. Completed prepatch gate exits1 (116 failures: 115 deterministic protected helper-realm goldens plus importer heartbeat), though all four frozen site builds succeeded. It is SUPERSEDED for patched source. Exact single-worker command golden fails100/102; production schema relaxation is not a repair.
+- **Next:** required `phases/baseline/fix-r2.md` and current `EXECUTION.md` retain actual command failures and current evidence. Independent pair/arbiter decide PASS, not this writer. Publication remains withheld until independent/live PASS and later fresh fetch/rebase/G4 PR integration.
+
+### Ownership and authority
+
+Protected manifest refreshed immediately before each W edit: peer UI/UX source, tokens/CSS/chrome, docs/redesign* and review paths remain protected. STATUS is **shared section-owned coordination metadata**: only the delimited Second context section is edited; origin/main's published peer section was integrated verbatim, never copied from an uncommitted peer checkout. Unresolved section conflicts require coordination, not takeover.
+
+Actual redesign-owner endpoint is absent from the current Empryo registry. Coordination request is recorded locally; delivery is **NOT confirmed**. No invented contact or O1 completion. Defaults S1 full gated autonomy, S3 unsigned native execution, S4 Sculpt, S2 reversible Kids restriction remain in force. Latest G4 ANSWERED: completed locally verified pieces merge through a PR after fetch/rebase and applicable local/live gates. Only never-running required CI permits admin merge, then a single-merge enforce_admins toggle with armed restoration if needed; required checks stay configured. No integration or bypass performed in preflight. Stripe remains TEST; operator-only charges/store/domain/posts/over-cap generation/deletion/signing bypass remain held. ADRs/boundaries/held keys/named refusals/Kids privacy/tier-6b commerce hold unchanged.
+
+### Fix r3 recovery checkpoint (before further patches)
+
+- Arbitration-r2.json and both independent r2 reports read: FAIL, final bounded fix round remains. HEAD `20aa0654cdac1a37404d6d259452a62ffe375f90`; inherited dirty `desktop/linux/src/electron/main.ts` preserved. Fresh fetch confirms origin/main `2cef2033232a9540d95fbb51ba6bc39acc9d6eae`, own branch 2 ahead / 0 behind.
+- Actual registry identifies writer bg-32, continuation `orun-6-28ce3464`, parent `orun-5-6933929c`; no new run ID or evidence namespace. Original 3600020ms one-hour timeout was NOT operator stop; no independent rounds preceded that timeout. Six-hour maximum 21600000ms retained.
+- Workspace G4 already corrected and verified. Running: exact failed goldens/native smoke and required current gates/runtime. Next: fix demonstrated authorized production root causes only; protected harness integration remains a technical dependency, never an operator exclusion. No publication or source delegates.
+- Evidence: `phases/baseline/raw/fix-r3-bg-32/`; required `phases/baseline/fix-r3.md` will record current commands, failures and source attribution. Outcomes remain 0/7 verified (0%), nothing landed.
+
+### Current-execution evidence
+
+- `execution-id.json`, `workspace.json`, `protected-paths.txt`, `protected-paths.json`
+- `preflight/rescue-manifest.json`, `preflight/remote-rescue-receipt.txt`, `preflight/original-root-unchanged-proof.json`
+- `preflight/candidate-manifest.json`, `preflight/old-before-inventory.json`, redacted per-tree scanner/adjudication/private-config reports
+- `preflight/fresh-base-proof.json`, `preflight/ignored-only-preservation.json`, `preflight/REPORT.md`, `preflight/verdict.json`
+
+Preflight receipts remain separate. Current product receipts belong to fix-r2-bg-28 and fix-r2.md/EXECUTION.md; earlier after-commands.json and failed/superseded variants are not current PASS. Integrity finds protected violations0,22 valid inside-W symlinks, peer sections verbatim, original strict schema unchanged; only authorized lifecycle fixture wiring differs. Own docs whitespace is corrected; final integrity and source-bound runtime/gates must be recorded after the smoke patch.
+<!-- END SECOND-CONTEXT WEB-SCENEAXI PORTFOLIO -->
