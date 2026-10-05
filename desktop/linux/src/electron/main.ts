@@ -1485,7 +1485,13 @@ async function start(): Promise<void> {
     }
 
     let capacityStarted = performance.now();
-    await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="web"]')?.getAttribute('aria-disabled') !== 'true', 'profile switch admitted'); await click('[data-action="profile"][data-value="web"]'); await wait(() => document.querySelector('[data-action="web-inject-asset"]')?.getAttribute('aria-disabled') !== 'true', 'Web import admitted'); await click('[data-action="web-inject-asset"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === false, 'GUI import review'); return true;`);
+    const previousCapacityPickerPath = smokeGuiAssetPickerPath;
+      smokeGuiAssetPickerPath = smokeAssetSource;
+      try {
+        await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="web"]')?.getAttribute('aria-disabled') !== 'true', 'profile switch admitted'); await click('[data-action="profile"][data-value="web"]'); await wait(() => document.querySelector('[data-action="web-inject-asset"]')?.getAttribute('aria-disabled') !== 'true', 'Web import admitted'); await click('[data-action="web-inject-asset"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === false, 'GUI import review'); return true;`);
+      } finally {
+        smokeGuiAssetPickerPath = previousCapacityPickerPath;
+      }
 
   assetCapacity.phaseMs.import = performance.now() - capacityStarted;
 

@@ -40,7 +40,7 @@ Evidence: `~/Documents/Reports/sceneaxi-redesign-main/` (before, after, final an
 <!-- BEGIN SECOND-CONTEXT WEB-SCENEAXI PORTFOLIO -->
 ## Second context — web-sceneaxi portfolio
 
-**Execution:** `orun-3-4742ee61` · **Continuation:** observed registry `orun-6-28ce3464` (parent `orun-5-6933929c`), current sole code writer `bg-28` · **Phase:** BASELINE bounded fix r2/3, IN PROGRESS after independent r1 FAIL · **Product outcomes verified:** 0/7 (0%). Original nested executor timed out exactly 3600020ms after child start at the one-hour graph-node limit, NOT an operator stop. No independent rounds ran before that timeout. Arbitration-r1.json now supplies three bounded fix assertions; this continuation addresses those assertions, not publication. Continuation limit is 21600000ms; durable checkpoint required if reached. Existing candidate/rescue/seven audit artifacts retained in the same W/namespace; no rewrite or new worktree.
+**Execution:** `orun-3-4742ee61` · **Continuation:** observed registry `orun-6-28ce3464` (parent `orun-5-6933929c`), current sole code writer `bg-32` · **Phase:** BASELINE bounded fix r3/3, IN PROGRESS after independent r2 FAIL · **Product outcomes verified:** 0/7 (0%). Original nested executor timed out exactly 3600020ms after child start at the one-hour graph-node limit, NOT an operator stop. No independent rounds ran before that timeout. Arbitration-r1.json now supplies three bounded fix assertions; this continuation addresses those assertions, not publication. Continuation limit is 21600000ms; durable checkpoint required if reached. Existing candidate/rescue/seven audit artifacts retained in the same W/namespace; no rewrite or new worktree.
 
 **W:** `/home/devuser/Documents/Projects/worktrees/sceneaxi-portfolio-cycle-2026-10`
 **Branch:** `cycle/sceneaxi-portfolio-2026-10`
@@ -73,6 +73,13 @@ Evidence: `~/Documents/Reports/sceneaxi-redesign-main/` (before, after, final an
 Protected manifest refreshed immediately before each W edit: peer UI/UX source, tokens/CSS/chrome, docs/redesign* and review paths remain protected. STATUS is **shared section-owned coordination metadata**: only the delimited Second context section is edited; origin/main's published peer section was integrated verbatim, never copied from an uncommitted peer checkout. Unresolved section conflicts require coordination, not takeover.
 
 Actual redesign-owner endpoint is absent from the current Empryo registry. Coordination request is recorded locally; delivery is **NOT confirmed**. No invented contact or O1 completion. Defaults S1 full gated autonomy, S3 unsigned native execution, S4 Sculpt, S2 reversible Kids restriction remain in force. Latest G4 ANSWERED: completed locally verified pieces merge through a PR after fetch/rebase and applicable local/live gates. Only never-running required CI permits admin merge, then a single-merge enforce_admins toggle with armed restoration if needed; required checks stay configured. No integration or bypass performed in preflight. Stripe remains TEST; operator-only charges/store/domain/posts/over-cap generation/deletion/signing bypass remain held. ADRs/boundaries/held keys/named refusals/Kids privacy/tier-6b commerce hold unchanged.
+
+### Fix r3 recovery checkpoint (before further patches)
+
+- Arbitration-r2.json and both independent r2 reports read: FAIL, final bounded fix round remains. HEAD `20aa0654cdac1a37404d6d259452a62ffe375f90`; inherited dirty `desktop/linux/src/electron/main.ts` preserved. Fresh fetch confirms origin/main `2cef2033232a9540d95fbb51ba6bc39acc9d6eae`, own branch 2 ahead / 0 behind.
+- Actual registry identifies writer bg-32, continuation `orun-6-28ce3464`, parent `orun-5-6933929c`; no new run ID or evidence namespace. Original 3600020ms one-hour timeout was NOT operator stop; no independent rounds preceded that timeout. Six-hour maximum 21600000ms retained.
+- Workspace G4 already corrected and verified. Running: exact failed goldens/native smoke and required current gates/runtime. Next: fix demonstrated authorized production root causes only; protected harness integration remains a technical dependency, never an operator exclusion. No publication or source delegates.
+- Evidence: `phases/baseline/raw/fix-r3-bg-32/`; required `phases/baseline/fix-r3.md` will record current commands, failures and source attribution. Outcomes remain 0/7 verified (0%), nothing landed.
 
 ### Current-execution evidence
 
