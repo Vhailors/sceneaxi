@@ -43,3 +43,6 @@ desktop/*/dist-build/
 .env*
 !.env.example
 .vercel
+
+# Empryo runtime state
+.empryo/
