@@ -1491,7 +1491,16 @@ async function start(): Promise<void> {
 
     if (readFileSync(guiDocument, "utf8") !== guiSaved) fail("GUI import wrote before approval.");
     capacityStarted = performance.now();
-  await gui(`await click('[data-action="change-accept"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'import apply'); return true;`);
+  await gui(`
+      await click('[data-action="change-accept"]');
+      await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'import apply');
+      await wait(() => {
+        const state = document.querySelector('[data-project-state]')?.dataset.projectState;
+        if (state === 'refused' || state === 'recovering') throw new Error('SMOKE_IMPORT_PERSISTENCE_' + state);
+        return state === 'saved' && document.querySelector('[data-action="change-accept"]')?.dataset.busy !== 'true';
+      }, 'import persistence');
+      return true;
+    `);
   assetCapacity.phaseMs.apply = performance.now() - capacityStarted;
     console.error("SMOKE_PHASE maximum-asset canonical reload");
   let guiImported = readFileSync(guiDocument, "utf8");
