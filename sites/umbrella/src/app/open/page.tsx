@@ -28,10 +28,15 @@ export default function OpenPage() {
 
   if (!scene.ok) {
     return (
-      <div className="page">
+      <div className="page page-experience">
         <div className="page-head">
-          <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
-          <h1>{LIVE_OPEN_COPY.title}</h1>
+          <div className="title-row">
+            <h1>{LIVE_OPEN_COPY.title}</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              {LIVE_OPEN_COPY.eyebrow}
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="No scene to open" reason={scene.reason}>
           <p>{scene.message}</p>
@@ -49,10 +54,15 @@ export default function OpenPage() {
   const artifactIds = Object.keys(opened.artifacts);
 
   return (
-    <div className="page">
+    <div className="page page-experience">
       <div className="page-head">
-        <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
-        <h1>{LIVE_OPEN_COPY.title}</h1>
+        <div className="title-row">
+          <h1>{LIVE_OPEN_COPY.title}</h1>
+          <span className="chip chip-dormant">
+            <span className="dot" aria-hidden="true" />
+            {LIVE_OPEN_COPY.eyebrow}
+          </span>
+        </div>
         <p className="lede">{LIVE_OPEN_COPY.lede}</p>
       </div>
 
@@ -70,16 +80,16 @@ export default function OpenPage() {
         <h2>What you are looking at</h2>
         <p className="prose prose-wide">{LIVE_OPEN_COPY.honesty}</p>
       </div>
-      <div className="grid">
-        <article className="panel">
+      <div className="prose-notes prose-notes-split">
+        <section className="prose-note">
           <h3>A real artifact</h3>
           <p>
             The object is a Sculpt Artifact reconstructed deterministically from a
             committed intake for a fixed seed — the same multi-pass path the engine
             tests cover. It is not a model file dropped into a viewer.
           </p>
-        </article>
-        <article className="panel">
+        </section>
+        <section className="prose-note">
           <h3>A real composition</h3>
           <p>
             The scene places {LIVE_OPEN_INSTANCE_COUNT} instances of that one artifact
@@ -87,20 +97,20 @@ export default function OpenPage() {
             reads relative to its parent, and no artifact is rewritten to place it,
             because its evidence binds its exact spec bytes.
           </p>
-        </article>
-        <article className="panel">
+        </section>
+        <section className="prose-note">
           <h3>{LIVE_OPEN_PRESENTATION.coreLabel}</h3>
           <p>{LIVE_OPEN_PRESENTATION.decision}</p>
           <p>{LIVE_OPEN_PRESENTATION.seam}</p>
-        </article>
-        <article className="panel">
+        </section>
+        <section className="prose-note">
           <h3>What is not claimed</h3>
           <p>{LIVE_OPEN_PRESENTATION.notClaimed}</p>
-        </article>
+        </section>
       </div>
 
       <h2>The scene this deploy serves</h2>
-      <dl className="dl">
+      <dl className="dl dl-machine">
         <dt>Scene id</dt>
         <dd>
           <code>{opened.sceneId}</code>
@@ -125,7 +135,7 @@ export default function OpenPage() {
           tabIndex={0}
           aria-label="Placed instances, scrollable"
         >
-          <table>
+          <table className="instance-table">
             <thead>
               <tr>
                 <th>Instance</th>

@@ -42,11 +42,16 @@ export default function OverviewPage() {
       <section className="hero release-hero" aria-labelledby="release-title">
         <div className="hero-inner hero-inner-split">
           <div className="hero-copy">
-            <p className="badge">
-              <span className="dot" aria-hidden="true" />
-              {RELEASE_MARKER}
-            </p>
-            <h1 id="release-title">Build scenes. Keep the source.</h1>
+            <div className="title-row hero-title">
+              <h1 id="release-title">
+                <span className="hero-line">Build scenes.</span>{" "}
+                <span className="hero-line">Keep the source.</span>
+              </h1>
+              <span className="badge chip chip-needs-review release-chip">
+                <span className="dot" aria-hidden="true" />
+                {RELEASE_MARKER}
+              </span>
+            </div>
             <p className="lede">
               Build interactive scenes as local, reviewable files, then open them through
               a versioned product profile.
@@ -100,7 +105,6 @@ export default function OverviewPage() {
 
       <section className="band-inner release-section" aria-labelledby="proof-title">
         <div className="release-heading">
-          <p className="eyebrow">Recorded Linux build</p>
           <h2 id="proof-title">Inside the recorded Linux build.</h2>
           <p className="prose prose-wide">
             Captured in the Linux developer build. Never retouched.
@@ -255,7 +259,7 @@ export default function OverviewPage() {
             only when you choose account-backed editor or hosted-AI features.
           </p>
         </div>
-        <nav className="path-links" aria-label="First-release paths">
+        <nav className="path-links" aria-label="First-release paths" data-link-list="arrows">
           {RELEASE_PATHS.map((path) => (
             <a href={path.href} key={path.href}>
               <span className="path-route" aria-hidden="true">

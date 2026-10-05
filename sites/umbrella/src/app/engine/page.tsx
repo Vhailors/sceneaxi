@@ -42,10 +42,15 @@ export default function EnginePage() {
   const windowCapture = PROOF_MEDIA.find((media) => media.placement === "engine") ?? null;
 
   return (
-    <div className="page">
+    <div className="page page-persuade">
       <div className="page-head">
-        <p className="eyebrow">Download · {RELEASE_MARKER}</p>
-        <h1>Get the engine.</h1>
+        <div className="title-row">
+          <h1>Get the engine.</h1>
+          <span className="chip chip-needs-review">
+            <span className="dot" aria-hidden="true" />
+            {RELEASE_MARKER}
+          </span>
+        </div>
         <p className="lede">
           {sdk === null
             ? "The SDK archive is not in this build, so there is nothing to download here. The packaged Linux desktop application below is a separate artifact and is unaffected."
@@ -143,8 +148,13 @@ export default function EnginePage() {
       ) : desktopApp !== null ? (
         <div className="stack">
           <div className="section-title">
-            <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
-            <h2>{desktopApp.productName} for Linux.</h2>
+            <div className="title-row">
+              <h2>{desktopApp.productName} for Linux.</h2>
+              <span className="chip chip-validated">
+                <span className="dot" aria-hidden="true" />
+                {desktopApp.platform}
+              </span>
+            </div>
             <p className="prose prose-wide">
               The Engine Desktop editor as a packaged Linux application: the accepted
               editor chrome in an Electron window over the real engine stack — kernel
@@ -220,7 +230,7 @@ export default function EnginePage() {
                     <code>{artifact.sha256}</code>
                   </dd>
                 </dl>
-                <p className="eyebrow eyebrow-quiet">Copy and verify this file</p>
+                <p className="command-label">Copy and verify this file</p>
                 <p className="command">
                   <code>{artifact.verifyCommand}</code>
                 </p>
@@ -314,7 +324,6 @@ export default function EnginePage() {
 
       <div className="stack">
         <div className="section-title">
-          <p className="eyebrow">The engine</p>
           <h2>A small, honest core with hard edges around it.</h2>
           <p className="prose prose-wide">
             Packages have declared boundaries and a checker that fails the build when one
@@ -325,14 +334,14 @@ export default function EnginePage() {
 
         {sdk !== null && (
           <>
-            <p className="eyebrow eyebrow-quiet">Packages in this archive</p>
-            <div className="grid grid-3">
+            <h3 className="subhead">Packages in this archive</h3>
+            <ul className="pkg-list" aria-label="Packages in this archive">
               {sdk.packages.map((name) => (
-                <article className="panel panel-line" key={name}>
-                  <p className="pkg">{name}</p>
-                </article>
+                <li className="pkg" key={name}>
+                  {name}
+                </li>
               ))}
-            </div>
+            </ul>
           </>
         )}
       </div>
@@ -358,28 +367,19 @@ export default function EnginePage() {
         </div>
       </div>
 
-      <div className="grid grid-2">
+      <div className="prose-notes prose-notes-split">
         {ENGINE_NOTES.map((note) => (
-          <article
-            className={note.tone === "plain" ? "note-card" : `note-card note-card-${note.tone}`}
-            key={note.title}
-          >
-            <h3>
-              <span className="dot" aria-hidden="true" />
-              {note.title}
-            </h3>
+          <section className={`prose-note prose-note-${note.tone}`} key={note.title}>
+            <h3>{note.title}</h3>
             <p>{note.body}</p>
-          </article>
+          </section>
         ))}
-        <article className="note-card note-card-info">
-          <h3>
-            <span className="dot" aria-hidden="true" />
-            {LIVE_OPEN_PRESENTATION.coreLabel}
-          </h3>
+        <section className="prose-note prose-note-info">
+          <h3>{LIVE_OPEN_PRESENTATION.coreLabel}</h3>
           <p>{LIVE_OPEN_PRESENTATION.decision}</p>
           <p>{LIVE_OPEN_PRESENTATION.seam}</p>
           <p>{LIVE_OPEN_PRESENTATION.notClaimed}</p>
-        </article>
+        </section>
       </div>
 
       <div className="stack">

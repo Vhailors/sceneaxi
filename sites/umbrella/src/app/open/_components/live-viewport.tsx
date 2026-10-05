@@ -36,13 +36,14 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
   }
 
   return (
-    <>
+    <div className="live-stage" data-surface-state={viewport.status.kind}>
+      <div className="live-stage-canvas">
       <SculptViewportSurface
         viewport={viewport}
         label="Live SceneAxi viewport — drag to orbit, scroll to zoom"
       />
 
-      <div className="actions">
+      <div className="actions live-stage-actions">
         <button className="button button-quiet" type="button" onClick={viewport.resetView}>
           Reset view
         </button>
@@ -57,8 +58,11 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
           {rootOnly ? "Mount every instance" : "Mount the root instance only"}
         </button>
       </div>
+      </div>
 
-      <SculptFrameReport heading="What the running core reports" frame={frame} />
-    </>
+      <div className="live-readout">
+        <SculptFrameReport heading="What the running core reports" frame={frame} />
+      </div>
+    </div>
   );
 }

@@ -6,10 +6,15 @@
  */
 export default function NotFound() {
   return (
-    <div className="page">
+    <div className="page page-narrow page-state">
       <div className="page-head">
-        <p className="eyebrow">Not found</p>
-        <h1>There is no page at this address</h1>
+        <div className="title-row">
+          <h1>There is no page at this address</h1>
+          <span className="chip chip-dormant state-chip">
+            <span className="dot" aria-hidden="true" />
+            Not found
+          </span>
+        </div>
         <p className="lede">
           The link may be mistyped or out of date. Everything the umbrella serves is reachable
           from the navigation above.

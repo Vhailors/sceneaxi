@@ -140,11 +140,12 @@ export default function DocsPage() {
 
         <h1>SceneAxi help</h1>
         <p className="lede">Practical guides for installing, opening scenes, credits, and the command line.</p>
-        <nav aria-label="Help topics" className="grid grid-2">
+        <nav aria-label="Help topics" className="guide-list">
           {HELP_DOCS.map((doc) => (
-            <a className="panel card-link" href={`/docs/${doc.slug}`} key={doc.slug}>
+            <a className="guide-link" href={`/docs/${doc.slug}`} key={doc.slug}>
               <h2>{doc.title}</h2>
               <p>{doc.sections[0]?.body}</p>
+              <code className="guide-route">/docs/{doc.slug}</code>
             </a>
           ))}
         </nav>
@@ -162,7 +163,10 @@ export default function DocsPage() {
         </p>
 
         <div className="rule-card">
-          <p className="eyebrow">Rule</p>
+          <span className="chip chip-experimental">
+            <span className="dot" aria-hidden="true" />
+            Rule
+          </span>
           <p>
             Where a page and a contract disagree, the contract wins. Nothing on this site
             restates a rule it does not own; it points at the document that does.
@@ -253,16 +257,16 @@ export default function DocsPage() {
           .
         </p>
 
-        <div className="grid grid-2">
-          <a className="panel card-link" href="/engine">
-            <p className="meta">Download</p>
+        <nav className="guide-list guide-list-compact" aria-label="Next steps">
+          <a className="guide-link" href="/engine">
             <h3>The engine SDK archive</h3>
+            <code className="guide-route">/engine</code>
           </a>
-          <a className="panel card-link" href="/pricing">
-            <p className="meta">Next</p>
+          <a className="guide-link" href="/pricing">
             <h3>Credit packs and pricing</h3>
+            <code className="guide-route">/pricing</code>
           </a>
-        </div>
+        </nav>
       </article>
 
       <nav className="toc" aria-label="On this page">

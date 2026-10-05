@@ -27,6 +27,7 @@
 import {
   FOUNDATION_STATUSES,
   foundationsCss,
+  foundationsMotionCss,
   ok,
   type SiteResult,
 } from "@sceneaxi/site-kit";
@@ -42,7 +43,7 @@ export const UMBRELLA_SURFACE = "umbrella" as const;
 export const UMBRELLA_METRICS = Object.freeze({
   shell: "1280px",
   gutter: "32px",
-  bandPad: "104px",
+  bandPad: "72px",
   mastheadHeight: "60px",
 });
 
@@ -125,6 +126,8 @@ export function umbrellaFoundationsCss(): SiteResult<string> {
   return ok(
     [
       shared.value,
+      "/* Redesign motion system (DV-P1), from @sceneaxi/site-kit foundationsMotionCss(). */",
+      foundationsMotionCss(),
       "/* Status vocabulary, projected from @sceneaxi/site-kit FOUNDATION_STATUSES. */",
       umbrellaStatusVariablesCss(),
       "/* Umbrella-local: layout metrics, recorded Foundations gaps, self-hosted faces. */",

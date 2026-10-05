@@ -31,9 +31,8 @@ export default function ProfilesPage() {
   const matrix = profileMatrix();
 
   return (
-    <div className="page">
+    <div className="page page-persuade">
       <div className="page-head">
-        <p className="eyebrow">{PROFILE_MATRIX_COPY.eyebrow}</p>
         <h1>{PROFILE_MATRIX_COPY.title}</h1>
         <p className="lede">{PROFILE_MATRIX_COPY.lede}</p>
       </div>
@@ -43,10 +42,9 @@ export default function ProfilesPage() {
         appears. Here the name is an `h2` because these cards *are* this page's sections;
         on the overview they sit under one, and are `h3`.
       */}
-      <div className="grid grid-3">
-        {PROFILE_CARDS.map((profile) => (
+      <div className="profile-compare" aria-label={`${PROFILE_MATRIX_COPY.eyebrow}: comparison`} role="group">
+        {PROFILE_CARDS.filter((profile) => profile.href !== null).map((profile) => (
           <article className={`profile-card tone-${profile.accent}`} key={profile.name}>
-            <span className="card-accent-rail" aria-hidden="true" />
             <div className="profile-card-body">
               <div className="panel-head">
                 <h2>{profile.name}</h2>
@@ -61,6 +59,20 @@ export default function ProfilesPage() {
               </ul>
             </div>
           </article>
+        ))}
+        {PROFILE_CARDS.filter((profile) => profile.href === null).map((profile) => (
+          <div className="profile-isolated" key={profile.name}>
+            <StatePanel tone="iso" level={2} title={profile.name}>
+              <p>
+                <span className={`tag tag-${profile.accent}`}>{profile.tag}</span> {profile.desc}
+              </p>
+              <ul className="bullets">
+                {profile.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </StatePanel>
+          </div>
         ))}
       </div>
 
