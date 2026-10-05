@@ -1,16 +1,9 @@
-packages:
-- packages/*
-- apps/*
-- sites/umbrella
-- sites/catalog-game
-- sites/catalog-web
-- desktop/linux
-- desktop/windows
-- desktop/macos
+
+# Linked site sources must not expose a nested pnpm symlink graph to Next traces.
+# This changes install layout only; frameworks remain outside this workspace.
+nodeLinker: hoisted
 allowBuilds:
-  electron-winstaller: true
   esbuild: true
-  sharp: true
   unrs-resolver: true
 overrides:
   fast-uri@3: 3.1.8
@@ -20,3 +13,7 @@ overrides:
   postcss@8: 8.5.23
   nanoid@3: 3.3.18
   sharp@<0.35.5: 0.35.5
+# Keep membership last: existing publish-safety injection fixtures append here.
+packages:
+  - packages/*
+  - apps/*

@@ -22,9 +22,12 @@ jobs:
           cache-dependency-path: |
             pnpm-lock.yaml
             desktop/linux/pnpm-lock.yaml
+            desktop/windows/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm install --frozen-lockfile
         working-directory: desktop/linux
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/windows
       - run: pnpm docs:api
       - run: pnpm gate
       - run: pnpm install --frozen-lockfile
@@ -36,10 +39,11 @@ jobs:
       - run: pnpm typecheck
         working-directory: sites/umbrella
 
-  # `pnpm gate` type-checks each site's `src/index.ts` and `src/lib/**`, but nothing in it
-  # runs a site's own production Next build, so a bundling or trace regression would first
-  # surface on the Vercel builder. Each site is its own install root (ADR 0018); its
-  # `postbuild` runs the same Vercel packaging check the deployment runs.
+  # `pnpm gate` installs desktop/linux and desktop/windows with --frozen-lockfile
+  # and freezes/builds all four independent site roots locally. It mutates node_modules,
+  # not lockfiles; provision a writable install environment for this acceptance gate.
+  # Keep independent site jobs as additional CI coverage, never the local acceptance gate.
+  # Each root's postbuild still runs its existing Vercel packaging check (ADR 0018).
   sites-build:
     runs-on: ubuntu-latest
     strategy:

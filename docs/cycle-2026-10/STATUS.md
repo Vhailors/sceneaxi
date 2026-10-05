@@ -1,5 +1,6 @@
 # Cycle 2026-10 status
 
+
 Each orchestration owns its own section. Edit only your own section.
 
 ## UI/UX redesign (impeccable + microanimations)
@@ -34,3 +35,52 @@ Known pre-existing problems on `main` (`dffefbab`), outside the redesign:
 - Running `pnpm install` inside `sites/*` with pnpm 12 rewrites the site lockfiles.
 
 Evidence: `~/Documents/Reports/sceneaxi-redesign-main/` (before, after, final and deploy). Rulings: `docs/redesign/RULINGS.md`.
+
+
+<!-- BEGIN SECOND-CONTEXT WEB-SCENEAXI PORTFOLIO -->
+## Second context — web-sceneaxi portfolio
+
+**Execution:** `orun-3-4742ee61` · **Continuation:** observed registry `orun-6-28ce3464` (parent `orun-5-6933929c`), current sole code writer `bg-28` · **Phase:** BASELINE bounded fix r2/3, IN PROGRESS after independent r1 FAIL · **Product outcomes verified:** 0/7 (0%). Original nested executor timed out exactly 3600020ms after child start at the one-hour graph-node limit, NOT an operator stop. No independent rounds ran before that timeout. Arbitration-r1.json now supplies three bounded fix assertions; this continuation addresses those assertions, not publication. Continuation limit is 21600000ms; durable checkpoint required if reached. Existing candidate/rescue/seven audit artifacts retained in the same W/namespace; no rewrite or new worktree.
+
+**W:** `/home/devuser/Documents/Projects/worktrees/sceneaxi-portfolio-cycle-2026-10`  
+**Branch:** `cycle/sceneaxi-portfolio-2026-10`  
+**Fresh origin/main base:** `2cef2033232a9540d95fbb51ba6bc39acc9d6eae`  
+**Evidence root:** `/home/devuser/Documents/Reports/sceneaxi-portfolio-cycle-2026-10`
+
+| Outcome | Current second-context verdict | Verification / next |
+|---|---|---|
+| O1 canonical tree / redesign | NOT PASS; archive subcriterion remotely verified | Rescue `ffe2c903344304bb6cc480a8a478261a5030bb0f`; peer redesign ownership exclusive, coordination UNCONFIRMED; no landed/merge/deploy claim |
+| O2 green baseline + four site builds | IN PROGRESS, NOT PASS | Incomplete owned candidate recovered; current targeted oracle, four frozen builds, full gate/lint/typecheck/build and actual runtime still required. Earlier after-commands.json is historical, not current PASS. |
+| O3 Linux/SDK public release + clean install | NOT RUN | Release, anonymous download, checksums, clean Ubuntu install and real runtime evidence required |
+| O4 Windows/macOS unsigned native runtime | NOT RUN | S3 allowed; evidence must come from actual native builds/runtime, not packaging mocks |
+| O5 seven surfaces + 219 desktop controls / flows | NOT RUN | Seven read-only audits next, then serial fixes with named refusals preserved |
+| O6 deterministic Sculpt batch | NOT RUN | S4 Sculpt; two-run digest proof and real composed scene/capture required |
+| O7 reversible Kids restriction / policy | NOT RUN | S2 reversible restriction; privacy/isolation preserved; protected integration gaps are peer/technical dependencies |
+
+### Landed / running / next
+
+- **Remote backup published, not merged:** unique rescue ref `rescue/sceneaxi-only-copy-v5-2026-10-orun-3-4742ee61-9b6b452f8b` → `ffe2c903344304bb6cc480a8a478261a5030bb0f`. Its second parent `b141b75673d834c8c5e6214ae086f135e86ab181` preserves staged-only versions. Exact working tree has 2,410 blobs; no candidate Git blob >=50 MiB.
+- **OLD preserved:** original source/index/HEAD/production-swarm branch and ignored source/assets unchanged; full before/after digests recorded. Own ignored Empryo bookkeeping drift is explicitly classified, never represented as byte-identical harness metadata. No OLD repoint, cleanup or foreign-session write.
+- **Ignored copies:** 98,434 ignored files remain locally intact and inventoried/digested; not claimed remotely backed up. See ignored-only preservation report for source/assets and oversized outputs.
+- **Fresh-base proof:** fetch/prune and remote default main verified before creating a new dedicated W; clean at creation, 0 ahead / 0 behind. Only this section and own LOG created inside W.
+- **Candidate committed locally:** owned baseline repair committed and rebasing on current origin/main. Add/add STATUS/LOG conflicts combine disjoint sections; published peer sections are preserved verbatim. No push/merge/deploy; source protected paths unchanged relative to refreshed main.
+- **Running:** fix r2 restores strict schema validation, regenerates traceability, fixes native install resolution, commits/rebases the owned candidate, and reruns current gate/four builds/real runtime. Raw receipts: `phases/baseline/raw/fix-r2-bg-28/`. Fresh fetch origin/main `2cef2033232a9540d95fbb51ba6bc39acc9d6eae`; no publication until independent pair/arbiter/live PASS. R1 production prototype widening is not accepted and will be removed unless production proof demonstrates necessity.
+- **R2 proven locally, not accepted PASS:** production schema matches the original strict identity guard, no widening. Existing targeted suite 8 files/554 tests and traceability exit0; real Electron GUI with a newly created project renders pixelsDrawn true/drawCalls16/three instances/four Play ticks under strict validation. All receipts must be rerun after rebase; pre-rebase receipts diagnose only.
+- **Next:** required `phases/baseline/fix-r2.md` and current `EXECUTION.md` retain actual command failures and current evidence. Independent pair/arbiter decide PASS, not this writer. Publication remains withheld until independent/live PASS and later fresh fetch/rebase/G4 PR integration.
+
+### Ownership and authority
+
+Protected manifest refreshed immediately before each W edit: all peer UI/UX source, tokens/CSS/chrome, docs/redesign* and review paths remain protected. STATUS is verified **shared section-owned coordination metadata**: this fresh W contains only the explicitly delimited Second context section; no uncommitted peer section is copied or overwritten. Preserve every peer section verbatim when integrating. An unresolved section conflict requires coordination, not takeover.
+
+Actual redesign-owner endpoint is absent from the current Empryo registry. Coordination request is recorded locally; delivery is **NOT confirmed**. No invented contact or O1 completion. Defaults S1 full gated autonomy, S3 unsigned native execution, S4 Sculpt, S2 reversible Kids restriction remain in force. Latest G4 ANSWERED: completed locally verified pieces merge through a PR after fetch/rebase and applicable local/live gates. Only never-running required CI permits admin merge, then a single-merge enforce_admins toggle with armed restoration if needed; required checks stay configured. No integration or bypass performed in preflight. Stripe remains TEST; operator-only charges/store/domain/posts/over-cap generation/deletion/signing bypass remain held. ADRs/boundaries/held keys/named refusals/Kids privacy/tier-6b commerce hold unchanged.
+
+### Current-execution evidence
+
+- `execution-id.json`, `workspace.json`, `protected-paths.txt`, `protected-paths.json`
+- `preflight/rescue-manifest.json`, `preflight/remote-rescue-receipt.txt`, `preflight/original-root-unchanged-proof.json`
+- `preflight/candidate-manifest.json`, `preflight/old-before-inventory.json`, redacted per-tree scanner/adjudication/private-config reports
+- `preflight/fresh-base-proof.json`, `preflight/ignored-only-preservation.json`, `preflight/REPORT.md`, `preflight/verdict.json`
+
+Preflight receipts remain separate from product evidence. Product verification now belongs to the current fix-r1 raw directory and EXECUTION/report; earlier after-commands.json and planner/permission-probe receipts are not current PASS. Integrity proof finds zero protected violations, 22 valid inside-W @sceneaxi symlinks and unchanged authorized fixture hash; `git diff --check` separately reports inherited trailing whitespace at fixture122, not hidden or treated as a passing command.
+<!-- END SECOND-CONTEXT WEB-SCENEAXI PORTFOLIO -->
+

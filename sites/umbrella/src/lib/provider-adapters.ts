@@ -676,7 +676,7 @@ const requireSiteModule: SiteModuleLoader = process
  */
 /** A candidate is an anchor only when it matches Node's selected CJS/ESM resolution source. */
 function isResolutionAnchor<Value>(value: Value): value is Value & string {
-  return value === (typeof __filename !== "undefined" ? __filename : import.meta.url);
+  return value === (typeof __filename === "string" ? __filename : import.meta.url);
 }
 
 function siteModuleAnchor(): string {

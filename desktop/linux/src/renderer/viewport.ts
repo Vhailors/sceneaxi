@@ -292,7 +292,9 @@ function isCallable<Input>(value: Input): value is Input & ((...args: never[]) =
 }
 
 function isBridgeGlobal(value: BridgeGlobal | undefined): value is BridgeGlobal {
-  return isJsonObject(value) && isCallable(value.request) && (value.inputActions === undefined || isCallable(value.inputActions)) && (value.configureByo === undefined || isCallable(value.configureByo));
+  // The preload exposes callable capabilities, not a serializable JSON document.
+  // JSON validation belongs to IPC replies; it rejects these bridge functions.
+  return value !== undefined && value !== null && !Array.isArray(value) && isCallable(value.request) && (value.inputActions === undefined || isCallable(value.inputActions)) && (value.configureByo === undefined || isCallable(value.configureByo));
 }
 
 declare global { var sceneaxiDesktopLinux: BridgeGlobal | undefined; }

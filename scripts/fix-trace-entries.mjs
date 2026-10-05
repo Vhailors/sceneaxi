@@ -12,14 +12,8 @@ if (!existsSync(nextServer)) {
   process.exit(1);
 }
 
-const manifest = JSON.parse(readFileSync(join(siteDir, "package.json"), "utf8"));
-
-const isLinkSpec = (spec) => Object.prototype.toString.call(spec) === "[object String]" && spec.startsWith("link:");
-
-const workspaceNames = new Set(Object.entries(manifest.dependencies ?? {})
-  .filter(([, spec]) => isLinkSpec(spec))
-  .map(([name]) => name));
-
+// Resolve transitive directory traces too. The former workspaceNames set was
+// never consulted here or below; removing it does not broaden trace rewriting.
 const workspacePathByName = new Map();
 
 for (const glob of ["packages", "apps", "sites"]) {
