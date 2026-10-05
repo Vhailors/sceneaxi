@@ -33,28 +33,34 @@ function installStyles(): void {
 .desktop-byo-config{display:flex;flex:none;flex-direction:column;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--well);min-width:0}
 .desktop-byo-config[hidden]{display:none}
 .desktop-byo-config-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-2);min-width:0;flex-wrap:wrap}
-.desktop-byo-config-title{font-size:12px;font-weight:650;color:var(--text)}
-.desktop-byo-config-state{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere;text-align:right}
-.desktop-byo-config-field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.desktop-byo-config-label{font-size:11px;color:var(--dim)}
+.desktop-byo-config-title{font-size:13px;font-weight:600;color:var(--text)}
+.desktop-byo-config-state{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere;text-align:right}
+.desktop-byo-config-field{display:flex;flex-direction:column;gap:var(--space-1);min-width:0}
+.desktop-byo-config-label{font-size:12px;color:var(--dim)}
 .desktop-byo-config select,.desktop-byo-config input{box-sizing:border-box;width:100%;min-width:0;height:36px;border:1px solid var(--line-control);border-radius:6px;background:var(--panel);color:var(--text);font:12px var(--sans);padding:0 var(--space-2)}
 .desktop-byo-config input::placeholder{color:var(--dim)}
 .desktop-byo-config select:focus-visible,.desktop-byo-config input:focus-visible,.desktop-byo-config button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 4px var(--well);scroll-margin:var(--space-3)}
 .desktop-byo-config :is(input,select):enabled:hover{border-color:var(--line-hover)}
+.desktop-byo-config :is(input,select):focus-visible{border-color:var(--accent)}
 .desktop-byo-config input:user-invalid{border-color:var(--refuse)}
 @media (forced-colors:active){.desktop-byo-config :focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}}
 .desktop-byo-config-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-2)}
-.desktop-byo-config button{min-width:0;min-height:32px;padding:var(--space-1) var(--space-2);border-radius:6px;border:1px solid var(--line-control);background:var(--panel);color:var(--text);font:600 11px var(--sans);transition:background-color .14s ease,border-color .14s ease}
+.desktop-byo-config button{min-width:0;min-height:32px;padding:var(--space-1) var(--space-2);border-radius:6px;border:1px solid var(--line-control);background:var(--panel);color:var(--text);font:600 12px var(--sans)}
 .desktop-byo-config button:not(:disabled):hover{border-color:var(--accent);background:var(--header)}
 .desktop-byo-config button[data-primary]{border-color:var(--accent);color:var(--accent)}
 /* Disabled labels keep AA contrast: paint with the inert token, never composite opacity. */
-.desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control)}
+.desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control);border-style:dashed}
 /* The same stable status well serves configured and unavailable states without implying success. */
-.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere;user-select:text}
+.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:12px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere;user-select:text}
 .desktop-byo-config-message:empty{display:none}
 .desktop-byo-config-message[role="alert"]{border-left-color:var(--refuse);color:var(--text)}
 .desktop-byo-config button:not(:disabled):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
 .desktop-byo-config button:not(:disabled):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+/* Open: the surface enters by keyframe when its [hidden] lifts and leaves at once (row 6).
+   Validate: the chrome's live-line wipe settles the state and message text (row 10),
+   and a request in flight marks its button aria-busy, which draws the chrome's loading bar. */
+@keyframes desktop-byo-config-in{from{opacity:0;translate:0 var(--motion-distance-sm,4px)}to{opacity:1;translate:0 0}}
+@media (prefers-reduced-motion: no-preference){.desktop-byo-config:not([hidden]){animation:desktop-byo-config-in var(--motion-duration-panel,280ms) var(--motion-ease-out-expo,cubic-bezier(0.16, 1, 0.3, 1)) backwards}}
 @media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}}
 @media (prefers-reduced-motion: reduce){.desktop-byo-config *{scroll-behavior:auto}}
 `;
@@ -245,6 +251,15 @@ export function installDesktopByoConfigurationSurface(
     if (visible) void refresh();
   };
 
+  // Loading state for the button whose request is in flight; the label stays.
+  // Never painted after teardown, like every other late outcome here.
+  const busy = (button: HTMLButtonElement, pending: boolean): void => {
+    if (signal?.aborted) return;
+
+    if (pending) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
+  };
+
   const onSave = (): void => {
     if (signal?.aborted) return;
     void (async () => {
@@ -261,6 +276,7 @@ export function installDesktopByoConfigurationSurface(
       const submittedKey = keyInput.value;
       keyInput.value = "";
 
+      busy(save, true);
       try {
         await request({
           action: "save",
@@ -270,6 +286,7 @@ export function installDesktopByoConfigurationSurface(
         });
       } finally {
         if (!signal?.aborted) keyInput.value = "";
+        busy(save, false);
       }
     })();
   };
@@ -279,11 +296,12 @@ export function installDesktopByoConfigurationSurface(
     const profile = assistantProfile(shell);
 
     if (profile === "@sceneaxi/profile-kids") return;
+    busy(remove, true);
     void request({
       action: "remove",
       profile,
       provider: selectedProvider(),
-    });
+    }).finally(() => busy(remove, false));
   };
 
   const onProviderChange = (): void => {

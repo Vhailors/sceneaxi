@@ -28,7 +28,7 @@ import {
   desktopWebStageDecision,
 } from "../../product-loop.js";
 import { DESKTOP_INTERACTION_COMMANDS, DESKTOP_PALETTE_SHORTCUT } from "../../interaction-commands.js";
-import { METRICS } from "../../visual-tokens.js";
+import { METRICS, MOTION_SYSTEM } from "../../visual-tokens.js";
 import { belowTier } from "./markup.js";
 import { frameScript } from "../frame/script.js";
 import { treeSelectionScript } from "../tree/script.js";
@@ -2522,6 +2522,115 @@ ${paletteScript()}
   syncMinimumWindow();
   void syncProjectLifecycle().then(hydrateInputActions).then(updateEditorCommandControls);
 }
+${motionScript()}
 `;
+}
+
+/**
+ * Motion only (DIRECTION.md section 6, rows 10, 16 and 17): no state, hook, id,
+ * role or label is read for behaviour or written here. Entrances already on
+ * screen at boot are finished at once (no page-load choreography); a live status
+ * line or value that changes text settles in with a short wipe; the selected
+ * tab bar and the assistant strength fill glide from the previous choice. It
+ * returns before observing when MutationObserver or Element.animate is missing,
+ * and does nothing under prefers-reduced-motion: reduce.
+ */
+function motionScript(): string {
+  return `(() => {
+  if (typeof document.getAnimations === 'function') {
+    document.getAnimations().forEach((animation) => {
+      const timing = animation.effect && typeof animation.effect.getTiming === 'function'
+        ? animation.effect.getTiming()
+        : null;
+      if (timing && timing.iterations !== Infinity) animation.finish();
+    });
+  }
+  const host = document.querySelector('.shell');
+  if (!host || typeof MutationObserver !== 'function' || typeof host.animate !== 'function') return;
+  const reduce = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+  const still = () => Boolean(reduce && reduce.matches);
+  const live = '.status-text,.status-pin,[data-project-status],.runtime-report,[data-scene-property-diagnostic],[data-assistant-status],.viewport p[data-live-viewport],.sculpt-detail,[data-change-badge],[data-ship-export-status],[data-product-run-report],.project-browser-status,.scene-entities-refusal,.editor-command-form [aria-live],.desktop-byo-config-message,.desktop-byo-config-state,[data-ship-bundle-digest],[data-ship-source-digest],[data-project-browser-digest]';
+  const running = new WeakMap();
+  const settle = (el) => {
+    if (typeof el.animate !== 'function' || still()) return;
+    const previous = running.get(el);
+    if (previous) previous.cancel();
+    running.set(el, el.animate([
+      { clipPath: 'inset(0 100% 0 0)', transform: 'translateY(${MOTION_SYSTEM.distance.sm}px)' },
+      { clipPath: 'inset(0 0 0 0)', transform: 'none' },
+    ], { duration: ${MOTION_SYSTEM.duration.state}, easing: '${MOTION_SYSTEM.ease.outQuint}' }));
+  };
+  const tabs = '.view-tab,.dock-tab';
+  const selectedIn = new WeakMap();
+  host.querySelectorAll('.view-tab[aria-selected="true"],.dock-tab[aria-selected="true"],.assistant-mode[aria-pressed="true"]').forEach((tab) => {
+    if (tab.parentElement) selectedIn.set(tab.parentElement, tab);
+  });
+  const from = (next) => {
+    const list = next.parentElement;
+    if (!list) return null;
+    const previous = selectedIn.get(list);
+    selectedIn.set(list, next);
+    if (!previous || previous === next || !previous.isConnected || still()) return null;
+    const a = previous.getBoundingClientRect();
+    const b = next.getBoundingClientRect();
+    if (a.width === 0 || b.width === 0) return null;
+    return { dx: a.left - b.left, hidden: b.width - Math.min(a.width, b.width) };
+  };
+  // The selected tab bar glides from the tab selected before (translate + clip-path).
+  const glide = (tab) => {
+    const path = from(tab);
+    if (!path) return;
+    try {
+      tab.animate([
+        { transform: 'translateX(' + path.dx + 'px)', clipPath: 'inset(0 ' + path.hidden + 'px 0 0)' },
+        { transform: 'none', clipPath: 'inset(0)' },
+      ], { duration: ${MOTION_SYSTEM.duration.panel}, easing: '${MOTION_SYSTEM.ease.outExpo}', pseudoElement: '::after' });
+    } catch (error) {
+      // Pseudo-element targets are unsupported here: the CSS draw stays.
+    }
+  };
+  // The assistant strength fill glides the same way; the button's own fill is
+  // held clear for the glide only.
+  const slide = (mode) => {
+    const path = from(mode);
+    if (!path) return;
+    const done = () => { mode.classList.remove('is-gliding'); };
+    try {
+      mode.classList.add('is-gliding');
+      const animation = mode.animate([
+        { transform: 'translateX(' + path.dx + 'px)', clipPath: 'inset(0 ' + path.hidden + 'px 0 0 round 4px)' },
+        { transform: 'none', clipPath: 'inset(0 0 0 0 round 4px)' },
+      ], { duration: ${MOTION_SYSTEM.duration.panel}, easing: '${MOTION_SYSTEM.ease.outExpo}', pseudoElement: '::before' });
+      if (animation && animation.finished) animation.finished.then(done, done);
+      else done();
+    } catch (error) {
+      done();
+    }
+  };
+  try {
+    new MutationObserver((records) => {
+      const seen = new Set();
+      records.forEach((record) => {
+        if (record.type === 'attributes') {
+          const target = record.target;
+          if (target.nodeType !== 1) return;
+          if (record.attributeName === 'aria-selected' && target.matches(tabs) && target.getAttribute('aria-selected') === 'true') glide(target);
+          if (record.attributeName === 'aria-pressed' && target.matches('.assistant-mode') && target.getAttribute('aria-pressed') === 'true') slide(target);
+          return;
+        }
+        const node = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+        const el = node && typeof node.closest === 'function' ? node.closest(live) : null;
+        if (el && !seen.has(el)) {
+          seen.add(el);
+          settle(el);
+        }
+      });
+    }).observe(host, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed'] });
+  } catch (error) {
+    // An observer that cannot watch these records only costs the motion.
+  }
+})();`;
 }
 
