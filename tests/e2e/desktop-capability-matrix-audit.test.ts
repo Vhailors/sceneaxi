@@ -26,56 +26,81 @@ import {
 } from "../docs/capability-matrix-audit.ts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
 const matrix = readFileSync(resolve(repoRoot, "docs/full-editor-v1-capability-matrix.md"), "utf8");
 
+type JsonValue = string | number | boolean | null | undefined | readonly JsonValue[] | JsonObject;
+
+type JsonObject = { readonly [key: string]: JsonValue };
+
+function isObject(value: JsonValue): value is JsonObject {
+  return typeof value === "object" && value !== null;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 const CONTROL_KINDS = new Set(["view", "live", "inert"]);
+
 const NOT_RENDERED = [/^profiles\[\d+\]\.assistant(\.|$)/, /^controls(\[|$)/];
 
-function isControl(value: unknown): value is DesktopControl {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Record<string, unknown>;
+function isControl(value: JsonValue): value is DesktopControl {
+  if (!isObject(value)) return false;
+  // SAFETY: The preceding guard establishes a non-null object; property values remain unknown and are checked below.
+  const candidate = value;
+
   return (
-    typeof candidate["id"] === "string" &&
-    typeof candidate["label"] === "string" &&
-    typeof candidate["kind"] === "string" &&
+    isString(candidate["id"]) &&
+    isString(candidate["label"]) &&
+    isString(candidate["kind"]) &&
     CONTROL_KINDS.has(candidate["kind"])
   );
 }
 
 function collectControlIds(
-  node: unknown,
+  node: JsonValue,
   path = "",
   found: Set<string> = new Set(),
 ): Set<string> {
   if (NOT_RENDERED.some((pattern) => pattern.test(path))) return found;
+
   if (isControl(node)) {
     found.add(node.id);
+
     return found;
   }
+
   if (Array.isArray(node)) {
     node.forEach((item, index) => collectControlIds(item, `${path}[${index}]`, found));
+
     return found;
   }
-  if (typeof node === "object" && node !== null) {
+
+  if (isObject(node)) {
     for (const [field, value] of Object.entries(node)) {
       collectControlIds(value, path === "" ? field : `${path}.${field}`, found);
     }
   }
+
   return found;
 }
 
 function uniqueControlIds() {
   const ids = new Set<string>();
+
   for (const mode of DESKTOP_MODE_IDS) {
     for (const profile of DESKTOP_PROFILE_IDS) {
       collectControlIds(desktopVisualView(createDesktopVisualState({ mode, profile })), "", ids);
     }
   }
+
   return [...ids].sort();
 }
 
 function verbPaths(node: CommandNode, prefix: readonly string[]): string[] {
   if (node.kind === "verb") return [prefix.join(" ")];
+
   return Object.entries(node.children).flatMap(([name, child]) =>
     verbPaths(child, [...prefix, name]),
   );
@@ -114,12 +139,14 @@ describe("full-editor capability-matrix evidence", () => {
     expect(matrix).toContain(PACKAGED_SMOKE_ROW);
     expect(matrix).toContain("The GitHub sub-issue graph under #249 is the canonical todo list");
     expect(matrix).toMatch(/Matrix-to-evidence enforcement \| \*\*real\*\*/);
+
     for (const issue of EDITOR_CHILD_ISSUES) {
       expect(matrix, `#${issue}`).toContain(`#${issue}`);
     }
+
     expect(EDITOR_COMMAND_REGISTRY.length).toBeGreaterThan(0);
-    expect(live.controls).toHaveLength(163);
-    expect(live.cliVerbs).toHaveLength(21);
+    expect(live.controls).toHaveLength(179);
+    expect(live.cliVerbs).toHaveLength(30);
     expect(live.tools.length).toBe(DESKTOP_LOCAL_BRIDGE_TOOLS.length);
   });
 });

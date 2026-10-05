@@ -31,6 +31,22 @@ type DiffOp =
   | { readonly kind: "add"; readonly line: string };
 
 function diffOps(a: readonly string[], b: readonly string[]): DiffOp[] {
+  // Keep historical exact LCS/tie behavior for small reviews. A quadratic
+  // table is unsafe for admitted asset documents (thousands of numeric lines).
+  // Large reviews use a complete, deterministic replacement of the changed
+  // middle; this is still a lossless unified diff, not an omitted/truncated edit.
+  if ((a.length + 1) * (b.length + 1) > 1_000_000) {
+    let prefix = 0;
+    while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix += 1;
+    let suffix = 0;
+    while (suffix < a.length - prefix && suffix < b.length - prefix && a[a.length - suffix - 1] === b[b.length - suffix - 1]) suffix += 1;
+    return [
+      ...a.slice(0, prefix).map((line): DiffOp => ({ kind: "equal", line })),
+      ...a.slice(prefix, a.length - suffix).map((line): DiffOp => ({ kind: "remove", line })),
+      ...b.slice(prefix, b.length - suffix).map((line): DiffOp => ({ kind: "add", line })),
+      ...a.slice(a.length - suffix).map((line): DiffOp => ({ kind: "equal", line })),
+    ];
+  }
   const table = lcsTable(a, b);
   const ops: DiffOp[] = [];
   let i = a.length;

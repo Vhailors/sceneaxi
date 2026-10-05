@@ -76,12 +76,18 @@ import {
 import {
   ACCENT,
   AXIS,
+  ELEVATION,
   INERT,
   LINE,
   METRICS,
+  MOTION,
+  MOTION_CUSTOM_PROPERTIES,
+  MOTION_REDUCED_CUSTOM_PROPERTIES,
   PROFILE_DOT,
+  RADIUS,
   SCRIM,
   SIGNAL,
+  SPACING_SCALE,
   SURFACE,
   TEXT,
   TYPE,
@@ -101,12 +107,14 @@ function belowTier(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
   const width = (tier?.minWidth ?? 0) - 1;
   const height = (tier?.minHeight ?? 0) - 1;
+
   return `(max-width:${width}px),(max-height:${height}px)`;
 }
 
 /** The exact complement of `belowTier(id)`, so the two can never overlap. */
 function atTierOrAbove(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
+
   return `(min-width:${tier?.minWidth ?? 0}px) and (min-height:${tier?.minHeight ?? 0}px)`;
 }
 
@@ -121,7 +129,7 @@ export function escapeHtml(value: string): string {
 }
 
 /** JSON for an inline `<script>`: `<` is escaped so no tag can close early. */
-function inlineJson(value: unknown): string {
+function inlineJson<T>(value: T): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
@@ -220,6 +228,7 @@ function button(
 ): string {
   const inert = ctrl.kind === "inert";
   const described = inert ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"` : "";
+
   return [
     `<button type="button" class="${className}${inert ? " is-inert" : ""}"`,
     ` id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
@@ -232,21 +241,26 @@ function button(
 
 function mutationTextarea(control: DesktopControl, extra = ""): string {
   const inert = control.kind === "inert";
+
   return `<textarea id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inert ? ` aria-disabled="true" readonly data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"` : ""}${extra}></textarea>`;
 }
 
 function editorCommandAttributes(id: EditorCommandId): string {
   const command = EDITOR_COMMAND_REGISTRY.find((candidate) => candidate.id === id);
+
   if (command === undefined) throw new Error(`Missing emitted editor command ${id}`);
+
   return ` data-editor-command="${escapeHtml(id)}" data-command-schema-version="${String(command.schemaVersion)}" data-command-permission="${escapeHtml(command.permission)}"`;
 }
 
 /** Render the one modelled prompt field through the same refusal contract. */
 function promptInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<textarea id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -265,9 +279,11 @@ function numericPropertyInput(
   bounds: Readonly<{ step: number; min: number; max: number }>,
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -282,9 +298,11 @@ function numericPropertyInput(
 
 function gitCommitMessageInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -299,9 +317,11 @@ function gitCommitMessageInput(ctrl: DesktopControl): string {
 
 function transformSnapInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -315,9 +335,11 @@ function transformSnapInput(ctrl: DesktopControl): string {
 
 function sceneEntitySelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}" data-product-action data-action="scene-entity-select"`,
     inert
@@ -330,6 +352,7 @@ function sceneEntitySelect(ctrl: DesktopControl): string {
 
 function selectControlAttributes(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   return [
     `id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -341,9 +364,11 @@ function selectControlAttributes(ctrl: DesktopControl): string {
 /** Render the modelled recent-project chooser through the same refusal contract. */
 function recentProjectSelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -361,9 +386,11 @@ function projectFileSelect(
   files: DesktopVisualView["product"]["surface"]["project"]["files"],
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${escapeHtml(ctrl.kind)}"`,
     inert
@@ -397,20 +424,24 @@ function projectFileSelect(
  */
 function refusalLegend(view: DesktopVisualView): string {
   const messages = new Map<string, string>();
+
   for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
     messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
   }
+
   for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
     if (!messages.has(code)) {
       messages.set(code, DESKTOP_PRODUCT_REFUSAL_MESSAGES[code]);
     }
   }
+
   const rows = [...messages]
     .map(
       ([code, message]) =>
         `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
+
   return `${button(
     view.overlay.refusalHelp,
     "Refusal help",
@@ -423,10 +454,12 @@ function titleBar(view: DesktopVisualView): string {
   const profiles = view.profiles
     .map((profile) => {
       const policy = profile.policy;
+
       const detail =
         policy === null
           ? "not in the shared open-path policy"
           : `${policy.demoLevel} · ${policy.sessionKind}`;
+
       return button(
         profile.control,
         [
@@ -507,6 +540,7 @@ function modeRail(view: DesktopVisualView): string {
   const items = view.modes
     .map((mode) => {
       const def = DESKTOP_MODES.find((candidate) => candidate.id === mode.id);
+
       return button(
         mode.control,
         [
@@ -519,19 +553,23 @@ function modeRail(view: DesktopVisualView): string {
       );
     })
     .join("");
+
   return `<nav class="mode-rail" aria-label="Editor mode"><span class="brand" aria-hidden="true"></span>${items}</nav>`;
 }
 
 function note(text: string, tone: "info" | "scene" | "accent"): string {
   const colors = TONE_COLORS[tone];
+
   return `<p class="panel-note" style="background:${colors.bg};border-color:${colors.line};color:${colors.fg}"><span class="dot" style="background:${colors.dot}" aria-hidden="true"></span>${escapeHtml(text)}</p>`;
 }
 
 function leftDock(view: DesktopVisualView): string {
   const active = view.state.mode;
   const project = view.product.surface.project;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
@@ -539,6 +577,7 @@ function leftDock(view: DesktopVisualView): string {
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
+
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
   <h2 class="panel-head" id="project-files-title"><span data-files-title>Objects</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
@@ -596,6 +635,7 @@ function profileSurfaces(view: DesktopVisualView): string {
           (capability) => `<li><b>${escapeHtml(capability.label)}</b><span>${escapeHtml(capability.detail)}</span></li>`,
         )
         .join("");
+
       const webTools =
         surface.profile === "web"
           ? `<div class="web-authoring-tools">
@@ -607,6 +647,7 @@ function profileSurfaces(view: DesktopVisualView): string {
   </div>
 </div>`
           : `<p class="game-runtime-note">Play the scene in the middle. Ask Flash to make or change objects.</p>`;
+
       return `<section class="profile-surface" data-profile-surface="${escapeHtml(surface.profile)}" aria-label="${escapeHtml(surface.profile === "game" ? "Game product surface" : "Web Experience product surface")}">
   <div><strong>${surface.profile === "game" ? "Scene" : "Website studio"}</strong></div>
   <ul class="capability-list">${capabilities}</ul>
@@ -614,6 +655,7 @@ function profileSurfaces(view: DesktopVisualView): string {
 </section>`;
     })
     .join("");
+
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
   ${button(view.product.play, "Play", "primary-button", ` data-product-action data-command="run-play"`)}
   <p class="runtime-report" data-product-run-report aria-live="polite">Ready.</p>
@@ -631,6 +673,7 @@ function profileSurfaces(view: DesktopVisualView): string {
  */
 function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
+
   return `
 <section class="viewport-region" aria-label="Viewport">
   ${profileSurfaces(view)}
@@ -768,8 +811,10 @@ function inspectorCatalogs(view: DesktopVisualView): string {
 
 function inspector(view: DesktopVisualView): string {
   const active = view.state.mode;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-live-report" : mode === "ship" ? ' data-ship-export-status aria-live="polite"' : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
@@ -779,6 +824,7 @@ function inspector(view: DesktopVisualView): string {
     <p class="scene-property-entity"><b data-scene-property-entity-label></b><code data-scene-property-entity-id></code></p>
     <div class="scene-transform-grid">${DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition, index) => {
       const control = view.product.transformProperties[index];
+
       return control === undefined
         ? ""
         : `<label for="${escapeHtml(control.id)}"><span>${escapeHtml(definition.label)}</span>${numericPropertyInput(control, definition)}</label>`;
@@ -888,10 +934,12 @@ function inspector(view: DesktopVisualView): string {
  */
 function assistant(view: DesktopVisualView): string {
   const denial = kidsAssistantDenial();
+
   const assistantStatus =
     view.state.assistantRuntime === "local"
       ? "Ready. Type, then Send."
       : `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`;
+
   return `
 <aside class="assistant" aria-label="Assistant">
   <div class="assistant-head">
@@ -965,6 +1013,7 @@ function assistant(view: DesktopVisualView): string {
  */
 function profileRefusal(view: DesktopVisualView): string {
   const refusal = view.profileRefusal ?? kidsProfileRefusal();
+
   return `
 <section class="profile-refusal" role="alert" aria-labelledby="kids-refusal-title">
   <div class="profile-refusal-card">
@@ -1044,6 +1093,7 @@ function overlays(view: DesktopVisualView): string {
         const action = dismissal.productAction === null
           ? ` data-action="overlay" data-value="none"`
           : ` data-product-action data-action="${escapeHtml(dismissal.productAction)}"`;
+
         return button(
           dismissal.control,
           escapeHtml(dismissal.label),
@@ -1073,8 +1123,32 @@ function overlays(view: DesktopVisualView): string {
 </div>`;
 }
 
+/**
+ * The mode rail indicator's slot per pressed mode. The step is one 42px button
+ * plus the 2px rail gap; details-only modes (Scene, Plug) shift the slots after
+ * them, so the closed and open orders are listed separately.
+ */
+function railIndexRules(modes: DesktopVisualView["modes"]): string {
+  const primary = modes.filter((mode) => mode.surface !== "details").map((mode) => mode.id);
+  const all = modes.map((mode) => mode.id);
+  const slot = (prefix: string, ids: readonly string[]) =>
+    ids
+      .map((id, index) => `  ${prefix}.mode-rail:has(.rail-mode[data-value="${id}"][aria-pressed="true"]){--rail-i:${index}}`)
+      .join("\n");
+
+  return [slot("", primary), slot('.shell[data-details-open="true"] ', all)].join("\n");
+}
+
+/** Row 9 stagger: item k waits min((k - 1) * step, max); item 6 and later share the cap. */
+function staggerRules(selector: string): string {
+  return [2, 3, 4, 5]
+    .map((k) => `  ${selector}:nth-child(${k}){animation-delay:calc(${k - 1} * var(--motion-stagger-step))}`)
+    .concat(`  ${selector}:nth-child(n+6){animation-delay:var(--motion-stagger-max)}`)
+    .join("\n");
+}
+
 /** The emitted stylesheet. Archive metrics; contrast-checked text tokens. */
-function styles(): string {
+function styles(view: DesktopVisualView): string {
   return `
 :root{
   --canvas:${SURFACE.canvas};--well:${SURFACE.well};--assistant:${SURFACE.assistant};
@@ -1092,16 +1166,30 @@ function styles(): string {
   --title-h:${METRICS.titleBarHeight}px;--tabs-h:${METRICS.viewTabsHeight}px;
   --status-h:${METRICS.statusBarHeight}px;
   --sans:${TYPE.sans};--mono:${TYPE.mono};
-  --r-panel:18px;--r-card:13px;--r-control:10px;
+  --r-panel:${RADIUS.panel}px;--r-card:${RADIUS.card}px;--r-control:${RADIUS.control}px;
+  ${Object.entries(SPACING_SCALE).map(([name, px]) => `${name}:${px}px`).join(";")};
+  --float:${ELEVATION.float};
+  ${MOTION_CUSTOM_PROPERTIES.map(([name, value]) => `${name}:${value}`).join(";")};
 }
+::selection{background:${ACCENT.surface};color:var(--text)}
 *{box-sizing:border-box}
 /* Every hidden region here is an explicit model or runtime decision. */
 [hidden]{display:none !important}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
+:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
+@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed="true"],button[aria-selected="true"]{border:1px solid Highlight}}
+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed="true"]):hover{background:var(--hover);color:var(--text)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:is(.ghost-button,.primary-button,.assistant-toggle,.profile-chip,.menu-item,.view-tab,.dock-tab){white-space:nowrap}
 /* An inert control is dimmed by paint, never by element opacity: opacity
    composites the label toward whatever is behind it, and both the token gate and
    a browser's getComputedStyle read the declared colour, so that dimming was
@@ -1111,7 +1199,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button.is-inert{cursor:not-allowed;color:var(--inert)}
 button.is-inert[aria-pressed="true"],button.is-inert[aria-selected="true"]{color:var(--inert)}
 button.is-inert .rail-glyph{border-color:var(--inert-glyph)}
-code,kbd{font-family:var(--mono);font-size:.86em}
+:is(.ghost-button,.state-shortcut,.assistant-route,.assistant-manipulator,.assistant-toggle).is-inert{border-style:dashed}
+button:disabled{cursor:not-allowed;color:var(--inert)}
+/* Loading: the label stays; after --motion-delay-loading a 2px bar draws once
+   along the bottom edge and holds while the work runs (DV-F8 in-band form). */
+:is(button[aria-busy="true"],.shell[data-assistant-busy="true"] .assistant-composer .primary-button){position:relative;overflow:hidden;pointer-events:none}
+:is(button[aria-busy="true"],.shell[data-assistant-busy="true"] .assistant-composer .primary-button)::before{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:currentColor;pointer-events:none;animation:ld-draw-from-start var(--motion-duration-route) var(--motion-ease-out-expo) var(--motion-delay-loading) backwards}
+:is(.scene-property-input,.project-recent-select,.project-files select,.scene-parenting select,.assistant-prompt,.scene-catalog-editor textarea,.dock-tabpanel textarea,.dock-tabpanel input):not(.is-inert):not([aria-disabled="true"]):not(:disabled):hover{border-color:var(--line-hover)}
+:is(.scene-property-input,.project-recent-select,.project-files select,.scene-parenting select,.assistant-prompt,.scene-catalog-editor textarea,.dock-tabpanel textarea,.dock-tabpanel input):focus-visible{border-color:var(--accent)}
+.scene-property-input:user-invalid{border-color:var(--refuse)}
+.assistant-prompt::-webkit-resizer{background:linear-gradient(135deg,transparent 0 55%,var(--line-hover) 55% 62%,transparent 62% 75%,var(--line-hover) 75% 82%,transparent 82%)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card,.change-diff)::-webkit-scrollbar{width:10px;height:10px}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card,.change-diff)::-webkit-scrollbar-thumb{background:var(--line-control);border:3px solid transparent;border-radius:6px;background-clip:padding-box}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card,.change-diff)::-webkit-scrollbar-thumb:hover{background-color:var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card,.change-diff)::-webkit-scrollbar-track{background:transparent}
+code,kbd{font-family:var(--mono);font-size:max(11px,.86em)}
 
 .shell{display:grid;grid-template-rows:var(--title-h) 1fr var(--status-h);height:100dvh;min-height:100dvh;background:var(--canvas);position:relative;overflow:hidden}
 /* A denied assistant keeps its column: the archive shows the Kids lock screen
@@ -1121,53 +1223,59 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-assistant="closed"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
 .shell[data-assistant="closed"] .assistant{display:none}
 
-.title-bar{display:flex;align-items:center;gap:12px;padding:0 11px;background:var(--panel);border-bottom:1px solid var(--line)}
-.window-dots{display:flex;gap:7px}
+.title-bar{display:flex;align-items:center;gap:var(--space-3);padding:0 var(--space-3);background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
+.window-dots{display:flex;gap:var(--space-2)}
 .window-dots i{width:11px;height:11px;border-radius:50%;background:${LINE.raised}}
 .menu-bar{display:flex;gap:1px}
 .menu-root{position:relative}
-.menu-item{font-size:12px;color:var(--text-3);padding:0 8px;height:22px;border-radius:3px}
+.menu-item{font-size:12px;color:var(--text-3);padding:0 var(--space-2);height:24px;border-radius:5px}
 .menu-item[aria-expanded="true"]{background:var(--hover);color:var(--text)}
-.menu-panel{position:absolute;left:0;top:25px;z-index:45;min-width:220px;padding:5px;background:var(--raised);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 45px -16px ${SCRIM.shadow}}
-.menu-command{display:flex;align-items:center;justify-content:space-between;gap:22px;width:100%;padding:7px 9px;border-radius:4px;color:var(--text-2);font-size:12px;text-align:left}
+.menu-panel{position:absolute;left:0;top:26px;z-index:45;min-width:228px;padding:var(--space-1);background:var(--raised);border:1px solid var(--line-raised);border-radius:8px;box-shadow:var(--float)}
+.menu-command{display:flex;align-items:center;justify-content:space-between;gap:var(--space-6);width:100%;min-height:30px;padding:var(--space-1) var(--space-2);border-radius:5px;color:var(--text-2);font-size:12px;text-align:left}
 .menu-command:hover,.menu-command:focus-visible{background:var(--hover);color:var(--text)}
 .menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}
-.menu-command kbd{font-size:9px;color:var(--dim)}
+.menu-command kbd{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .profile-switch{display:flex;gap:2px;padding:2px;background:var(--well);border:1px solid var(--line-control);border-radius:5px}
-.profile-chip{display:flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:3px;font-size:11px;color:var(--dim);white-space:nowrap}
+.profile-chip{display:flex;align-items:center;gap:var(--space-2);height:22px;padding:0 var(--space-3);border-radius:4px;font-size:12px;color:var(--dim);white-space:nowrap}
 .profile-chip[aria-pressed="true"]{background:var(--hover);color:var(--text);font-weight:600}
 .profile-chip .dot{background:${PROFILE_DOT.idle}}
 .profile-chip[aria-pressed="true"] [data-profile-dot="game"]{background:var(--accent)}
 .profile-chip[aria-pressed="true"] [data-profile-dot="web"]{background:${PROFILE_DOT.web}}
 .profile-chip[aria-pressed="true"] [data-profile-dot="kids"]{background:var(--scene)}
-.chip-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--faint)}
+.chip-tag{font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--faint)}
 .dot{width:5px;height:5px;border-radius:50%;flex:none;display:inline-block}
 .dot-ok{background:var(--ok)}
 .title-centre{flex:1;display:flex;justify-content:center;min-width:0}
-.project-pill{display:flex;align-items:center;gap:8px;height:22px;padding:0 11px;border-radius:11px;background:var(--header);border:1px solid var(--line-control);font-size:11px;white-space:nowrap}
+.project-pill{display:flex;align-items:center;gap:var(--space-2);min-width:0;max-width:100%;height:24px;padding:0 var(--space-3);border-radius:12px;background:var(--header);border:1px solid var(--line-control);font-size:12px;white-space:nowrap;overflow:hidden}
+/* The ellipsis belongs to the status text, not the flex box: a flex container cannot ellipsize its items. */
+.project-pill [data-project-status]{min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* Mint means verified, so a refused project never keeps the mint dot. */
+.project-pill[data-project-state="refused"] .dot{background:var(--refuse)}
 .project-pill[data-project-state="dirty"],.project-pill[data-project-state="recovering"]{border-color:var(--accent);color:var(--accent)}
 .project-pill[data-project-state="refused"]{border-color:${SIGNAL.refuseLine};color:var(--refuse)}
-.title-actions{display:flex;align-items:center;gap:9px;flex:none}
+.title-actions{display:flex;align-items:center;gap:var(--space-2);flex:none}
 /* Drawer toggles exist at every size but only matter once a column undocks.
    Scoped so the later .ghost-button rule cannot win on equal specificity. */
 .title-actions .drawer-toggle{display:none}
-.ghost-button{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;background:var(--header);border:1px solid var(--line-control);font-size:11px;color:var(--dim)}
+.ghost-button{display:flex;align-items:center;gap:var(--space-2);height:24px;padding:0 var(--space-3);border-radius:var(--r-control);background:var(--header);border:1px solid var(--line-control);font-size:12px;color:var(--dim)}
 .ghost-button:hover{border-color:var(--line-hover);color:var(--text)}
 /* A single-class :hover outranks button.is-inert, so every control class whose
    hover repaints its label has to say what the inert one does under the pointer
    — otherwise an inert control becomes indistinguishable from a live one there,
    which is the same dimmed-by-nothing state the paint rule above replaced. */
 .ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}
-.ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:2px;padding:1px 4px;color:var(--faint)}
-.primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:var(--r-control);height:22px;padding:0 11px}
+.ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:3px;padding:0 4px;color:var(--faint)}
+.primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:12px;border-radius:var(--r-control);height:24px;padding:0 var(--space-3)}
 .primary-button:hover{background:var(--accent-hover)}
 /* The accent fill stays and only the mark on it is demoted: --inert on orange is
    1.29:1, and the fill is what says which control this is. --inert-on-accent is
    5.72:1 there against the live 7.05:1. */
 .primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}
+/* Disabled is painted: the inert primary takes the dashed edge inert ghosts carry, inside its fill. The focus ring still wins. */
+.primary-button.is-inert:not(:focus-visible){outline:1px dashed var(--inert-on-accent);outline-offset:-3px;cursor:not-allowed}
 .primary-button.is-inert:hover{background:var(--accent)}
-.block-button{width:100%;height:32px;font-size:12px;margin-top:10px}
-.assistant-toggle{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;font-size:11px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
+.block-button{width:100%;height:32px;font-size:12px;margin-top:var(--space-2)}
+.assistant-toggle{display:flex;align-items:center;gap:var(--space-2);height:24px;padding:0 var(--space-3);border-radius:var(--r-control);font-size:12px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
 /* Where the assistant is docked the toggle reads the column's own state; below
    that tier the drawer rule takes over. Which one applies is a stylesheet
    decision on the two complementary media conditions rather than an attribute
@@ -1177,109 +1285,127 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 @media ${atTierOrAbove("regular")}{
   .shell[data-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
   .shell[data-assistant="open"] [data-assistant-dot]{background:var(--accent)}
+  /* A pressed toggle still answers the pointer: pressing it closes the column. */
+  .shell[data-assistant="open"] .assistant-toggle:not(.is-inert):hover{border-color:var(--accent);color:var(--text)}
 }
 .shell[data-assistant="denied"] [data-assistant-dot]{background:var(--scene)}
 
-.mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
-.brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:9px;display:grid;place-items:center;box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),0 5px 16px -5px color-mix(in srgb, var(--accent) 60%, transparent)}
+.mode-rail{position:relative;background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:var(--space-2) 0;gap:2px}
+.brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:var(--space-2);display:grid;place-items:center}
 .brand::before{content:"";width:10px;height:10px;border:2px solid var(--on-accent);border-radius:1px;transform:rotate(45deg)}
-.rail-mode{width:44px;height:42px;border-radius:var(--r-control);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;color:var(--faint)}
-.rail-mode:hover{background:var(--header)}
+.rail-mode{width:48px;height:42px;border-radius:var(--r-control);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-1);position:relative;color:var(--faint)}
+.rail-mode:not(.is-inert):hover{background:var(--header);color:var(--text-2)}
 .rail-mode[aria-pressed="true"]{background:var(--header);color:var(--accent)}
-.rail-mode[aria-pressed="true"]::before{content:"";position:absolute;left:-9px;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}
+.rail-mode[aria-pressed="true"]::before{content:"";position:absolute;left:-4px;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}
 .rail-glyph{width:14px;height:14px;border:1.5px solid currentColor;display:block}
-.rail-label{font-family:var(--mono);font-size:8px;letter-spacing:.05em}
+.rail-label{font-family:var(--mono);font-size:11px;line-height:1;letter-spacing:0}
 
 .left-dock,.inspector{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .left-dock{border-right:1px solid var(--line)}
 .inspector{border-left:1px solid var(--line)}
-.panel-head{margin:0;height:29px;flex:none;display:flex;align-items:center;padding:0 10px;background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
-.panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}
-.panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
-.panel-note .dot{margin-top:5px}
+/* Intrinsic section heights contribute to the inspector's scroll extent. */
+.inspector > section{flex-shrink:0;min-width:0}
+/* Catalogue textareas must not share an inline baseline with Stage: native
+   multiline controls otherwise paint below the label's line box at the scroll edge. */
+.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}
+.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}
+.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}
+.scene-catalog-editor button{justify-self:start}
+.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
+.panel-empty[aria-live]{border-style:solid;border-color:var(--line-control);background:var(--panel)}
+.panel-note{display:flex;gap:var(--space-2);align-items:flex-start;margin:0 var(--space-2) var(--space-3);padding:var(--space-2) var(--space-3);border:1px solid;border-radius:6px;font-size:12px;line-height:1.55}
+.panel-note .dot{margin-top:var(--space-2)}
 .project-panel{flex:none;border-bottom:1px solid var(--line)}
 .project-panel .panel-head{justify-content:space-between}
-.project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}
-.project-launcher{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--line)}
-.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}
-.project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
-.project-lifecycle-actions button{min-width:0;padding-inline:7px}
-.project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
-.project-recent-select{width:100%;min-width:0;height:26px;padding:0 7px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:11px;letter-spacing:0}
+.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-2)}
+.project-lifecycle-actions button{min-width:0;height:28px;padding-inline:var(--space-2);justify-content:center}
+.project-recent-label{font-size:11px;color:var(--faint)}
+.project-recent-select{width:100%;min-width:0;height:28px;padding:0 var(--space-2);border:1px solid var(--line-control);border-radius:5px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
 .project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}
 .project-bound{min-width:0}
-.project-files{padding:7px}
-.project-files select{width:100%;min-width:0;padding:3px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--dim);font-family:var(--mono);font-size:9px}
+.project-files{padding:var(--space-2)}
+.project-files select{width:100%;min-width:0;padding:var(--space-1);border:1px solid var(--line-control);border-radius:5px;background:var(--raised);color:var(--dim);font-family:var(--mono);font-size:11px}
 .project-files select[aria-disabled="true"]{color:var(--inert);cursor:not-allowed}
-.project-files option{padding:6px;color:var(--dim)}
+.project-files option{padding:var(--space-2);color:var(--dim)}
 .project-files option:checked{background:${ACCENT.surface};color:var(--text)}
-.project-browser-detail{margin:0 7px 8px;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--well);min-width:0}
-.project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}
-.project-browser-detail dl{display:grid;gap:5px;margin:8px 0}
-.project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}
-.project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}
-.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
-.project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
-.project-browser-actions button{min-width:0;height:auto;min-height:24px;padding:4px 6px;font-size:8px;white-space:normal}
+.project-browser-detail{margin:0 var(--space-2) var(--space-2);padding:var(--space-2);border:1px solid var(--line);border-radius:6px;background:var(--well);min-width:0}
+.project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:11px;color:var(--text)}
+.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}
+.project-browser-detail dl div{display:grid;grid-template-columns:72px minmax(0,1fr);gap:var(--space-2);min-width:0}
+.project-browser-detail dt{font-size:11px;color:var(--faint)}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums}
+.project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-1)}
+.project-browser-actions button{min-width:0;height:auto;min-height:28px;padding:var(--space-1) var(--space-2);font-size:11px;white-space:normal;justify-content:center}
 .project-browser-actions button:first-child{grid-column:1/-1}
-.asset-browser{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:8px;padding:10px;min-width:0}
+.asset-browser{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:var(--space-2);padding:var(--space-3);min-width:0}
 .asset-browser .panel-empty{grid-column:1/-1}
-.asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}
+.asset-browser-card{min-width:0;padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-radius:6px;background:var(--well)}
 .asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}
-.asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
-.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
+.asset-browser-card strong{font-family:var(--mono);font-size:11px;color:var(--text)}
+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}
 .asset-browser-card .asset-browser-meta{display:none}
-.scene-entities{padding:0 7px 9px}
-.scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
+.scene-entities{padding:0 var(--space-2) var(--space-3)}
+.scene-entities-label{margin:var(--space-2) var(--space-1) var(--space-1);font-size:11px;color:var(--dim)}
 .scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
-.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}
-.scene-entity-identity:hover{border-color:var(--line-hover)}
+/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */
+.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:var(--space-2);margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}
+.scene-entity-identities{display:grid;gap:2px;min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-3));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);background:var(--well);cursor:pointer}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}
+.scene-entity-identity:hover{border-color:var(--line-hover);background:var(--raised)}
 .scene-entity-identity.is-selected{border-color:var(--accent);background:${ACCENT.surface}}
-.scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}
-.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}
+.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
 .shell[data-details-open="true"] .scene-entity-identity dl{display:grid}
-.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
-.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity dl div{display:grid;grid-template-columns:56px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+.scene-entity-identity dt{font-size:11px;line-height:1.6;color:var(--faint)}
 .scene-entity-identity dd{min-width:0;margin:0}
-.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
-.scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}
+.scene-entity{width:100%;min-width:0;padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-radius:6px;background:var(--raised);color:var(--dim);text-align:left}
+.scene-entity:not(.is-inert):hover{border-color:var(--line-hover)}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
+.scene-entity span{font-size:12px;color:var(--text)}.scene-entity code{margin-top:var(--space-1);font-size:11px;color:var(--dim)}
 .scene-entity[aria-pressed="true"]{border-color:var(--accent);background:${ACCENT.surface}}
-.scene-entities-refusal{margin:0;padding:0 10px 9px;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
+.scene-entities-refusal{margin:0;padding:0 var(--space-3) var(--space-2);font-size:11px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere}
 .project-file-state,.project-root,.scene-entities-refusal,.left-dock .panel-note{display:none}
 .ship-export-evidence,.project-git-controls{display:none}
 .shell[data-details-open="true"] .ship-export-evidence,
 .shell[data-details-open="true"] .project-git-controls{display:grid}
-.scene-property-editor{display:grid;gap:6px;padding:8px 10px}
-.scene-property-entity{margin:0;padding-bottom:5px;border-bottom:1px solid var(--line);min-width:0}
+.scene-property-editor{display:grid;gap:var(--space-2);padding:var(--space-3)}
+.scene-property-entity{margin:0;padding-bottom:var(--space-2);border-bottom:1px solid var(--line);min-width:0}
 .scene-property-entity b,.scene-property-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-property-entity b{font-size:12px}.scene-property-entity code{display:none}
-.scene-property-editor label{display:grid;gap:3px;font-size:9px;color:var(--dim)}
-.scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-.scene-advanced{display:none;min-width:0;border:1px solid var(--line-row);border-radius:5px;padding:8px}
-.shell[data-details-open="true"] .scene-advanced{display:grid;gap:7px}
+.scene-property-editor label{display:grid;gap:var(--space-1);font-size:11px;color:var(--dim)}
+.scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2) var(--space-1)}
+.scene-advanced{display:none;min-width:0;border:1px solid var(--line-row);border-radius:6px;padding:var(--space-2)}
+.shell[data-details-open="true"] .scene-advanced{display:grid;gap:var(--space-2)}
 .scene-review-details .scene-property-review{margin-top:4px}
-.scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
-.scene-instance-actions button{min-width:0;padding-inline:6px}
-.scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
-.scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
-.scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
-.scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
-.scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}
-.ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}
-.pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
-.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
-.pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
-.pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}
-.pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}
+.scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-1)}
+.scene-instance-actions button{min-width:0;height:26px;padding-inline:var(--space-2);justify-content:center}
+.scene-parenting{display:grid;gap:var(--space-2);padding-top:2px}.scene-parenting label{display:grid;gap:var(--space-1)}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:5px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
+.scene-property-input{width:100%;min-width:0;height:28px;padding:0 var(--space-2);border:1px solid var(--line-control);border-radius:5px;background:var(--well);color:var(--text);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-diagnostic{margin:0;font-size:11px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere}
+.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.ship-export-panel{padding:0 var(--space-3) var(--space-3)}.ship-export-evidence{display:grid;gap:var(--space-2);margin:var(--space-3) 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font-size:11px;line-height:1.4;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:11px}
+.pass-list{list-style:none;margin:0;padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-1)}
+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
+.pass-row>div{min-width:0;overflow-wrap:anywhere}
+.pass-row:nth-child(even){background:var(--well)}
+.pass-order{width:18px;height:18px;border-radius:4px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;flex:none}
+.pass-row b{display:block;font-size:12px;font-weight:500;color:var(--text)}
+.pass-row em{display:block;font-style:normal;font-size:11px;line-height:1.45;color:var(--dim)}
 
 .viewport-column{display:flex;flex-direction:column;min-width:0;min-height:0}
 .viewport-region{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:var(--canvas)}
 .stage-host{flex:1;min-height:0;display:flex;flex-direction:column}
 .profile-surfaces{flex:none;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
-.profile-surface{min-height:56px;padding:10px 14px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
+.profile-surface{min-height:56px;padding:var(--space-2) var(--space-3);display:grid;grid-template-columns:120px minmax(0,1fr);gap:var(--space-3);align-items:center}
 .capability-list{display:none}
 .shell[data-profile="web"] .profile-surface[data-profile-surface="web"]{min-height:88px;grid-template-columns:140px minmax(0,1.4fr)}
 .shell[data-profile="web"] .mode-rail,
@@ -1306,49 +1432,55 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .profile-surface[data-profile-surface="web"]{display:none}
 .shell[data-profile="web"] .profile-surface[data-profile-surface="game"]{display:none}
 .shell[data-profile="web"] .profile-surface[data-profile-surface="web"]{display:grid}
-.profile-kicker{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--accent);margin-bottom:4px}
 .profile-surface strong{font-size:13px}
-.capability-list{list-style:none;margin:0;padding:0;display:flex;gap:6px;min-width:0;overflow:hidden}
-.capability-list li{min-width:0;flex:1;padding:6px 8px;background:var(--raised);border:1px solid var(--line-card);border-radius:4px}
-.capability-list b,.capability-list span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.capability-list b{font-size:10px}.capability-list span{font-size:8.5px;color:var(--dim);margin-top:2px}
-.game-runtime-note,.web-authoring-tools p{margin:0;font-size:10px;line-height:1.45;color:var(--dim)}
+.capability-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--space-1);min-width:0}
+.capability-list li{position:relative;min-width:0;flex:1 1 120px;padding:var(--space-1) var(--space-2);background:var(--raised);border:1px solid var(--line-card);border-radius:6px}
+/* Each capability names itself in one short title; its sentence is secondary
+   detail, disclosed with the rest of the details layer rather than cut off. */
+.capability-list b,.capability-list span{display:block;min-width:0;overflow-wrap:anywhere}
+.shell:not([data-details-open="true"]) .capability-list span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.capability-list b{font-size:11px}.capability-list span{font-size:11px;color:var(--dim);margin-top:2px}
+.game-runtime-note,.web-authoring-tools p{margin:0;font-size:12px;line-height:1.5;color:var(--dim)}
 .web-authoring-note{display:none}
 .shell[data-details-open="true"] .web-authoring-note{display:block}
 .web-authoring-tools{display:flex;flex-direction:column;gap:8px;min-width:0}
 .web-authoring-tools p{font-size:12px;color:var(--text-2)}
 .web-authoring-tools code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${PROFILE_DOT.web}}
-.profile-actions{display:flex;gap:6px;align-items:center}
-.profile-runtime-actions{min-height:30px;padding:0 12px 7px;display:flex;align-items:center;justify-content:flex-end;gap:9px}
-.runtime-report{margin:0;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:8.5px;color:var(--dim)}
+.profile-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.profile-runtime-actions{min-height:32px;padding:0 var(--space-3) var(--space-2);display:flex;align-items:center;justify-content:flex-end;gap:var(--space-3)}
+.runtime-report{order:-1;margin:0 auto 0 0;min-width:0;max-width:min(52ch,100%);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--dim)}
 .view-tabs{height:var(--tabs-h);flex:none;display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--line)}
 /* The tablist owns only its tabs: ARIA restricts a tablist's children to tabs,
    so the spacer and the tool glyphs stay siblings in the same flex row. */
 .view-tablist{display:flex;align-items:stretch}
-.view-tab{padding:0 15px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
-.view-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
+.view-tab{position:relative;padding:0 var(--space-4);font-size:12px;color:var(--dim);border-right:1px solid var(--line)}
+.view-tab:not(.is-inert):not([aria-selected="true"]):hover{color:var(--text);background:var(--header)}
+.view-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel)}
 .spacer{flex:1}
-.view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}
+.view-tools{display:flex;align-items:center;gap:var(--space-1);padding:0 var(--space-3)}
 .view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
 .viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
-.viewport-backdrop{position:absolute;inset:0;pointer-events:none}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}
+/* Runtime overlay lines (desktop/linux viewport.ts) read as chips over the canvas. */
+.viewport [data-live-viewport]{z-index:3;width:fit-content;padding:var(--space-1) var(--space-2);border:1px solid var(--line-card);border-radius:6px;background:color-mix(in srgb, var(--well) 88%, transparent);font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--text-2);overflow-wrap:anywhere}
+.shell[data-mode="run"] .viewport::after{content:"";position:absolute;inset:0;z-index:2;border:1px solid var(--accent);pointer-events:none}
 .site-stage{display:none}
-.shell[data-profile="web"] .stage-host{overflow:auto;background:${SIGNAL.infoSurface};padding:18px 20px 28px}
+.shell[data-profile="web"] .stage-host{overflow:auto;background:${SIGNAL.infoSurface};padding:var(--space-4) var(--space-4) var(--space-6)}
 .shell[data-profile="web"] .site-stage{display:block}
-.site-browser-bar{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--header)}
+.site-browser-bar{display:flex;align-items:center;gap:var(--space-2);height:32px;padding:0 12px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--header)}
 .site-browser-bar i{width:8px;height:8px;border-radius:50%;background:var(--line-hover)}
 .site-browser-bar span{margin-left:8px;font-size:11px;color:var(--dim)}
-.site-page{border:1px solid var(--line);border-bottom:0;background:var(--raised);padding:18px 24px 14px}
-.site-nav{display:flex;gap:16px;margin:0 0 18px;font-size:12px;color:var(--dim)}
-.site-eyebrow{margin:0 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.site-page{border:1px solid var(--line);border-bottom:0;background:var(--raised);padding:var(--space-4) var(--space-6) var(--space-3)}
+.site-nav{display:flex;gap:16px;margin:0 0 var(--space-4);font-size:12px;color:var(--dim)}
+.site-eyebrow{display:inline-block;margin:0 0 var(--space-3);padding:2px var(--space-2);border:1px solid var(--line);border-radius:var(--r-control);font-size:11px;font-weight:500;line-height:1.4;color:var(--text-2)}
 .site-hero-copy h3{margin:0 0 8px;font-size:32px;line-height:1.1;color:var(--text)}
 .site-hero-copy p{margin:0;max-width:44ch;font-size:14px;line-height:1.55;color:var(--text-2)}
-.site-page-tail{display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);padding:8px 24px 20px}
+.site-page-tail{display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);padding:var(--space-2) var(--space-6) var(--space-4)}
 .shell[data-profile="web"] .site-page-tail{display:block}
-.site-band{margin:16px 0;padding:14px 0;border-top:1px solid var(--line-row)}
-.site-band h4{margin:0 0 6px;font-size:16px}
+.site-band{margin:16px 0;padding:var(--space-3) 0;border-top:1px solid var(--line-row)}
+.site-band h4{margin:0 0 var(--space-2);font-size:16px}
 .site-band p{margin:0;max-width:48ch;font-size:13px;line-height:1.55;color:var(--text-2)}
-.site-foot{margin:18px 0 0;font-size:11px;color:var(--dim)}
+.site-foot{margin:var(--space-4) 0 0;font-size:11px;color:var(--dim)}
 .shell[data-profile="web"] .shell-body{grid-template-columns:var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
 .shell[data-profile="web"] .profile-surfaces{background:transparent;border:0}
 .shell[data-profile="web"] .viewport{flex:none;height:min(46vh,420px);min-height:220px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
@@ -1357,100 +1489,108 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .web-page-inspector{display:none;padding:0 0 16px}
 .shell[data-profile="web"] .web-page-inspector{display:block}
 .web-page-sections{list-style:none;margin:0;padding:8px 12px;display:grid;gap:8px}
-.web-page-sections li{padding:10px 11px;border:1px solid var(--line-card);border-radius:8px;background:var(--raised)}
+.web-page-sections li{padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-radius:8px;background:var(--raised)}
 .web-page-sections b,.web-page-sections span{display:block}
 .web-page-sections b{font-size:12px}
 .web-page-sections span{margin-top:3px;font-size:11px;color:var(--dim)}
-.viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
+.viewport-note{margin:0;font-size:12px;line-height:1.55;color:var(--dim);max-width:44ch;text-align:center}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
 .axis-widget i{width:18px;height:2px;border-radius:1px;display:block}
-.assistant-manipulators{position:absolute;left:12px;top:12px;z-index:8;display:flex;gap:4px}
-.assistant-manipulator{border:1px solid var(--line-hover);border-radius:3px;background:var(--header);color:var(--text);padding:5px 7px;font-size:10px}
+.assistant-manipulators{position:absolute;left:var(--space-3);top:var(--space-3);z-index:8;display:flex;gap:var(--space-1)}
+.assistant-manipulator{border:1px solid var(--line-hover);border-radius:5px;background:var(--header);color:var(--text);min-height:26px;padding:var(--space-1) var(--space-2);font-size:11px}
 .assistant-manipulator:hover{border-color:var(--accent);color:var(--accent)}
 .assistant-manipulator.is-inert:hover{border-color:var(--line-hover);color:var(--inert)}
 
-.sculpt-progress{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:9px;animation:rise .3s ease-out}
+.sculpt-progress{position:absolute;left:50%;bottom:var(--space-4);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);border:1px solid var(--line-raised);border-radius:var(--r-card);background:var(--overlay);animation:ld-rise-md var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
 .sculpt-label{margin:0;font-size:14px;font-weight:600}
 .sculpt-track{width:320px;height:3px;background:var(--hover);border-radius:2px;overflow:hidden;position:relative}
 .sculpt-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
-.sculpt-sweep{position:absolute;inset:0;width:28%;background:linear-gradient(90deg,transparent,${SCRIM.sheen},transparent);animation:sweep 1.1s linear infinite}
-.sculpt-detail{margin:0;font-family:var(--mono);font-size:9px;color:var(--faint)}
+.sculpt-sweep{position:absolute;inset:0;width:90px;background:linear-gradient(90deg,transparent,${SCRIM.sheen},transparent);animation:sweep var(--motion-duration-loop) var(--motion-ease-out-quart) infinite}
+.sculpt-detail{margin:0;font-family:var(--mono);font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 
 .dock{height:var(--dock-h);flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .dock-tabs{height:30px;flex:none;display:flex;align-items:stretch;background:var(--header);border-bottom:1px solid var(--line)}
 /* Same rule as the viewport strip: the bulk accept/reject are the highest
    consequence controls here, so they must not sit inside the tablist. */
 .dock-tablist{display:flex;align-items:stretch}
-.dock-tab{display:flex;align-items:center;gap:7px;padding:0 13px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
-.dock-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
-.badge{min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center}
+.dock-tab{position:relative;display:flex;align-items:center;gap:var(--space-2);padding:0 var(--space-4);font-size:12px;color:var(--dim);border-right:1px solid var(--line)}
+.dock-tab:not(.is-inert):not([aria-selected="true"]):hover{color:var(--text);background:var(--panel)}
+.dock-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel)}
+:is(.view-tab,.dock-tab)[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);pointer-events:none}
+.badge{min-width:18px;height:18px;padding:0 var(--space-1);border-radius:9px;background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:11px;font-weight:700;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .dock-body{flex:1;min-height:0;overflow-y:auto}
-.dock-caption{margin:0;padding:8px 14px;font-size:10.5px;color:var(--dim);border-bottom:1px solid var(--line-row);background:var(--well)}
-.change-proposal{padding:12px 14px;display:grid;grid-template-columns:minmax(220px,.42fr) minmax(0,1fr) auto;gap:14px;align-items:start}
-.change-meta{margin:0;display:grid;gap:9px;min-width:0}
+.dock-caption{margin:0;padding:var(--space-2) var(--space-4);font-size:12px;line-height:1.5;color:var(--dim);border-bottom:1px solid var(--line-row);background:var(--well)}
+.change-proposal{padding:var(--space-3) var(--space-4);display:grid;grid-template-columns:minmax(220px,.42fr) minmax(0,1fr) auto;gap:var(--space-4);align-items:start}
+.change-meta{margin:0;display:grid;gap:var(--space-2);min-width:0}
 .change-meta div{min-width:0}
-.change-meta dt{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.change-meta dt{font-size:11px;color:var(--faint)}
 .change-meta dd{margin:3px 0 0;min-width:0;color:var(--text-2)}
-.change-meta code{display:block;overflow-wrap:anywhere;font-size:10px}
-.change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
-.change-actions{display:flex;gap:7px;justify-content:flex-end}
-.change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}
-.change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}
+.change-meta code{display:block;overflow-wrap:anywhere;font-size:11px;font-variant-numeric:tabular-nums}
+.change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:var(--space-2) var(--space-3);border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text-2);font:11px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
+.change-actions{display:flex;gap:var(--space-2);justify-content:flex-end}
+.change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 var(--space-3)}
+.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:"";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}
 
 .assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.assistant-head{height:36px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
-.assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}
+.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:var(--space-2);padding:0 var(--space-3);background:var(--raised);border-bottom:1px solid var(--line)}
+.assistant-head h2{margin:0;font-size:13px;font-weight:600;flex:1}
 .assistant-mark{width:16px;height:16px;border-radius:4px;background:${ACCENT.surface};display:grid;place-items:center}
 .assistant-mark::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}
-.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface};animation:assistant-breathe 1.1s ease-in-out infinite}
-.shell[data-assistant-busy="true"] .assistant-mark::before{animation:assistant-spin 1.6s linear infinite}
-.shell[data-assistant-busy="true"] .viewport::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(80% 70% at 50% 40%, ${ACCENT.surface} 0%, transparent 70%);animation:assistant-glow 1.4s ease-in-out infinite}
+/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface}}
 .shell[data-assistant="denied"] .assistant-mark{background:${SIGNAL.sceneSurface}}
 .shell[data-assistant="denied"] .assistant-mark::before{background:var(--scene)}
-.assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}
-.icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}
+.assistant-model{font-family:var(--mono);font-size:11px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px var(--space-2)}
+.icon-button{width:28px;height:28px;flex:none;border-radius:5px;display:grid;place-items:center;color:var(--dim);line-height:1}
+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}
 /* An icon button on the accent fill keeps the on-accent glyph colour: without
    this the later single-class rule wins and paints --dim on orange (1.1:1). */
 .primary-button.icon-button{color:var(--on-accent)}
 .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
-.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
-.assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}
-.assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}
+.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
+.assistant-live{display:none;align-items:end;gap:var(--space-1);height:28px;margin:var(--space-3) 0 0}
 .shell[data-assistant-busy="true"] .assistant-live{display:flex}
-.assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}
+.assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars var(--motion-duration-loop) var(--motion-ease-out-quart) infinite}
 .assistant-live i:nth-child(1){height:8px;animation-delay:0s}
 .assistant-live i:nth-child(2){height:16px;animation-delay:.12s}
 .assistant-live i:nth-child(3){height:22px;animation-delay:.24s}
-.assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}
-.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:assistant-dot 1s ease-in-out infinite}
-.assistant-thinking .dot:nth-child(2){animation-delay:.15s}
-.assistant-thinking .dot:nth-child(3){animation-delay:.3s}
-.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
-.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}
-.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}
-.assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
-.assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
-.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}
+.assistant-thinking{display:flex;align-items:center;gap:var(--space-1);margin:var(--space-3) 0 0;font-size:12px;color:var(--accent)}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:12px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:6px;background:var(--header)}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:ld-rise-sm var(--motion-duration-micro) var(--motion-ease-out-quart) backwards}
+.assistant-foot{font-size:11px;color:var(--dim);line-height:1.5;margin:var(--space-3) 0 0}
+.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:8px;background:var(--well);color:var(--text);font:13px/1.6 var(--sans);padding:var(--space-3);caret-color:var(--accent)}
+.assistant-prompt::placeholder{color:var(--faint)}
 .assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}
-.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-1)}
 .shell[data-details-open="true"] .assistant-routes{display:grid}
-.assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
-.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}
+.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:5px;color:var(--dim);font-size:11px;line-height:1.3}
+.assistant-route:not(.is-inert):not([aria-pressed="true"]):hover{border-color:var(--line-hover);color:var(--text)}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:11px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}
 .assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
-.composer-actions{display:flex;align-items:center;gap:7px}
-.assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
-.assistant-mode{height:24px;padding:0 11px;font-size:11px;color:var(--dim);border-radius:3px}
+.composer-actions{display:flex;align-items:center;gap:var(--space-2)}
+.assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:6px;padding:2px}
+.assistant-mode{position:relative;isolation:isolate;height:26px;padding:0 var(--space-3);font-size:12px;color:var(--dim);border-radius:4px}
 .assistant-mode[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+/* Row 17 indicator: the fill also lives on ::before, under the label. While the
+   motion script glides it in from the previous mode (translate + clip-path), the
+   button's own fill is held clear so only the moving fill shows. */
+.assistant-mode[aria-pressed="true"]::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--accent);pointer-events:none}
+.assistant-mode.is-gliding[aria-pressed="true"]{background:transparent}
 .assistant-mode.is-inert[aria-pressed="true"]{color:var(--inert-on-accent)}
 /* Both assistant bodies ship in every document and the state chooses between
    them, so a profile switched in the browser reaches the same named denial the
    model reports — the rule the editor body's refusal region already follows. */
-.assistant-denied{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:34px 26px;text-align:center}
+.assistant-denied{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-3);padding:var(--space-8) var(--space-6);text-align:center}
 .shell[data-assistant="denied"] .assistant-denied{display:flex}
 .shell[data-assistant="denied"] .assistant-body,
 .shell[data-assistant="denied"] .assistant-composer{display:none}
 .assistant-denied p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
-.assistant-denied-title{font-size:16px;font-weight:700;color:var(--text)}
+.assistant-denied-title{font-size:17px;font-weight:700;color:var(--text);text-wrap:balance}
 .assistant-denied-detail,.assistant-denied-code{display:none}
 .shell[data-details-open="true"] .assistant-denied-detail,
 .shell[data-details-open="true"] .assistant-denied-code{display:block}
@@ -1462,76 +1602,121 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-profile="kids"] .left-dock,
 .shell[data-profile="kids"] .viewport-column,
 .shell[data-profile="kids"] .inspector{display:none}
-.profile-refusal{display:none;place-items:center;padding:32px;background:radial-gradient(120% 90% at 50% 0%, ${SIGNAL.sceneSurface} 0%, var(--canvas) 70%);min-width:0}
+.profile-refusal{display:none;place-items:center;padding:var(--space-8);background:var(--canvas);min-width:0}
 .shell[data-profile="kids"] .profile-refusal{display:grid}
 .shell[data-profile="kids"]{--accent:${SIGNAL.scene};--on-accent:${SIGNAL.sceneSurface}}
-.profile-refusal-card{max-width:46ch;text-align:center;background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};border-radius:18px;padding:28px 28px 24px;box-shadow:0 18px 40px -24px ${SIGNAL.scene}}
-.profile-refusal-card h2{margin:12px 0;font-size:22px;color:${SIGNAL.sceneText}}
-.profile-refusal-card p{margin:0 0 10px;font-size:13px;line-height:1.65;color:${SIGNAL.sceneText}}
-.kids-studio-mark{display:grid;place-items:center;width:42px;height:42px;margin:0 auto;border-radius:14px;background:${SIGNAL.scene};color:${SIGNAL.sceneSurface};font-size:20px}
+.profile-refusal-card{max-width:46ch;text-align:center;background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};border-radius:var(--r-panel);padding:var(--space-8) var(--space-8) var(--space-6)}
+.profile-refusal-card h2{margin:var(--space-4) 0 var(--space-3);font-size:22px;line-height:1.2;color:${SIGNAL.sceneText};text-wrap:balance}
+.profile-refusal-card p{margin:0 0 var(--space-3);font-size:13px;line-height:1.65;color:${SIGNAL.sceneText}}
+.kids-studio-mark{display:grid;place-items:center;width:44px;height:44px;margin:0 auto;border-radius:var(--r-card);background:${SIGNAL.scene};color:${SIGNAL.sceneSurface};font-size:20px}
 .profile-refusal-code{display:none}
 .shell[data-details-open="true"] .profile-refusal-code{display:block}
 .profile-refusal-code code{color:var(--scene)}
 .profile-refusal-foot{color:var(--dim) !important}
 .mark-scene{background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};color:${SIGNAL.scene};margin:0 auto}
-.project-browser-status{margin:4px 0 0;font-size:10px;color:var(--dim)}
-.project-browser-advanced{display:none;margin-top:6px}
+.project-browser-status{margin:var(--space-1) 0 0;font-size:11px;color:var(--dim)}
+.project-browser-advanced{display:none;margin-top:var(--space-2)}
 .shell[data-details-open="true"] .project-browser-advanced{display:block}
 
-.status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
-.status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
-.status-pin{font-family:var(--mono);font-size:10px;color:var(--faint)}
-.status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 var(--space-3);gap:var(--space-3);min-width:0}
+.status-text{display:flex;align-items:center;gap:var(--space-2);font-size:12px;color:var(--text-3);white-space:nowrap}
+.status-pin{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--dim)}
 .divider{width:1px;height:12px;background:var(--line-card)}
-.state-shortcut{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px}
-.state-shortcut:hover{border-color:var(--line-hover);color:var(--text)}
+.state-shortcut{font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--faint);border:1px solid var(--line-control);border-radius:4px;padding:1px var(--space-2);white-space:nowrap}
+.state-shortcut:not(.is-inert):hover{border-color:var(--line-hover);color:var(--text)}
 
 .overlay{position:absolute;inset:0;background:${SCRIM.overlay};display:grid;place-items:center;z-index:50;padding:24px}
-.overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px ${SCRIM.shadow};animation:rise .16s ease-out}
+.overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:var(--r-card);box-shadow:var(--float)}
 .overlay-card.overlay-refused{border-color:${SIGNAL.refuseLine}}
-.overlay-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
-.overlay-head h2{margin:0;font-size:15px;font-weight:600}
+.overlay-head{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--line)}
+.overlay-head h2{margin:0;flex:1;font-size:15px;font-weight:600;text-wrap:balance}
 .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
 .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
 .mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}
-.overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
-.overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
-.overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
-.palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}
-.palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}
+.overlay-actions{display:flex;gap:var(--space-2);justify-content:flex-end;padding:var(--space-3) var(--space-6);background:var(--well);border-top:1px solid var(--line)}
+.overlay-actions .primary-button,.overlay-actions .ghost-button{height:32px;padding:0 var(--space-4);font-size:12px}
+.palette-list{list-style:none;margin:0;padding:var(--space-1) 0;max-height:352px;overflow-y:auto}
+.palette-group h3{margin:0;padding:var(--space-3) var(--space-6) var(--space-1);font-size:11px;font-weight:500;color:var(--faint)}
 .palette-group ul{list-style:none;margin:0;padding:0}
-.palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
-.palette-item:hover{background:var(--hover)}
+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-6);width:100%;min-height:36px;text-align:left}
+.palette-name{min-width:0;overflow-wrap:anywhere}
+.palette-item kbd{flex:none;white-space:nowrap}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
 .palette-name{flex:1;font-size:13px}
-.palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
-.overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
+.palette-item kbd{font-size:11px;color:var(--dim);border:1px solid var(--line-control);border-radius:4px;padding:1px var(--space-1)}
+.overlay-foot{margin:0;padding:var(--space-3) var(--space-6);background:var(--well);border-top:1px solid var(--line);font-size:12px;line-height:1.5;color:var(--dim)}
 
 .refusal-help-toggle[aria-expanded="true"]{border-color:var(--line-hover);color:var(--text)}
-.refusal-legend-panel{position:absolute;right:8px;bottom:calc(100% + 8px);z-index:45;width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px ${SCRIM.shadow}}
-.refusal-legend-panel h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
-.refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
+.refusal-legend-panel{position:absolute;right:8px;bottom:calc(100% + 8px);z-index:45;width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--overlay);border:1px solid var(--line-raised);border-radius:8px;box-shadow:var(--float)}
+.refusal-legend-panel h2{margin:0 0 var(--space-2);font-size:13px;font-weight:600;color:var(--text)}
+.refusal-row{margin:0 0 var(--space-2);font-size:12px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere}
 .refusal-row code{color:var(--accent);margin-right:8px}
 
-.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px 24px;text-align:center}
+.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:var(--space-11) var(--space-6);text-align:center;overflow-wrap:anywhere}
 .window-refusal h1{font-size:17px;margin:0 0 12px}
-.window-refusal p{font-size:13px;line-height:1.65;color:var(--dim);margin:0 0 10px}
+.window-refusal p{font-size:13px;line-height:1.65;color:var(--dim);margin:0 0 var(--space-2)}
 .window-refusal code{color:var(--accent)}
 
-@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
-@keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
-@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}
-@keyframes assistant-spin{to{transform:rotate(225deg)}}
+/* Motion (DIRECTION.md section 6): one-shot keyframes keyed on existing state
+   attributes; opacity only inside keyframes; translate/clip-path/filter only;
+   never scale. Anything shown by [hidden] enters here and leaves at once. */
+@keyframes ld-rise-sm{from{opacity:0;translate:0 var(--motion-distance-sm)}to{opacity:1;translate:0 0}}
+@keyframes ld-rise-md{from{opacity:0;translate:0 var(--motion-distance-md)}to{opacity:1;translate:0 0}}
+@keyframes ld-drop{from{opacity:0;translate:0 calc(-1 * var(--motion-distance-sm))}to{opacity:1;translate:0 0}}
+@keyframes ld-fade{from{opacity:0}to{opacity:1}}
+@keyframes ld-dialog{from{opacity:0;translate:0 var(--motion-distance-md);clip-path:inset(0 0 var(--motion-distance-md) 0 round var(--r-card))}to{opacity:1;translate:0 0;clip-path:inset(-24px round var(--r-card))}}
+@keyframes ld-in-left{from{opacity:0;translate:calc(-1 * var(--motion-distance-lg)) 0}to{opacity:1;translate:0 0}}
+@keyframes ld-in-right{from{opacity:0;translate:var(--motion-distance-lg) 0}to{opacity:1;translate:0 0}}
+@keyframes ld-draw-x{from{clip-path:inset(0 50% 0 50%)}to{clip-path:inset(0)}}
+@keyframes ld-draw-from-start{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
+@keyframes ld-aperture{from{clip-path:inset(48% 0 48% 0)}to{clip-path:inset(0)}}
+@keyframes ld-ring{from{opacity:1;clip-path:circle(25% at 50% 50%)}to{opacity:0;clip-path:circle(75% at 50% 50%)}}
+@keyframes ld-settle{from{filter:brightness(1.4)}to{filter:brightness(1)}}
+@keyframes sweep{0%{transform:translateX(-108px)}100%{transform:translateX(338px)}}
 @keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}
-@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
-@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}
-@keyframes assistant-glow{0%,100%{opacity:.18}50%{opacity:.4}}
+
+/* Mode rail: one indicator glides to the pressed mode (row 17). The fallback is
+   the per-button bar above. Indices follow DESKTOP_MODES; Scene and Plug show
+   only with details open. */
+@supports selector(:has(*)){
+  .rail-mode[aria-pressed="true"]::before{content:none}
+  .mode-rail::after{content:"";position:absolute;left:0;top:56px;width:2px;height:22px;border-radius:0 2px 2px 0;background:var(--accent);pointer-events:none;translate:0 calc(var(--rail-i,0) * 44px);transition:translate var(--motion-duration-panel) var(--motion-ease-out-expo)}
+  .mode-rail:not(:has(.rail-mode[aria-pressed="true"]))::after{content:none}
+${railIndexRules(view.modes)}
+}
+
+@media (prefers-reduced-motion:no-preference){
+  .menu-panel:not([hidden]){animation:ld-drop var(--motion-duration-state) var(--motion-ease-out-expo) backwards}
+  .refusal-legend-panel:not([hidden]){animation:ld-rise-sm var(--motion-duration-state) var(--motion-ease-out-expo) backwards}
+  .overlay:not([hidden]){animation:ld-fade var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .overlay:not([hidden]) .overlay-card{animation:ld-dialog var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .overlay:not([hidden]) .palette-group{animation:ld-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+${staggerRules(".overlay:not([hidden]) .palette-group")}
+  :is(.dock-tabpanel,.dock-panel,.inspector-panel):not([hidden]){animation:ld-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  :is(.scene-entities,.project-bound,.project-browser-detail,.change-proposal,.scene-property-editor,.assistant-manipulators,.assistant-thinking,.assistant-retry):not([hidden]){animation:ld-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards}
+  .shell[data-details-open="true"] :is(.scene-entity-identity dl,.scene-advanced,.assistant-routes){animation:ld-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards}
+  :is(.scene-entity-identity.is-selected,.scene-entity[aria-pressed="true"],.profile-chip[aria-pressed="true"],.assistant-route[aria-pressed="true"]){animation:ld-settle var(--motion-duration-state) var(--motion-ease-out-quint)}
+  :is(.view-tab,.dock-tab)[aria-selected="true"]::after{animation:ld-draw-x var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .assistant{animation:ld-in-right var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .shell::after{animation:ld-fade var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .profile-surface,.profile-refusal-card,.assistant-denied{animation:ld-rise-md var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .viewport [data-live-viewport]{animation:ld-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards}
+  .viewport canvas{animation:ld-fade var(--motion-duration-route) var(--motion-ease-out-expo) backwards}
+  .shell[data-mode="run"] .viewport::after{animation:ld-aperture var(--motion-duration-route) var(--motion-ease-out-expo) backwards}
+  .shell[data-mode="run"] .profile-runtime-actions .primary-button{position:relative}
+  .shell[data-mode="run"] .profile-runtime-actions .primary-button::before{content:"";position:absolute;inset:-4px;border:2px solid var(--accent);border-radius:calc(var(--r-control) + 4px);pointer-events:none;animation:ld-ring var(--motion-duration-panel) var(--motion-ease-out-expo) both}
+}
 
 /* Compact: the assistant leaves the grid and becomes an overlay drawer. Its
    existing toggle opens and closes it, so nothing becomes unreachable. */
 @media ${belowTier("regular")}{
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
   .shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
-  .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
+  .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:var(--float)}
   /* An undocked assistant starts closed: a drawer nobody opened must not sit
      on top of the panel it undocked from. Its toggle still opens it. The
      emitted bytes always carry a closed drawer, so this holds at every viewport
@@ -1549,6 +1734,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell[data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
   .shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
   .shell[data-assistant="denied"] .assistant{position:static;display:flex;width:auto;box-shadow:none}
+  /* An open drawer lays the content it covers behind a scrim (row 7). The scrim takes
+     no pointer: the drawer is not modal, and its own toggle still closes it. */
+  .shell[data-drawer-assistant="open"]:not([data-assistant="denied"])::after{content:"";position:absolute;top:var(--title-h);bottom:var(--status-h);left:0;right:0;z-index:34;background:${SCRIM.overlay};pointer-events:none}
 }
 /* Narrow: the left dock and the inspector become drawers too, and the two
    title-bar toggles that open them appear. They start closed, because a drawer
@@ -1557,7 +1745,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
   .title-actions .drawer-toggle{display:inline-flex}
   .title-centre,.menu-bar{display:none}
-  .left-dock,.inspector{position:absolute;top:var(--title-h);bottom:var(--status-h);z-index:35;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
+  .left-dock,.inspector{position:absolute;top:var(--title-h);bottom:var(--status-h);z-index:35;box-shadow:var(--float)}
+  .shell[data-drawer-left="open"] .left-dock{animation:ld-in-left var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
+  .shell[data-drawer-inspector="open"] .inspector{animation:ld-in-right var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
   .left-dock{left:var(--rail);width:min(var(--left),calc(100% - var(--rail)))}
   .inspector{right:0;width:min(var(--inspector),100%)}
   .shell:not([data-drawer-left="open"]) .left-dock{display:none}
@@ -1570,18 +1760,21 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell[data-assistant="denied"] .shell-body,.shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
   .shell[data-profile="web"] .shell-body,.shell[data-profile="web"][data-assistant="closed"] .shell-body{grid-template-columns:minmax(0,1fr)}
   .shell[data-profile="web"] .left-dock{left:0}
+  .shell[data-drawer-left="open"]::after,.shell[data-drawer-inspector="open"]::after{content:"";position:absolute;top:var(--title-h);bottom:var(--status-h);left:0;right:0;z-index:34;background:${SCRIM.overlay};pointer-events:none}
 }
 /* Below the declared minimum the chrome refuses instead of laying out. The
    breakpoints are interpolated from DESKTOP_MINIMUM_WINDOW, so the CSS and the
    model refuse at exactly the same size and cannot be raised apart. */
 @media (max-width:${DESKTOP_MINIMUM_WINDOW.width - 1}px),(max-height:${DESKTOP_MINIMUM_WINDOW.height - 1}px){
   .shell{display:none}
-  .window-refusal{display:block}
+  .window-refusal{display:block;animation:ld-rise-md var(--motion-duration-panel) var(--motion-ease-out-expo) backwards}
 }
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  :root{${MOTION_REDUCED_CUSTOM_PROPERTIES.map(([name, value]) => `${name}:${value}`).join(";")}}
   .sculpt-sweep,.assistant-live{display:none}
+  :is(button[aria-busy="true"],.shell[data-assistant-busy="true"] .assistant-composer .primary-button)::before{animation:none;right:60%}
 }
 `;
 }
@@ -1598,10 +1791,12 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 function controlsByProfile(
   view: DesktopVisualView,
   runtime = view.state.assistantRuntime,
-): Record<string, Record<string, readonly [string, string | null]>> {
+) {
   const table: Record<string, Record<string, readonly [string, string | null]>> = {};
+
   for (const profile of view.profiles) {
     const merged: Record<string, readonly [string, string | null]> = {};
+
     for (const mode of DESKTOP_MODE_IDS) {
       const projected = desktopVisualView({
         ...view.state,
@@ -1609,12 +1804,15 @@ function controlsByProfile(
         mode,
         assistantRuntime: runtime,
       });
+
       for (const control of projected.controls) {
         merged[control.id] = [control.kind, control.refusal] as const;
       }
     }
+
     table[profile.id] = merged;
   }
+
   return table;
 }
 
@@ -1626,6 +1824,7 @@ function script(view: DesktopVisualView): string {
         ...view.state,
         assistantRuntime: runtime,
       });
+
       return [
         runtime,
         {
@@ -1643,6 +1842,7 @@ function script(view: DesktopVisualView): string {
       ];
     }),
   );
+
   const tables = {
     dockTabsByMode: Object.fromEntries(
       DESKTOP_MODE_IDS.map((mode) => [mode, [...dockTabsFor(mode)]]),
@@ -1774,7 +1974,7 @@ if (shell) {
     if (binding.code !== (event.code || fallback)) return false;
     const modifiers = binding.modifiers;
     const primary = event.ctrlKey || event.metaKey;
-    if (modifiers.includes('primary') !== primary) return false;
+    if (modifiers.includes('primary') && !primary) return false;
     if (!modifiers.includes('primary')) {
       if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;
       if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;
@@ -2075,7 +2275,12 @@ if (shell) {
     if (!isSessionSnapshot(snapshot)) return null;
     const proposal = snapshot && snapshot.proposal;
     const edits = proposal && Array.isArray(proposal.edits) ? proposal.edits : [];
-    const first = edits[0];
+    const compact = snapshot?.preparedReview;
+    const first = edits[0] || (snapshot.proposal === null && snapshot.preparedAsset &&
+      Number.isSafeInteger(snapshot.preparedAsset.canonicalBase64ByteLength) &&
+      snapshot.preparedAsset.canonicalBase64ByteLength > 0 && compact &&
+      typeof compact.documentPath === 'string' && compact.documentPath.length > 0 &&
+      typeof compact.baseContentHash === 'string' && compact.baseContentHash.length > 0 ? compact : null);
     const diff = snapshot && typeof snapshot.renderedDiff === 'string'
       ? snapshot.renderedDiff
       : null;
@@ -2483,6 +2688,9 @@ if (shell) {
     if (files.length !== status.files.length ||
         !files.some((file) => file.path === status.selectedPath)) return false;
     projectBrowserStatus = status;
+    const browserRevision = Number(shell.dataset.projectBrowserRevision || '0') + 1;
+    shell.dataset.projectBrowserRevision = String(browserRevision);
+    shell.dataset.projectBrowserSelectedPath = status.selectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list && list.tagName === 'SELECT') {
       list.replaceChildren();
@@ -2548,6 +2756,7 @@ if (shell) {
 
   const clearProjectBrowser = () => {
     projectBrowserStatus = null;
+    delete shell.dataset.projectBrowserSelectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list) list.replaceChildren();
     const detail = shell.querySelector('[data-project-browser-detail]');
@@ -3975,7 +4184,7 @@ if (shell) {
   // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
-    return open === null ? [] : Array.from(open.querySelectorAll('button'));
+    return open === null ? [] : Array.from(open.querySelectorAll('button, input:not([disabled]), textarea:not([disabled]), select:not([disabled])'));
   };
 
   const setOverlay = (id) => {
@@ -4102,6 +4311,27 @@ if (shell) {
   // announce itself pressed over nothing, and its first press would only turn
   // that claim off. One press opens the drawer at every tier.
   const drawerQuery = window.matchMedia('${belowTier("regular")}');
+  const compactDrawerQuery = window.matchMedia('${belowTier("compact")}');
+  // Undocked panels occlude the viewport/dock. Keep covered controls out of
+  // keyboard and pointer navigation until the drawer is closed again.
+  const syncDrawerNavigation = () => {
+    const assistantDrawer = drawerQuery.matches && shell.dataset.assistant !== 'denied' && shell.dataset.drawerAssistant === 'open';
+    const leftDrawer = compactDrawerQuery.matches && shell.dataset.drawerLeft === 'open';
+    const inspectorDrawer = compactDrawerQuery.matches && shell.dataset.drawerInspector === 'open';
+    q('.viewport-region, .dock').forEach((el) => { el.inert = assistantDrawer || leftDrawer || inspectorDrawer; });
+    q('.left-dock').forEach((el) => { el.inert = assistantDrawer || inspectorDrawer; });
+    q('.inspector').forEach((el) => { el.inert = assistantDrawer || leftDrawer; });
+  };
+  const drawerNavigationObserver = new MutationObserver(syncDrawerNavigation);
+  drawerNavigationObserver.observe(shell, { attributes: true, attributeFilter: ['data-drawer-left', 'data-drawer-inspector', 'data-drawer-assistant', 'data-assistant'] });
+  drawerQuery.addEventListener('change', syncDrawerNavigation);
+  compactDrawerQuery.addEventListener('change', syncDrawerNavigation);
+  window.addEventListener('pagehide', () => {
+    drawerNavigationObserver.disconnect();
+    drawerQuery.removeEventListener('change', syncDrawerNavigation);
+    compactDrawerQuery.removeEventListener('change', syncDrawerNavigation);
+  }, { once: true });
+  syncDrawerNavigation();
 
   const assistantOpen = () => shell.dataset.drawerAssistant === 'open';
 
@@ -4216,8 +4446,161 @@ if (shell) {
     }
   });
 
-  const runEditorCommand = async (commandId) => {
-    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'
+  // Collect the registry's real fields; the existing host remains the validator
+    // and the existing Change Review/Save path remains the sole document writer.
+    const inputCommands = new Set([
+    'input-action-rebind', 'input-actions-reset', 'scene-prefab-define',
+    'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh',
+    'viewport-source-set', 'physics-evaluate', 'package-install', 'package-remove',
+    'project-migration-commit', 'extension-start',
+    ]);
+    const collectCommandInput = async (commandId) => {
+    const command = T.editorCommands.find((row) => row.id === commandId);
+    if (shell.dataset.profile === 'kids') return commandRefusal('EDITOR_COMMAND_KIDS_DENIED');
+    const properties = command.inputSchema.properties;
+    if (properties.expectedContentHash && !(await openTimelineVersion())) return;
+    let inspection = null;
+    if (properties.expectedBaseVersion || properties.proposalDigest) {
+      const response = await commandRequest(properties.expectedBaseVersion
+        ? 'input-actions-inspect' : 'project-migration-propose', {});
+      const diagnostic = responseDiagnostic(response);
+      if (diagnostic !== null) return showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
+      inspection = response.data;
+    }
+    shell.querySelector('[data-overlay="command-input"]')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.dataset.overlay = 'command-input';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'command-input-title');
+    const card = document.createElement('div');
+    card.className = 'overlay-card';
+    card.style.maxHeight = '85vh';
+    card.style.overflowY = 'auto';
+    const title = document.createElement('h2');
+    title.id = 'command-input-title';
+    title.textContent = command.label;
+    const help = document.createElement('p');
+    help.textContent = command.mutation === 'stages-change'
+      ? 'Stage for Change Review. Only Save writes; Reject discards.'
+      : 'Review exact input before submitting. Settings and approved migrations commit explicitly; host validation remains mandatory.';
+    const form = document.createElement('form');
+    form.dataset.commandInput = commandId;
+    const fields = new Map();
+    const required = command.inputSchema.required || [];
+    const defaults = {
+      documentPath: T.product.documentPath, expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile, scope: 'project',
+      expectedBaseVersion: inspection?.baseVersions?.project,
+      proposalDigest: inspection?.proposal?.proposalDigest,
+      reviewDigest: 'null', instanceIds: JSON.stringify(selectedSceneEntityIds),
+      instanceId: selectedSceneEntityId, parentInstanceId: editableScene?.hierarchy?.rootInstanceId,
+      steps: 1,
+    };
+    for (const [name, schema] of Object.entries(properties)) {
+      const label = document.createElement('label');
+      label.style.display = 'grid';
+      label.style.marginBottom = '8px';
+      label.textContent = name;
+      const json = Array.isArray(schema.type) || schema.type === 'object' || schema.type === 'array';
+      const boolean = schema.type === 'boolean' || schema.const === true;
+      const field = document.createElement(schema.enum ? 'select' : json ? 'textarea' : 'input');
+      field.dataset.commandField = name;
+      field.name = name;
+      if (schema.enum) schema.enum.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = String(value); option.textContent = String(value); field.append(option);
+      });
+      else if (boolean) field.type = 'checkbox';
+      else if (!json) field.type = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text';
+      if (!boolean) field.required = required.includes(name);
+      if (schema.type === 'integer') field.step = '1';
+      if (schema.type === 'number') field.step = 'any';
+      if (schema.minimum !== undefined) field.min = String(schema.minimum);
+      if (schema.maximum !== undefined) field.max = String(schema.maximum);
+      if (schema.pattern) field.pattern = schema.pattern;
+      if (schema.minLength !== undefined) field.minLength = schema.minLength;
+      if (schema.maxLength !== undefined) field.maxLength = schema.maxLength;
+      if (defaults[name] !== undefined && defaults[name] !== null) field.value = String(defaults[name]);
+      if (['documentPath', 'expectedContentHash', 'profile', 'expectedBaseVersion', 'proposalDigest', 'reviewDigest'].includes(name)) {
+        field.readOnly = true;
+        if (field.tagName === 'SELECT') field.disabled = true;
+      }
+      label.append(field); form.append(label);
+      fields.set(name, { field, schema, json, boolean });
+    }
+    if (fields.has('expectedBaseVersion')) fields.get('scope').field.addEventListener('change', () => {
+      fields.get('expectedBaseVersion').field.value = inspection.baseVersions[fields.get('scope').field.value];
+      fields.get('approved').field.checked = false;
+      fields.get('reviewDigest').field.value = 'null';
+    });
+    const evidence = document.createElement('pre');
+    evidence.dataset.commandEvidence = '';
+    evidence.setAttribute('role', 'status');
+    evidence.textContent = inspection === null ? 'No command submitted.' : JSON.stringify(inspection, null, 2);
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = command.mutation === 'stages-change' ? 'Stage for review' : 'Submit reviewed input';
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => setOverlay('none'));
+    form.append(submit, cancel);
+    form.addEventListener('input', (event) => {
+      if (fields.has('reviewDigest') && event.target !== fields.get('approved').field) {
+        fields.get('approved').field.checked = false;
+        fields.get('reviewDigest').field.value = 'null';
+      }
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (inFlight || submit.disabled) return;
+      let input;
+      try {
+        input = Object.fromEntries(Array.from(fields, ([name, row]) => {
+          const value = row.boolean ? row.field.checked : row.json ? JSON.parse(row.field.value)
+            : row.schema.type === 'number' || row.schema.type === 'integer' ? Number(row.field.value) : row.field.value;
+          return [name, value];
+        }).filter(([name, value]) => required.includes(name) || value !== ''));
+      } catch { evidence.textContent = 'EDITOR_COMMAND_INPUT_INVALID: complex fields require valid JSON.'; return; }
+      submit.disabled = true;
+      void productAction(async () => {
+        try {
+          if (properties.expectedContentHash && input.expectedContentHash !== projectContentHash) {
+            evidence.textContent = 'EDITOR_COMMAND_STALE_BASE_VERSION: reopen and review the current document.';
+            return;
+          }
+          if (command.mutation === 'stages-change') {
+            setOverlay('none');
+            await stageSceneCommand(commandId, input, command.label, { authoringSnapshot: true });
+            return;
+          }
+          const response = await commandRequest(commandId, input);
+          const diagnostic = responseDiagnostic(response);
+          evidence.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+            : diagnostic.code + ' · ' + diagnostic.message;
+          if (diagnostic !== null) return;
+          if (response.data?.kind === 'sceneaxi.input-action-review') {
+            if (response.data.status === 'review') {
+              fields.get('reviewDigest').field.value = JSON.stringify(response.data.reviewDigest);
+              evidence.textContent += '\\nReview before/after, then explicitly check approved and submit the exact input.';
+            } else {
+              activeInputActionMap = response.data.after; refreshInputBindingLabels(); submit.hidden = true;
+            }
+          } else {
+            submit.hidden = true;
+            if (commandId === 'project-migration-commit') await openProject();
+          }
+        } finally { submit.disabled = false; }
+      });
+    });
+    card.append(title, help, form, evidence); overlay.append(card); shell.append(overlay);
+    setOverlay('command-input');
+    };
+
+    const runEditorCommand = async (commandId) => {
+    if (inputCommands.has(commandId)) return collectCommandInput(commandId);
+    const input = commandId === 'package-inspect' || commandId === 'profile-inspect' || commandId === 'scene-prefab-inspect'
       ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
       : commandId === 'extension-inspect'
         ? { profile: shell.dataset.profile }
@@ -4265,7 +4648,7 @@ if (shell) {
       documentPath: T.product.documentPath,
       expectedContentHash: projectContentHash,
       mutation,
-    }, 'animation');
+    }, 'animation', { authoringSnapshot: true });
     if (result) q('[data-timeline-result]').forEach((el) => {
       el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';
     });
@@ -4336,7 +4719,9 @@ if (shell) {
       'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',
       'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
       'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
-      'project-inspect', 'input-action-rebind', 'input-actions-reset',
+      'project-inspect', 'input-actions-inspect', 'input-action-rebind', 'input-actions-reset',
+      'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh', 'viewport-source-set', 'physics-evaluate',
     ].map((id) => [id, () => runEditorCommand(id)])),
   });
 
@@ -4406,7 +4791,15 @@ if (shell) {
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
       const primary = el.tagName === 'SELECT' ? el.value : value;
-      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
+      if (primary && showSceneProperty(primary)) {
+        if (shell.dataset.mode !== 'build') showModePanels('build');
+        const instanceIds = [...selectedSceneEntityIds];
+        const generation = sceneSelectionGeneration;
+        sceneSelectionPending = sceneSelectionPending.then(
+          () => setSceneSelection(instanceIds, generation),
+          () => setSceneSelection(instanceIds, generation),
+        );
+      }
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'catalog-stage' && value) void productAction(() => stageCatalog(value));
@@ -4609,6 +5002,108 @@ if (shell) {
   syncCommandAvailability();
   void syncProjectLifecycle().then(hydrateInputActions);
 }
+// Motion only: no state is read or written here. Entrances already on screen at
+// boot are finished at once (no page-load choreography), and a live status line
+// that changes text settles in with a short wipe instead of swapping silently.
+(() => {
+  if (typeof document.getAnimations === 'function') {
+    document.getAnimations().forEach((animation) => {
+      const timing = animation.effect && typeof animation.effect.getTiming === 'function'
+        ? animation.effect.getTiming()
+        : null;
+      if (timing && timing.iterations !== Infinity) animation.finish();
+    });
+  }
+  const host = document.querySelector('.shell');
+  if (!host || typeof MutationObserver !== 'function' || typeof host.animate !== 'function') return;
+  const reduce = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+  const live = '.status-text,.status-pin,[data-project-status],.runtime-report,[data-scene-property-diagnostic],[data-assistant-status],[data-live-viewport],.sculpt-detail,[data-change-badge],[data-ship-export-status],[data-run-live-report],[data-run-session-report],.project-browser-status,.scene-entities-refusal,.desktop-byo-config-message,.desktop-byo-config-state,[data-ship-bundle-digest],[data-ship-source-digest],[data-project-browser-digest]';
+  const running = new WeakMap();
+  const settle = (el) => {
+    if (typeof el.animate !== 'function' || (reduce && reduce.matches)) return;
+    const previous = running.get(el);
+    if (previous) previous.cancel();
+    running.set(el, el.animate([
+      { clipPath: 'inset(0 100% 0 0)', transform: 'translateY(${MOTION.distance.sm}px)' },
+      { clipPath: 'inset(0 0 0 0)', transform: 'none' },
+    ], { duration: ${MOTION.duration.state}, easing: '${MOTION.ease.outQuint}' }));
+  };
+  // View and dock tabs: the selected bar glides from the tab that was selected
+    // before, the same way the mode rail indicator does (translate + clip-path).
+    const tabs = '.view-tab,.dock-tab';
+    const selectedIn = new WeakMap();
+    host.querySelectorAll('.view-tab[aria-selected="true"],.dock-tab[aria-selected="true"],.assistant-mode[aria-pressed="true"]').forEach((tab) => {
+      if (tab.parentElement) selectedIn.set(tab.parentElement, tab);
+    });
+    const glide = (tab) => {
+      const list = tab.parentElement;
+    if (!list) return;
+      const previous = selectedIn.get(list);
+      selectedIn.set(list, tab);
+    if (!previous || previous === tab || !previous.isConnected || (reduce && reduce.matches)) return;
+    const from = previous.getBoundingClientRect();
+    const to = tab.getBoundingClientRect();
+    if (from.width === 0 || to.width === 0) return;
+    const shown = Math.min(from.width, to.width);
+    try {
+      tab.animate([
+        { transform: 'translateX(' + (from.left - to.left) + 'px)', clipPath: 'inset(0 ' + (to.width - shown) + 'px 0 0)' },
+        { transform: 'none', clipPath: 'inset(0)' },
+      ], { duration: ${MOTION.duration.panel}, easing: '${MOTION.ease.outExpo}', pseudoElement: '::after' });
+    } catch (error) {
+      // Pseudo-element targets are unsupported here: the CSS draw stays.
+    }
+  };
+  // Assistant strength: the accent fill glides from the previous mode the same
+  // way (row 17). The button's own fill is held clear for the glide only.
+  const slide = (mode) => {
+    const list = mode.parentElement;
+    if (!list) return;
+    const previous = selectedIn.get(list);
+    selectedIn.set(list, mode);
+    if (!previous || previous === mode || !previous.isConnected || (reduce && reduce.matches)) return;
+    const from = previous.getBoundingClientRect();
+    const to = mode.getBoundingClientRect();
+    if (from.width === 0 || to.width === 0) return;
+    const shown = Math.min(from.width, to.width);
+    const done = () => { mode.classList.remove('is-gliding'); };
+    try {
+      mode.classList.add('is-gliding');
+      const animation = mode.animate([
+        { transform: 'translateX(' + (from.left - to.left) + 'px)', clipPath: 'inset(0 ' + (to.width - shown) + 'px 0 0 round 4px)' },
+        { transform: 'none', clipPath: 'inset(0 0 0 0 round 4px)' },
+      ], { duration: ${MOTION.duration.panel}, easing: '${MOTION.ease.outExpo}', pseudoElement: '::before' });
+      if (animation && animation.finished) animation.finished.then(done, done);
+      else done();
+    } catch (error) {
+      done();
+    }
+  };
+  try {
+    new MutationObserver((records) => {
+      const seen = new Set();
+      records.forEach((record) => {
+        if (record.type === 'attributes') {
+          const tab = record.target;
+          if (tab.nodeType !== 1) return;
+          if (record.attributeName === 'aria-selected' && tab.matches(tabs) && tab.getAttribute('aria-selected') === 'true') glide(tab);
+          if (record.attributeName === 'aria-pressed' && tab.matches('.assistant-mode') && tab.getAttribute('aria-pressed') === 'true') slide(tab);
+          return;
+        }
+        const node = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+        const el = node && typeof node.closest === 'function' ? node.closest(live) : null;
+        if (el && !seen.has(el)) {
+          seen.add(el);
+          settle(el);
+        }
+      });
+    }).observe(host, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed'] });
+  } catch (error) {
+    // An observer that cannot watch these records only costs the motion.
+  }
+})();
 `;
 }
 
@@ -4630,6 +5125,7 @@ export function renderDesktopChrome(
   options: DesktopChromeOptions = {},
 ): string {
   const title = options.title ?? "SceneAxi — Engine Desktop";
+
   // The block is emitted in every document but `view.refusal` is non-null only
   // in the below-minimum render, so the fallback is what a browser actually
   // shows once the viewport crosses the breakpoint. It reads the same registry
@@ -4650,7 +5146,7 @@ export function renderDesktopChrome(
 <meta name="sceneaxi-visual-source" content="${escapeHtml(`${VISUAL_SOURCE.member} · sha256 ${VISUAL_SOURCE.sha256}`)}">
 <meta name="sceneaxi-pixels-drawn" content="false">
 <title>${escapeHtml(title)}</title>
-<style>${styles()}</style>
+<style>${styles(view)}</style>
 </head>
 <body>
 <div class="window-refusal" role="alert">

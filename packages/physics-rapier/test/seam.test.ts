@@ -17,10 +17,10 @@ function catalog(): ScenePhysicsCatalog {
       { bodyId: "ball", instanceId: "ball", kind: "dynamic", mass: 2 },
       { bodyId: "capsule", instanceId: "capsule", kind: "kinematic", mass: 3 },
     ],
-    shapes: [
-      { shapeId: "floor", bodyId: "floor", kind: "box", size: 1 },
-      { shapeId: "ball", bodyId: "ball", kind: "sphere", size: 0.25 },
-      { shapeId: "capsule", bodyId: "capsule", kind: "capsule", size: 0.25 },
+    colliders: [
+      { colliderId: "floor", bodyId: "floor", kind: "box", size: 1 },
+      { colliderId: "ball", bodyId: "ball", kind: "sphere", size: 0.25 },
+      { colliderId: "capsule", bodyId: "capsule", kind: "capsule", size: 0.25 },
     ],
     materials: [
       { bodyId: "floor", friction: 0.8, restitution: 1 },
@@ -85,7 +85,7 @@ describe("Rapier PhysicsWorldHost public seam", () => {
 
     const world = host.create({
       ...input,
-      shapes: [],
+      colliders: [],
       constraints: [{ constraintId: "link", kind, bodyA: "floor", bodyB: "ball" }],
     });
 
@@ -131,10 +131,10 @@ describe("Rapier PhysicsWorldHost public seam", () => {
       .toThrow(SCENE_PHYSICS_REFUSALS.catalogInvalid);
     expect(() => host.create({ ...input, bodies: [...input.bodies, ...input.bodies] }))
       .toThrow(SCENE_PHYSICS_REFUSALS.catalogInvalid);
-    expect(() => host.create({ ...input, shapes: [{ shapeId: "bad", bodyId: "absent", kind: "box", size: 1 }] }))
+    expect(() => host.create({ ...input, colliders: [{ colliderId: "bad", bodyId: "absent", kind: "box", size: 1 }] }))
       .toThrow(SCENE_PHYSICS_REFUSALS.bodyUnknown);
-    expect(() => host.create({ ...input, shapes: [{ shapeId: "bad", bodyId: "ball", kind: "box", size: -1 }] }))
-      .toThrow(SCENE_PHYSICS_REFUSALS.shapeInvalid);
+    expect(() => host.create({ ...input, colliders: [{ colliderId: "bad", bodyId: "ball", kind: "box", size: -1 }] }))
+      .toThrow(SCENE_PHYSICS_REFUSALS.colliderInvalid);
     expect(() => host.create({ ...input, materials: [{ bodyId: "ball", friction: -1, restitution: 0 }] }))
       .toThrow(SCENE_PHYSICS_REFUSALS.catalogInvalid);
     expect(() => host.create({ ...input, constraints: [{ constraintId: "bad", kind: "fixed", bodyA: "ball", bodyB: "ball" }] }))

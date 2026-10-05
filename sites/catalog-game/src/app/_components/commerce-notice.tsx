@@ -38,6 +38,7 @@ export function CommerceNotice({
     >
       <p>{model.policy}</p>
       <p>{model.explanation}</p>
+      <div className="state-meta">
       <p>
         {COMMERCE_NOTICE_COPY.modeLabel} <code>{model.mode}</code> ·{" "}
         {COMMERCE_NOTICE_COPY.completionLabel} <code>{model.completion}</code>
@@ -58,6 +59,7 @@ export function CommerceNotice({
       <p>
         {COMMERCE_NOTICE_COPY.registryLabel} <code>{model.registry}</code>
       </p>
+      </div>
     </StatePanel>
   );
 }

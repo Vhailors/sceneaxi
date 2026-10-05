@@ -157,6 +157,7 @@ claim a guarantee the gate does not enforce.
 | `desktop/windows/scripts/dist.mjs` |
 | `desktop/windows/scripts/release-preflight.mjs` |
 | `desktop/windows/scripts/release.mjs` |
+| `desktop/windows/scripts/smoke.mjs` |
 <!-- traceability:release-owners:end -->
 
 - **Building a registry tarball.** `pnpm build:sdk` is the packaging path; there is no

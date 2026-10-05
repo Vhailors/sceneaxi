@@ -10,7 +10,6 @@ import {
   RARITY_REQUEST_KIND,
   RARITY_SCHEMA_VERSION,
   RARITY_TIERS,
-  type KernelCommand,
   type KernelSessionSaveArtifact,
   type ModelProviderCallEvidence,
   type ProductManifest,
@@ -41,6 +40,7 @@ type Fixture = {
   }>;
 };
 
+// SAFETY: the checked-in rarity fixture is the versioned policy/request/vector contract tested by this suite.
 const fixture = JSON.parse(
   readFileSync(
     new URL(`../../schemas/${RARITY_FIXTURES_PATH}`, import.meta.url),
@@ -50,10 +50,11 @@ const fixture = JSON.parse(
 
 function fixedHost(): KernelHost {
   let now = 1_000;
+
   return { nowMs: () => now++ };
 }
 
-function manifest(): ProductManifest {
+function manifest(): ProductManifest & { readonly rarity: RarityNamespace } {
   return {
     productId: fixture.scope,
     seed: fixture.projectSeed,
@@ -72,15 +73,15 @@ function rarityCommand(
   request: RarityRollRequest = fixture.request,
   providerEvidence?: ModelProviderCallEvidence,
 ) {
-  return {
-    type: "rarity-roll",
-    eventId,
-    request,
-    ...(providerEvidence === undefined ? {} : { providerEvidence }),
-  } as const;
+  const command: RarityCommandFixture = { type: "rarity-roll", eventId, request };
+
+  if (providerEvidence !== undefined) command.providerEvidence = providerEvidence;
+
+  return command;
 }
 
 function jsonCopy<Value>(value: Value): Value {
+  // SAFETY: callers pass JSON-only rarity fixtures or kernel saves; this round-trip preserves their data fields and removes readonly/freeze restrictions for tampering tests.
   return JSON.parse(JSON.stringify(value)) as Value;
 }
 
@@ -91,6 +92,7 @@ function jsonCopy<Value>(value: Value): Value {
  * of this implementation from the documented algorithm.
  */
 const SKEWED_SEED = 20_260_809;
+
 const SKEWED_SCOPE = "skewed-rarity-product";
 
 const SKEWED_POLICY: RarityPolicy = {
@@ -163,6 +165,7 @@ afterEach(() => {
 describe("pure deterministic rarity resolver", () => {
   it("matches every checked-in tier/candidate interval vector exactly", () => {
     const tierCandidateBoundaries = new Set<string>();
+
     for (const vector of fixture.vectors) {
       const result = resolveRarityRoll(
         {
@@ -173,7 +176,9 @@ describe("pure deterministic rarity resolver", () => {
         fixture.policy,
         fixture.request,
       );
+
       expect(result.ok, vector.eventId).toBe(true);
+
       if (!result.ok) continue;
       expect(result.value.outcome).toEqual(vector.outcome);
       expect(result.value.provenance).toEqual(vector.provenance);
@@ -181,6 +186,7 @@ describe("pure deterministic rarity resolver", () => {
         `${String(result.value.provenance.tierDraw)}:${String(result.value.provenance.candidateDraw)}`,
       );
     }
+
     expect(tierCandidateBoundaries).toEqual(
       new Set(["0:0", "0:1", "1:0", "1:1", "2:0", "2:1", "3:0", "3:1", "4:0", "4:1"]),
     );
@@ -194,7 +200,9 @@ describe("pure deterministic rarity resolver", () => {
       throw new Error("Date.now must not be called");
     });
     const vector = fixture.vectors[0];
+
     if (vector === undefined) throw new Error("rarity fixture is empty");
+
     const first = resolveRarityRoll(
       {
         projectSeed: fixture.projectSeed,
@@ -204,6 +212,7 @@ describe("pure deterministic rarity resolver", () => {
       fixture.policy,
       fixture.request,
     );
+
     const second = resolveRarityRoll(
       {
         projectSeed: fixture.projectSeed,
@@ -213,6 +222,7 @@ describe("pure deterministic rarity resolver", () => {
       fixture.policy,
       fixture.request,
     );
+
     expect(first).toEqual(second);
     expect(first).toMatchObject({ ok: true, value: { outcome: vector.outcome } });
   });
@@ -228,7 +238,9 @@ describe("pure deterministic rarity resolver", () => {
         SKEWED_POLICY,
         SKEWED_REQUEST,
       );
+
       expect(result.ok, vector.eventId).toBe(true);
+
       if (!result.ok) continue;
       expect(result.value.outcome.tier, vector.eventId).toBe(vector.tier);
       expect(result.value.outcome.candidateId, vector.eventId).toBe(
@@ -248,14 +260,18 @@ describe("pure deterministic rarity resolver", () => {
       (total, tier) => total + SKEWED_POLICY.tierWeights[tier],
       0,
     );
+
     for (let index = 0; index < 16; index += 1) {
       const eventId = `skew-${String(index).padStart(4, "0")}`;
+
       const result = resolveRarityRoll(
         { projectSeed: SKEWED_SEED, scope: SKEWED_SCOPE, eventId },
         SKEWED_POLICY,
         SKEWED_REQUEST,
       );
+
       expect(result.ok, eventId).toBe(true);
+
       if (!result.ok) continue;
       const { outcome, provenance } = result.value;
 
@@ -263,24 +279,30 @@ describe("pure deterministic rarity resolver", () => {
       expect(SKEWED_POLICY.tierWeights[outcome.tier], eventId).toBeGreaterThan(0);
       let cumulative = 0;
       let expectedTier: RarityTierId | undefined;
+
       for (const tier of RARITY_TIERS) {
         cumulative += SKEWED_POLICY.tierWeights[tier];
+
         if (expectedTier === undefined && provenance.tierDraw < cumulative) {
           expectedTier = tier;
         }
       }
+
       expect(outcome.tier, eventId).toBe(expectedTier);
 
       const pool = SKEWED_REQUEST.candidates.filter(
         (candidate) => candidate.tier === outcome.tier,
       );
+
       expect(provenance.candidateTotalWeight, eventId).toBe(
         pool.reduce((total, candidate) => total + candidate.weight, 0),
       );
       cumulative = 0;
       let expectedCandidate: string | undefined;
+
       for (const candidate of pool) {
         cumulative += candidate.weight;
+
         if (
           expectedCandidate === undefined &&
           provenance.candidateDraw < cumulative
@@ -288,6 +310,7 @@ describe("pure deterministic rarity resolver", () => {
           expectedCandidate = candidate.candidateId;
         }
       }
+
       expect(outcome.candidateId, eventId).toBe(expectedCandidate);
     }
   });
@@ -341,6 +364,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
   it("binds provider evidence independently to each stored roll", () => {
     const base = manifest();
+
     const evidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
@@ -353,13 +377,16 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
+
     const evidenced = open(base, fixedHost());
     evidenced.dispatch(rarityCommand("roll-bound", fixture.request, evidence));
     evidenced.advance({ tick: 1, deltaMs: 16 });
+
     const differentEvidence: ModelProviderCallEvidence = {
       ...evidence,
       model: { ...evidence.model, version: "2026-09-01" },
     };
+
     evidenced.dispatch(rarityCommand("roll-unbound"));
     evidenced.dispatch(rarityCommand("roll-different", fixture.request, differentEvidence));
     evidenced.advance({ tick: 2, deltaMs: 16 });
@@ -379,16 +406,19 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
   it("refuses provider evidence added without its roll provenance binding", () => {
     const base = manifest();
+
     const resolved = resolveRarityRoll(
       {
         projectSeed: base.seed,
         scope: base.productId,
         eventId: "roll-retroactive",
       },
-      (base.rarity as RarityNamespace).policy,
+      base.rarity.policy,
       fixture.request,
     );
+
     if (!resolved.ok) throw new Error(resolved.message);
+
     const providerEvidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
@@ -401,12 +431,13 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
+
     expect(() =>
       open(
         {
           ...base,
           rarity: {
-            ...(base.rarity as RarityNamespace),
+            ...base.rarity,
             rolls: [{ ...resolved.value.record, providerEvidence }],
           },
         },
@@ -417,6 +448,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
   it("refuses stored rarity evidence outside Game or Web tool calls", () => {
     const base = manifest();
+
     const evidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
@@ -429,37 +461,42 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
-    for (const invalidEvidence of [
+
+    const invalidEvidenceFixtures = [
       { ...evidence, operation: "complete" },
       { ...evidence, profile: "@sceneaxi/profile-kids" },
-    ] as ModelProviderCallEvidence[]) {
+    ] as const;
+
+    for (const invalidEvidence of invalidEvidenceFixtures) {
       const resolved = resolveRarityRoll(
         {
           projectSeed: base.seed,
           scope: base.productId,
           eventId: "roll-invalid-evidence",
         },
-        (base.rarity as RarityNamespace).policy,
+        base.rarity.policy,
         fixture.request,
       );
+
       if (!resolved.ok) throw new Error(resolved.message);
       expect(() =>
-        open(
-          {
-            ...base,
-            rarity: {
-              ...(base.rarity as RarityNamespace),
-              rolls: [{ ...resolved.value.record, providerEvidence: invalidEvidence }],
+          open(
+            {
+              ...base,
+              rarity: {
+                ...base.rarity,
+                rolls: [{ ...resolved.value.record, providerEvidence: invalidEvidence }],
+              },
             },
-          },
-          fixedHost(),
-        ),
+            fixedHost(),
+          ),
       ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
     }
   });
 
   it("carries per-roll provider evidence through save and replay", () => {
     const base = manifest();
+
     const evidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
@@ -472,6 +509,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
+
     const session = open(base, fixedHost());
     session.dispatch(rarityCommand("roll-0000", fixture.request, evidence));
     session.advance({ tick: 1, deltaMs: 16 });
@@ -489,6 +527,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       ...evidence,
       model: { ...evidence.model, version: "2026-09-01" },
     };
+
     replayed.dispatch(rarityCommand("roll-0001", fixture.request, nextEvidence));
     replayed.advance({ tick: 2, deltaMs: 16 });
     replayed.dispatch(rarityCommand("roll-0002"));
@@ -501,7 +540,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
     const stripped = jsonCopy(save);
     const strippedRoll = stripped.productManifest.rarity?.rolls[0];
+
     if (strippedRoll === undefined) throw new Error("saved rarity roll missing");
+    // SAFETY: strippedRoll comes from the JSON copy of the saved roll with evidence above; the copy is mutable.
     delete (strippedRoll as { providerEvidence?: ModelProviderCallEvidence }).providerEvidence;
     expect(() => replay(stripped, fixedHost())).toThrow(
       RARITY_REFUSE_CODES.provenanceMismatch,
@@ -525,12 +566,13 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         index === 0 ? { ...candidate, weight: candidate.weight + 1 } : candidate,
       ),
     };
+
     try {
       session.dispatch(rarityCommand("roll-0000", changed));
       throw new Error("changed rarity request was accepted");
     } catch (error) {
       expect(error).toBeInstanceOf(KernelSessionError);
-      expect((error as KernelSessionError).code).toBe(
+      expect(error instanceof KernelSessionError ? error.code : undefined).toBe(
         RARITY_REFUSE_CODES.eventInputConflict,
       );
     }
@@ -547,6 +589,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
+
     expect(() =>
       session.dispatch(rarityCommand("roll-0000", fixture.request, retroactiveEvidence))
     ).toThrow(
@@ -563,18 +606,13 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
   it("refuses provider entropy at both request and command boundaries", () => {
     const session = open(manifest(), fixedHost());
+    const providerSeed = { type: "rarity-roll", eventId: "provider-seed", request: { ...fixture.request, seed: 99 } } as const;
+    const providerOutcome = { ...rarityCommand("provider-outcome"), outcome: { tier: "legendary", candidateId: "legendary-a" } } as const;
     expect(() =>
-      session.dispatch({
-        type: "rarity-roll",
-        eventId: "provider-seed",
-        request: { ...fixture.request, seed: 99 },
-      } as unknown as KernelCommand),
+      session.dispatch(providerSeed),
     ).toThrow(RARITY_REFUSE_CODES.providerEntropyForbidden);
     expect(() =>
-      session.dispatch({
-        ...rarityCommand("provider-outcome"),
-        outcome: { tier: "legendary", candidateId: "legendary-a" },
-      } as unknown as KernelCommand),
+      session.dispatch(providerOutcome),
     ).toThrow(RARITY_REFUSE_CODES.providerEntropyForbidden);
   });
 
@@ -586,7 +624,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
     const outcome = jsonCopy(save);
     const outcomeRoll = outcome.productManifest.rarity?.rolls[0];
+
     if (outcomeRoll === undefined) throw new Error("saved rarity roll missing");
+    // SAFETY: outcomeRoll is the existing JSON-copied saved roll; its outcome owns candidateId, and the copy is mutable.
     (outcomeRoll.outcome as { candidateId: string }).candidateId = "common-b";
     expect(() => replay(outcome, fixedHost())).toThrow(
       RARITY_REFUSE_CODES.outcomeMismatch,
@@ -594,7 +634,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
     const provenance = jsonCopy(save);
     const provenanceRoll = provenance.productManifest.rarity?.rolls[0];
+
     if (provenanceRoll === undefined) throw new Error("saved rarity roll missing");
+    // SAFETY: provenanceRoll is the existing JSON-copied saved roll; provenance owns requestDigest, and the copy is mutable.
     (provenanceRoll.provenance as { requestDigest: string }).requestDigest =
       `sha256:${"0".repeat(64)}`;
     expect(() => replay(provenance, fixedHost())).toThrow(
@@ -602,18 +644,24 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     );
 
     const request = jsonCopy(save);
+
     const dispatch = request.events.find(
       (event) => event.kind === "dispatch" && event.command.type === "rarity-roll",
     );
+
     if (dispatch?.kind !== "dispatch" || dispatch.command.type !== "rarity-roll") {
       throw new Error("saved rarity dispatch missing");
     }
+
+    // SAFETY: the dispatch kind/type guards above identify a rarity request; JSON copying made its candidate array mutable.
     const changedCandidates = dispatch.command.request.candidates as Array<{
       candidateId: string;
       tier: "common" | "uncommon" | "rare" | "epic" | "legendary";
       weight: number;
     }>;
+
     const changedFirst = changedCandidates[0];
+
     if (changedFirst === undefined) throw new Error("saved rarity candidate missing");
     changedFirst.weight += 1;
     expect(() => replay(request, fixedHost())).toThrow(
@@ -621,7 +669,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     );
 
     const schema = jsonCopy(save);
+
     if (schema.productManifest.rarity === undefined) throw new Error("saved rarity missing");
+    // SAFETY: the namespace existence check above identifies the saved rarity namespace; its JSON copy owns a mutable numeric schemaVersion.
     (schema.productManifest.rarity as { schemaVersion: number }).schemaVersion = 2;
     expect(() => replay(schema, fixedHost())).toThrow(
       RARITY_REFUSE_CODES.schemaVersionMismatch,
@@ -630,7 +680,8 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     const digest = {
       ...save,
       terminalDigest: `sha256:${"f".repeat(64)}`,
-    } as KernelSessionSaveArtifact;
+    };
+
     expect(() => replay(digest, fixedHost())).toThrow(/replay digest mismatch/);
   });
 
@@ -649,13 +700,17 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         },
         fixedHost(),
       );
+
       session.dispatch(rarityCommand(vector.eventId, SKEWED_REQUEST));
       session.advance({ tick: 1, deltaMs: 16 });
       const roll = session.observe().rarity?.rolls[0];
+
       if (roll === undefined) throw new Error(`missing weighted roll ${vector.eventId}`);
       expect(replay(jsonCopy(session.save()), fixedHost()).observe().rarity?.rolls[0]).toEqual(roll);
+
       return roll;
     });
+
     expect(
       rolls.map((roll) => ({
         eventId: roll.eventId,
@@ -676,7 +731,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     const save = jsonCopy(session.save());
 
     const rolled = save.productManifest.rarity;
+
     if (rolled === undefined) throw new Error("saved rarity namespace missing");
+
     const repriced = {
       ...save.productManifest,
       rarity: {
@@ -697,7 +754,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         throw new Error("a changed rarity policy was accepted");
       } catch (error) {
         expect(error).toBeInstanceOf(KernelSessionError);
-        expect((error as KernelSessionError).code).toBe(
+        expect(error instanceof KernelSessionError ? error.code : undefined).toBe(
           RARITY_REFUSE_CODES.policyChanged,
         );
       }
@@ -708,12 +765,13 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
   it("refuses a manifest whose productId cannot be the rarity resolution scope", () => {
     const scoped = { ...manifest(), productId: `p${"x".repeat(128)}` };
+
     try {
       open(scoped, fixedHost());
       throw new Error("an unusable rarity scope was accepted at open");
     } catch (error) {
       expect(error).toBeInstanceOf(KernelSessionError);
-      expect((error as KernelSessionError).code).toBe(
+      expect(error instanceof KernelSessionError ? error.code : undefined).toBe(
         RARITY_REFUSE_CODES.invalidIdentifier,
       );
     }
@@ -725,6 +783,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     session.advance({ tick: 1, deltaMs: 16 });
     const save = jsonCopy(session.save());
     const [dispatched, advanced] = save.events;
+
     if (dispatched?.kind !== "dispatch" || advanced?.kind !== "advance") {
       throw new Error("saved rarity event stream is not dispatch-then-advance");
     }
@@ -732,7 +791,8 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     const duplicated = {
       ...save,
       events: [dispatched, jsonCopy(dispatched), advanced],
-    } as KernelSessionSaveArtifact;
+    };
+
     expect(() => replay(duplicated, fixedHost())).toThrow(
       RARITY_REFUSE_CODES.duplicateEvent,
     );
@@ -748,15 +808,16 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       const malformed = {
         ...save,
         events: [{ kind: "dispatch", command, timestampMs: 1 }],
-      } as unknown as KernelSessionSaveArtifact;
+      };
+
       try {
-        replay(malformed, fixedHost());
+        replayMalformed(malformed, fixedHost());
         throw new Error("a malformed saved dispatch command was accepted");
       } catch (error) {
         expect(error, JSON.stringify(command ?? null)).toBeInstanceOf(
           KernelSessionError,
         );
-        expect((error as Error).message).toContain("invalid command");
+        expect(error instanceof Error ? error.message : undefined).toContain("invalid command");
       }
     }
   });
@@ -766,6 +827,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       { productId: "no-rarity-policy", seed: 42 },
       fixedHost(),
     );
+
     expect(() => session.dispatch(rarityCommand("roll-without-policy"))).toThrow(
       RARITY_REFUSE_CODES.policyAbsent,
     );
@@ -784,3 +846,26 @@ describe("rarity fixture policy shape", () => {
     });
   });
 });
+
+
+it("retains declarative gameplay when replay strips generated rarity rolls from an entity manifest", () => {
+  const s = open({ ...manifest(), gameplay: { profile: "game", initialState: { score: 0 }, actions: [{ id: "play.primary", effects: [{ kind: "add-state", key: "score", value: 1 }] }], timers: [] } }, fixedHost());
+  s.dispatch({ type: "rarity-roll", eventId: requireValue(fixture.vectors[0]).eventId, request: fixture.request });
+  s.dispatch({ type: "action", actionId: "play.primary" }); s.advance({ tick: 1, deltaMs: 16 });
+  expect(replay(JSON.parse(JSON.stringify(s.save())), fixedHost()).observe()).toEqual(s.observe());
+});
+
+function requireValue<T>(value: T | undefined | null): T {
+  if (value === undefined || value === null) throw new Error("Required fixture value is absent.");
+
+  return value;
+}
+
+type RarityCommandFixture = { readonly type: "rarity-roll"; readonly eventId: string; readonly request: RarityRollRequest; providerEvidence?: ModelProviderCallEvidence };
+
+type MalformedSaveFixture = Omit<KernelSessionSaveArtifact, "events"> & { events: readonly { kind: string; command: null | undefined | string | never[]; timestampMs: number }[] };
+
+type ReplayFixtureBoundary = (artifact: KernelSessionSaveArtifact | MalformedSaveFixture, host: KernelHost) => ReturnType<typeof replay>;
+
+// SAFETY: replay validates each saved command with snapshotPlainRecord before using it, so the malformed-command fixtures exercise its runtime refusal boundary without claiming to be valid commands.
+const replayMalformed = replay as ReplayFixtureBoundary;

@@ -1,0 +1,215 @@
+{
+  "lane": "catalog-session-adapter",
+  "status": "IMPLEMENTED_FOCUSED_VERIFIED_PENDING_SERIAL_WIRING",
+  "gap": "SITE-CATALOG-IDENTITY",
+  "productionStatus": "NOT_CERTIFIED",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "baseline": {
+    "adapterMissing": true,
+    "bothCatalogCompositionsMissing": true,
+    "existingPlaneDefaultUnwired": true,
+    "earlierRepairedFilesTouched": false
+  },
+  "contract": {
+    "version": 1,
+    "path": "/api/auth/own-session",
+    "method": "GET",
+    "credentialHeader": "x-sceneaxi-session",
+    "requestHeaders": [
+      "Accept",
+      "Origin",
+      "x-sceneaxi-session"
+    ],
+    "origin": "approved raw canonical configured DNS HTTPS; HTTP exact loopback only explicit development opt-in",
+    "envelope": "{version:1,ok:true,value:SitePrincipal}|{version:1,ok:false,reason:SiteRefusalReason}",
+    "cookies": "credentials:omit; no ambient forwarding/SSO",
+    "cache": "no-store request and response required",
+    "redirect": "error; response redirect/url substitution refused",
+    "responseBytes": 16384,
+    "deadlineMs": 2000,
+    "credentialLength": 4096,
+    "surface": "site pinned; Kids denies before any network",
+    "sessionBinding": "first-dot carried sessionId must match public response sessionId",
+    "clock": "same injected clock across both inner and outer ports"
+  },
+  "ownedFiles": [
+    {
+      "path": "packages/site-kit/src/catalog-server-fetch.ts",
+      "sha256": "d902013c74c02b02bb524f82adb49aa4f09a31586d2289e9f460d602f94274e0",
+      "new": true
+    },
+    {
+      "path": "packages/site-kit/test/catalog-server-fetch.test.ts",
+      "sha256": "6c329da70feab86dca1fa8ca80e51270ed11c95cb81a93317f9db3cb663417db",
+      "new": true
+    },
+    {
+      "path": "sites/catalog-game/src/lib/identity-plane.ts",
+      "sha256": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+      "new": true
+    },
+    {
+      "path": "sites/catalog-web/src/lib/identity-plane.ts",
+      "sha256": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+      "new": true
+    }
+  ],
+  "symbols": {
+    "packages/site-kit/src/catalog-server-fetch.ts": {
+      "CATALOG_SESSION_MAX_RESPONSE_BYTES": 10,
+      "CATALOG_SESSION_TIMEOUT_MS": 11,
+      "CatalogServerFetchOptions": 12,
+      "configuredOrigin": 28,
+      "inspectRequest": 53,
+      "boundedText": 92,
+      "parsePrincipal": 96,
+      "refusalStatus": 108,
+      "parseWire": 115,
+      "createCatalogServerFetchAdapter": 128,
+      "createCatalogServerIdentityPlane": 216
+    },
+    "sites/catalog-game/src/lib/identity-plane.ts": {
+      "createCatalogRequestIdentityPlane": 8,
+      "resolveCatalogViewer": "re-export line6"
+    },
+    "sites/catalog-web/src/lib/identity-plane.ts": {
+      "createCatalogRequestIdentityPlane": 8,
+      "resolveCatalogViewer": "re-export line6"
+    }
+  },
+  "failBeforePassAfter": [
+    {
+      "phase": "fresh baseline / before implementation",
+      "command": "pnpm exec vitest run packages/site-kit/test/catalog-server-fetch.test.ts --reporter=dot",
+      "exit": 1,
+      "output": "FAIL Cannot find module '../src/catalog-server-fetch.js'; Test Files 1 failed; Tests no tests",
+      "interpretation": "Confirmed absent adapter, not a failing provider call."
+    },
+    {
+      "phase": "public projection regression before tightening",
+      "command": "pnpm exec vitest run packages/site-kit/test/catalog-server-fetch.test.ts --reporter=dot",
+      "exit": 1,
+      "output": "3 failed | 42 passed (45): control-character email, 321-character email and 257-character bound userId returned ok:true instead of IDENTITY_ADAPTER_OUTPUT_INVALID",
+      "after": "Same three permanent assertions pass after matching endpoint public text bounds."
+    },
+    {
+      "phase": "clock composition regression before repair",
+      "command": "pnpm exec vitest run packages/site-kit/test/catalog-server-fetch.test.ts --reporter=dot",
+      "exit": 1,
+      "output": "1 failed | 46 passed (47): injected year-2000 valid session returned ok:false in outer catalog port",
+      "after": "Same assertion passes after forwarding the injected clock to the catalog plane as well as transport validation."
+    },
+    {
+      "phase": "intermediate tooling diagnostics, fixed not skipped",
+      "output": "ESLint forbidden non-null assertion in test (removed); tsc TS6379 from invalid --incremental false invocation (reran valid noEmit); four source/test typing errors (Node-only browser guard, exact optional token, literal surface fixed); six reverse static-import composite/subpath errors (actual site modules now runtime-imported with explicit structural function contracts, no type casts, no checks skipped); ESLint no-control-regex (replaced with bounded char-code checks)."
+    }
+  ],
+  "tested": [
+    {
+      "command": "pnpm exec vitest run packages/site-kit/test/catalog-server-fetch.test.ts --reporter=dot",
+      "exit": 0,
+      "result": "1 file / 47 tests PASS; permanent executable tests; log acceptance.log"
+    },
+    {
+      "command": "pnpm exec eslint packages/site-kit/src/catalog-server-fetch.ts packages/site-kit/test/catalog-server-fetch.test.ts sites/catalog-game/src/lib/identity-plane.ts sites/catalog-web/src/lib/identity-plane.ts",
+      "exit": 0,
+      "result": "All four owned source/test files clean"
+    },
+    {
+      "command": "pnpm exec tsc -p packages/site-kit/tsconfig.json --noEmit",
+      "exit": 0,
+      "result": "Strict package typecheck PASS, pinned installed TypeScript; no fullbuild"
+    },
+    {
+      "command": "pnpm -s check:boundaries",
+      "exit": 0,
+      "result": "27 packages verified against unchanged dependency-matrix.json"
+    },
+    {
+      "command": "git diff --check -- packages/site-kit/src/catalog-server-fetch.ts packages/site-kit/test/catalog-server-fetch.test.ts sites/catalog-game/src/lib/identity-plane.ts sites/catalog-web/src/lib/identity-plane.ts",
+      "exit": 0,
+      "result": "Owned paths check clean; no whole-checkout cleanliness claim"
+    }
+  ],
+  "testCoverage": [
+    "both actual storefront compositions default-unwired and configured positive",
+    "real own-session handler over in-memory Request/Response + authoritative port fixture, no providers/sockets",
+    "canonical unsafe origin matrix + explicit HTTP loopback",
+    "client role/deep/accessor/Host/Kids/missing carry no-dispatch",
+    "exact version/status/refusal/private projection/public text bounds",
+    "user/session binding + wrong-session replay + stale replay clock",
+    "no-store/credentials omit/redirect/error/url/media/cache policy",
+    "stream budget exact16384/onebyteover/content-length lies/zero-progress/UTF-8",
+    "header and body stalls, aborted errors, late-stream cancellation, no remaining deadline timers",
+    "Node server-only browser refusal"
+  ],
+  "dependencies": [
+    {
+      "lane": "own-session-endpoint",
+      "owner": "bg-110",
+      "state": "Versioned contract agreed; peer reports60 tests pass after unsafe origin tightening. Owning adapter test independently executes its real handler factory, not live Next/provider proof."
+    }
+  ],
+  "integrationRequests": [
+    {
+      "owner": "serial shared-manifest owner via bg-109/parent",
+      "path": "packages/site-kit/package.json",
+      "change": "Add export './catalog-server-fetch':'./src/catalog-server-fetch.ts'. No root barrel/port/matrix change required.",
+      "state": "REQUESTED; owning package resolution/export acceptance delegated"
+    },
+    {
+      "owner": "bg-109",
+      "paths": [
+        "vitest.config.ts",
+        "tsconfig.tests.json"
+      ],
+      "change": "Add narrow @sceneaxi/site-kit/catalog-server-fetch alias before root prefix and matching test tsconfig path.",
+      "state": "Owner reports aliases applied; real dynamic storefront tests resolve the narrow import."
+    },
+    {
+      "owner": "serial item-page integration owner",
+      "paths": [
+        "sites/catalog-game/src/app/item/[itemId]/page.tsx:23-26,86",
+        "sites/catalog-web/src/app/item/[itemId]/page.tsx:23-26,86"
+      ],
+      "change": "Import createCatalogRequestIdentityPlane/resolveCatalogViewer from '../../../lib/identity-plane.js'; use createCatalogRequestIdentityPlane with explicit approved server configuration. Keep existing readSessionToken explicit carry and commerce holds untouched.",
+      "state": "ACKNOWLEDGED bg-109; deferred until source handback"
+    },
+    {
+      "owner": "shared configured-origin owner via parent",
+      "path": "packages/site-kit/src/deep-link.ts:177",
+      "change": "Expose raw configuredValue additively, or otherwise validate canonical raw config before any normalization. Existing resolver NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN normalizes userinfo/path/query/hash through .origin; adapter must not accept a sanitized unsafe URL. Preserve existing public v1 semantics; no Host fallback. Separate explicit server approval flag (proposed SCENEAXI_CATALOG_OWN_SESSION_APPROVED=true) must be wired/documented by owner; default false.",
+      "state": "REQUESTED; no additional environment name actually read by child source"
+    }
+  ],
+  "notRun": [
+    "fullbuild",
+    "fullgate",
+    "owning site full TS builds",
+    "site production builds",
+    "browser/native",
+    "actual multi-origin HTTP socket",
+    "real provider/DB/network",
+    "production deployment/publication"
+  ],
+  "acceptanceLog": {
+    "path": "docs/audits/production-swarm/implementation-expansion-2026-10-02/catalog-session-adapter/acceptance.log",
+    "sha256": "671f646e8ed5daf43d5b3140d7a551fb8d225b34d52d2beb07af53e0303d21e7",
+    "normalization": "ANSI escapes stripped only; no assertion/output result changed"
+  },
+  "resources": {
+    "services": 0,
+    "ports": 0,
+    "browsers": 0,
+    "containers": 0,
+    "providers": 0,
+    "installs": 0,
+    "cleanup": "Fixtures in memory; stream readers canceled/released, deadline timers cleared, aborted transport signal and late stream cancellation asserted. No outstanding child resource."
+  },
+  "sourceHandback": {
+    "complete": true,
+    "sourceChangesAfterHandback": "NONE PLANNED; parent owns frozen-review scheduling",
+    "allowedNextWork": "serial shared exports/raw-config/page wiring and bounded acceptance after all child handbacks"
+  },
+  "historicalPasses": "No old failed visual/repair pass is claimed green; this is separately authorized scoped implementation."
+}

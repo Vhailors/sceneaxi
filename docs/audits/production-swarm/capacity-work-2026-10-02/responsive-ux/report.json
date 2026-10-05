@@ -1,0 +1,58 @@
+{
+  "taskId": "responsive-ux",
+  "status": "PARTIAL_AUXILIARY_PROOF",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "currentFingerprint": "99e295737a6e1018ccaf0cb49bf65253b0bcf4d6cde3ebf015286af54da1b37e",
+  "fingerprintScope": "Four site CSS files, design tokens, desktop chrome and web inspector only; not complete candidate",
+  "sourceHashes": {
+    "sites/umbrella/src/app/globals.css": "37ff7ca533d6ea48037f258b60c2937a95644929c197c24190fc7387f11f2009",
+    "sites/catalog-game/src/app/globals.css": "c12f47aba173b6e3f02b740404b6f8e9af698737a7266ec7c88804c1286b5eb0",
+    "sites/catalog-web/src/app/globals.css": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3",
+    "sites/kids/src/app/globals.css": "120f68a9e0763f8d04f3df76ca3484fa562724b39101dcf8c04d6e4d274260f0",
+    "packages/site-kit/src/design-tokens.ts": "bf58bf8646f400560f2e72d751a4cf62e5db152397068a04d6e61241919be486",
+    "apps/web-shell/src/inspector-app.ts": "50f26b71434c4463a88981d35eb4b948b5fcc264c449eb128ef967afed474ae6",
+    "apps/desktop-shell/src/chrome.ts": "1c45e9cdb94fdd251cdf2703b7801c63db54ae36f867693a36121d409662008f"
+  },
+  "executed": [
+    "20 existing before/after PNG SHA256/bytes/CRC/IHDR/viewport checks",
+    "2 corrupted expected digest negative controls: PNG_HASH_MISMATCH",
+    "Recorded mobile/desktop DOM document overflow metrics",
+    "Historical foreground contrast 3.421712 to 6.097978 on declared panel background",
+    "Python AST and embedded Node syntax; deferred default prints NOT_RUN"
+  ],
+  "deferred": [
+    "All fresh browser/native/GPU/build acceptance",
+    "Actual authenticated account history and long IDs",
+    "Real long-hash/diff/refusal/error transitions; theme/forced-color focus measurements",
+    "Complete candidate/published SHA and build provenance"
+  ],
+  "reproducedGaps": [
+    "Historical ledgers lack raw HTTP/page-error and complete source/build fingerprint",
+    "Account signed-out receipts are not authenticated purchase-history proof",
+    "Repeated focus samples are not unique requirements",
+    "Desktop compact blank refusal/focus issues retained from read-only deep-review08, not independently rerun"
+  ],
+  "refuted": [
+    "No historical PNG corruption among 20 selected receipts",
+    "No drift in four selected CSS files versus historical after hashes"
+  ],
+  "failuresRetained": [
+    {
+      "command": "python3 validate_receipts.py first run",
+      "exit": 1,
+      "output": "FileNotFoundError /home/devuser/Documents/Projects/docs/audits/production-swarm/finish-visual-postpr-sites.json",
+      "resolution": "Corrected auxiliary ROOT parents[6] to parents[5]; identical oracle passes"
+    }
+  ],
+  "artifacts": {
+    "validate_receipts.py": "b131a0cad657780edbe15119f72d7db2bf22ef004d3cfe5d59b2698524d806e8",
+    "browser_edges.py": "5f53a383d2f4065bd9b09b6315569d2cb5ac43e0ea7f8e59b2830411919139c6",
+    "intended-spec.json": "373bed7ebc8f55757a0c18e89d7ce86cd347c770d519bc900d26db62d4208de7",
+    "receipt-validation.json": "178a297a55c11e0b7d5712e87045949553cdc2cba1e9bd06ea53a281ef064644",
+    "deferred-plan.json": "496c1e7fc018042dd4dca8f8447b9f27505f372adb7897ac9b950d34b39c42a9",
+    "integration-proposal.md": "0005ba4c608f6f9289ae8691ad8600fe09d6f57ec27a86c9fd816de1b7dd3e42"
+  },
+  "handoff": "integration-proposal.md; preserve existing .ed-cr-current fg-2 fix, integrate auxiliary validator/spec after explicit Astra handoff; no product patch applied",
+  "resourcesCleaned": "No temporary fixtures, servers, browser processes, installs or containers allocated",
+  "duplicateFullReviewClaim": false
+}

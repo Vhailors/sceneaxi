@@ -1,5 +1,6 @@
 import {
   EDITOR_DEEP_LINK_PATH,
+  serializeEditorDocument,
   buildWebExperienceEditorView,
   buildEditorShellView,
   describeSiteAccessState,
@@ -60,11 +61,17 @@ export default async function EditorPage({
     const outcome = describeSiteAccessState(resolved.decision.reason, {
       next: sitePathWithSearchParams(EDITOR_DEEP_LINK_PATH, params),
     });
+
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor is not open for this request</h1>
+          <div className="title-row">
+            <h1>The editor is not open for this request</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel
           tone="deny"
@@ -97,12 +104,18 @@ export default async function EditorPage({
   }
 
   const state = readEditorState(params);
+
   if (!state.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>That editor link was refused</h1>
+          <div className="title-row">
+            <h1>That editor link was refused</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Link refused" reason={state.reason}>
           <p>{state.message}</p>
@@ -121,12 +134,18 @@ export default async function EditorPage({
   }
 
   const webState = readWebExperienceEditorState(params);
+
   if (!webState.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Web Experience editor</p>
-          <h1>That web editor state was refused</h1>
+          <div className="title-row">
+            <h1>That web editor state was refused</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Web Experience editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Web state refused" reason={webState.reason}>
           <p>{webState.message}</p>
@@ -138,12 +157,18 @@ export default async function EditorPage({
   }
 
   const render = renderEditorState(state.value);
+
   if (!render.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor session could not start</h1>
+          <div className="title-row">
+            <h1>The editor session could not start</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={render.reason}>
           <p>{render.message}</p>
@@ -156,12 +181,18 @@ export default async function EditorPage({
   }
 
   const starter = webEditorStarterArtifact();
+
   if (!starter.ok) {
     return (
-      <div className="page">
+      <div className="page page-narrow page-state">
         <div className="page-head">
-          <p className="eyebrow">Engine Desktop editor</p>
-          <h1>The editor session could not start</h1>
+          <div className="title-row">
+            <h1>The editor session could not start</h1>
+            <span className="chip chip-dormant">
+              <span className="dot" aria-hidden="true" />
+              Engine Desktop editor
+            </span>
+          </div>
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={starter.reason}>
           <p>{starter.message}</p>
@@ -174,10 +205,12 @@ export default async function EditorPage({
   }
 
   const editor = state.value;
+
   const webView = buildWebExperienceEditorView({
     state: webState.value,
     starterArtifactId: starter.value.artifactId,
   });
+
   const view = buildEditorShellView({
     state: editor,
     render: render.value,
@@ -204,6 +237,7 @@ export default async function EditorPage({
             ? []
             : [{ name: "artifact", value: editor.deepLink.artifactRef }]),
         ];
+
   const carriedTransforms = editor.instances
     .filter((instance) => instance.instanceId !== editor.selectedInstanceId)
     .map((instance) => ({
@@ -213,6 +247,8 @@ export default async function EditorPage({
 
   return (
     <>
+      <span hidden data-editor-project-digest={(editor.profileId === "web" ? webView.documentDigest : render.value.documentDigest).replace(/^sha256:/, "")}
+        data-editor-project-owner={resolved.decision.mode === "preview" ? "preview-local" : resolved.access.principal?.user.userId ?? ""} />
       {/*
         The shell is a fixed, opaque application surface, so anything rendered beside it
         in normal flow is painted underneath it on a page that does not scroll. These
@@ -287,6 +323,9 @@ export default async function EditorPage({
         )}
       </div>
       <EditorShell
+        projectOwner={resolved.decision.mode === "preview" ? "preview-local" : resolved.access.principal?.user.userId ?? ""}
+        projectDigest={(editor.profileId === "web" ? webView.documentDigest : render.value.documentDigest).replace(/^sha256:/, "")}
+        projectDocument={editor.profileId === "web" ? serializeEditorDocument(webView.document) : render.value.documentBytes}
         view={view}
         scene={render.value.mountable}
         selectedInstanceId={editor.selectedInstanceId}

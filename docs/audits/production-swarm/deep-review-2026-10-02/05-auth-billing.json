@@ -1,0 +1,229 @@
+{
+  "review": "05-auth-billing",
+  "date": "2026-10-02",
+  "verdict": "FAIL",
+  "narrowGoal": "FAIL: incomplete merge-safe published auth/billing artifact; visual sequence delegated, not certified by this lane",
+  "productionGoal": "FAIL: boundary defects and unverified provider/economic/end-to-end requirements",
+  "applicationRoot": "/home/devuser/Documents/Projects/sceneaxi",
+  "artifacts": {
+    "pr": {
+      "number": 312,
+      "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+      "head": "346933c105305224d575bf9319256301c1eeabfa",
+      "base": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+      "verdict": "FAIL",
+      "executed": false
+    },
+    "current": {
+      "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "dirty": true,
+      "verdict": "FAIL",
+      "boundedCheckout": "PASS",
+      "disposablePg": "PASS",
+      "greenTransferredToPr": false
+    }
+  },
+  "findings": [
+    {
+      "id": "05-001",
+      "severity": "P0",
+      "verdict": "FAIL",
+      "artifact": "pr",
+      "evidence": [
+        "346933c105305224d575bf9319256301c1eeabfa:packages/auth (empty subtree)",
+        "346933c105305224d575bf9319256301c1eeabfa:packages/billing/package.json (absent)",
+        "346933c105305224d575bf9319256301c1eeabfa:packages/billing/src/entitlements.ts (absent)",
+        "346933c105305224d575bf9319256301c1eeabfa:packages/billing/src/metering.ts (absent)"
+      ],
+      "expectation": "Retain manifests and imported package implementations in exact PR tree",
+      "observed": "git show exits128 for each named missing path; entire auth subtree absent",
+      "status": "REPRODUCED_STRUCTURAL",
+      "fixAcceptance": "Reconstruct intended complete PR over base, preserve untouched files, verify every import/export and unchanged mandatory gates on NEW exact head"
+    },
+    {
+      "id": "05-002",
+      "severity": "P0",
+      "verdict": "FAIL",
+      "artifact": "pr",
+      "evidence": [
+        "346933c105305224d575bf9319256301c1eeabfa:sites/umbrella/src/app/api/checkout/route.ts:5",
+        "346933c105305224d575bf9319256301c1eeabfa:sites/umbrella/src/app/api/checkout/checkout-handler.ts (absent)",
+        "tests/sites/billing-final-acceptance.test.ts:4"
+      ],
+      "expectation": "Executable origin-first bounded handler included in PR",
+      "observed": "Published route and test import handler absent from exact tree; local handler untracked",
+      "status": "REPRODUCED_STRUCTURAL",
+      "fixAcceptance": "Include handler and execute owning test and production site build on updated exact PR head preserving origin/limit/duplicate/redirect negative guarantees"
+    },
+    {
+      "id": "05-003",
+      "severity": "P1",
+      "verdict": "FAIL",
+      "artifact": "both-source",
+      "evidence": [
+        "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc:sites/umbrella/src/lib/provider-adapters.ts:59",
+        "sites/umbrella/src/lib/provider-adapters.ts:65-67",
+        "sites/umbrella/src/lib/provider-adapters.ts:111-115"
+      ],
+      "expectation": "Unknown provider-output boundary and compatible existing adapter signature retained",
+      "observed": "Read-only virtual TypeScript consumer of old query returning Record<string,unknown> produces TS2322 under current NeonDatabase type; PR same bytes",
+      "status": "REPRODUCED_TYPE_INCOMPATIBILITY",
+      "fixAcceptance": "Restore unknown output boundary plus per-column narrowing or explicitly version compatible validated port; old-consumer compile and hostile-column runtime oracles required"
+    },
+    {
+      "id": "05-004",
+      "severity": "P2",
+      "verdict": "FAIL",
+      "artifact": "current-runtime; identical PR serializer source",
+      "evidence": [
+        "sites/umbrella/src/lib/provider-adapters.ts:1072-1080",
+        "packages/billing/src/store.ts:963-965",
+        "packages/billing/src/hosted-ai.ts:818-820",
+        "packages/billing/src/hosted-ai.ts:179-204"
+      ],
+      "expectation": "Lossless bounded validated generic response recovery",
+      "observed": "Injected database saves Map answer successfully as empty JSON object; JSON.stringify runs before bounds and may invoke hooks; restored JSON cast to generic Response",
+      "status": "REPRODUCED_SERIALIZER_LOSS; paid end-to-end recovery NOT_EXECUTED",
+      "fixAcceptance": "Bounded accessor-free JSON response contract or encode/decode codec; preserve answer or precise unsupported contract; Map/Date/BigInt/accessor/toJSON/restart/no-second-provider oracles"
+    },
+    {
+      "id": "05-005",
+      "severity": "P2",
+      "verdict": "FAIL",
+      "artifact": "current-runtime; same conversion present in PR-source",
+      "evidence": [
+        "packages/billing/src/hosted-ai.ts:616-620"
+      ],
+      "expectation": "Invalid unknown capability returns named BillingOutcome without invoking conversion hooks",
+      "observed": "Hostile toString rejects runMeteredModelCall with HOSTILE STRINGIFICATION before provider; same preexisting conversion, not new predicate-rewrite regression",
+      "status": "REPRODUCED_RUNTIME",
+      "fixAcceptance": "Fixed or primitive-only bounded diagnostic; owning negative tests for throwing conversions/accessors/proxies with named refusal and zero provider/store calls"
+    }
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run tests/sites/billing-final-acceptance.test.ts --reporter=verbose",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "artifact": "current",
+      "exit": 0,
+      "pass": 10,
+      "fail": 0,
+      "kind": "hermetic injected authority; not real auth/Stripe"
+    },
+    {
+      "command": "memory-only Node registerHooks source transpilation; hostile Origin Request.body getter trap",
+      "artifact": "current",
+      "exit": 0,
+      "observed": {
+        "status": 403,
+        "bodyReads": 0,
+        "authority": 0
+      }
+    },
+    {
+      "command": "docker image inspect postgres:17-alpine --format '{{.Id}}' && node --test db/local-postgres-oracle.mjs",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "artifact": "current",
+      "exit": 0,
+      "pass": 15,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 9255,
+      "cachedImage": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "disposable": true,
+      "restoreTables": 24,
+      "coverage": [
+        "migration lock refresh race",
+        "competing ledger next sequence",
+        "chain witnesses/ranges",
+        "replay",
+        "reservation affordability race",
+        "response-ready debit and completion",
+        "rolling checkout budget",
+        "competing sixth attempt",
+        "corrupt-history migration refusal",
+        "indexes",
+        "populated restore counts/digests and guards"
+      ]
+    },
+    {
+      "command": "memory-only TypeScript createProgram root hosted-ai.ts actual source deps noEmit absolute config/rootDir",
+      "artifact": "current",
+      "diagnostics": 0,
+      "scope": "hosted-ai source and dependency closure only; NOT root build",
+      "invalidPreliminarySetups": [
+        "relative config setup",
+        "TS2209 ambiguous root"
+      ]
+    },
+    {
+      "command": "memory-only TypeScript virtual legacy NeonDatabase consumer",
+      "artifact": "current-types",
+      "expectedCompatible": true,
+      "observed": "TS2322 unknown not assignable to SqlValue",
+      "verdict": "FAIL"
+    }
+  ],
+  "refutations": [
+    "No current auth source rewrite vs PR base: packages/auth diff empty; entire unchanged package omitted from published PR",
+    "Current origin-first and byte-limit implementation is tested; incomplete PR cannot inherit local green",
+    "Local migration/reservation/quota races are no longer wholly unverified: fresh disposable PG15 tests pass",
+    "Do not attribute hosted-ai.ts:833 unknown-response compile error: StoreBoundaryValue aliases current validateCreditLedgerEntry unknown input; scoped source checker has zero diagnostics",
+    "Historical4513/544 or4297 test receipts do not certify either present artifact",
+    "Hostile capability conversion defect survives earlier implementation; not newly introduced by primitive predicate wrappers"
+  ],
+  "sourceHashes": {
+    "sites/umbrella/src/lib/provider-adapters.ts": {
+      "sha256": "050fd5f1d7d71b61218e549895e8c352c8cd532a34f20c890cb05a8b94ace6b8",
+      "sameAsPr": true
+    },
+    "sites/umbrella/src/lib/identity-plane.ts": {
+      "sha256": "e3091b9fc0817439c43364333698097809df7f251a4ad8e9f9fefbc9b33bcd34",
+      "sameAsPr": true
+    },
+    "db/migrations/0008_credit_chain_hosted_budget.sql": {
+      "sha256": "607e13b126d842e0bcadd99f969b4ce4eaa661d29dae25cf14eb3d084baa0a15",
+      "sameAsPr": true
+    },
+    "packages/billing/src/hosted-ai.ts": {
+      "sha256": "961c0c114685ac30b76152b157e8b8c6bc14b852769193ac37f7e8ac29834cbc",
+      "sameAsPr": false
+    },
+    "packages/billing/src/store.ts": {
+      "sha256": "6cb08f65a83490ff6cc12ddd72ce2f062c3a84d49f668b5799e074c3d76a2424",
+      "sameAsPr": false
+    },
+    "tests/sites/billing-final-acceptance.test.ts": {
+      "sha256": "0dc4c60ae16f4aab89250c4423ffb6a6143220ac6ff2eb3a9101bd591ef5b37d",
+      "sameAsPr": true
+    },
+    "db/local-postgres-oracle.mjs": {
+      "sha256": "dc45d85cdb9b0bc624f4ff42452502ce2deaba0f5b7a0e10d9c51ff6a66114d7",
+      "sameAsPr": true
+    },
+    "sites/umbrella/src/app/api/checkout/checkout-handler.ts": {
+      "sha256": "a4c3a2a93dfd3bfa94daefe5fd8e4f655da4330b17aa67d50449056ade6a3ab3",
+      "sameAsPr": false,
+      "prPresent": false
+    }
+  },
+  "limits": [
+    "Selective source review, not exhaustive auth/billing audit",
+    "No PR runtime execution possible with missing dependency subtree",
+    "No full-repo build/gate rerun; serial build reviewer owns it",
+    "No real credentials/providers/money/production DB used",
+    "No live economic-policy adequacy or physical/native acceptance",
+    "No paid end-to-end Map recovery executed",
+    "No prolonged capacity, hostile-proxy exhaustive proof, different-account deadlock stress or crashed pending reconciliation",
+    "No visual-in-PR certification by this lane"
+  ],
+  "writes": [
+    "docs/audits/production-swarm/deep-review-2026-10-02/05-auth-billing.md",
+    "docs/audits/production-swarm/deep-review-2026-10-02/05-auth-billing.json"
+  ],
+  "productEdits": false,
+  "shellCommandCountBeforeValidation": 11,
+  "maxCommandTimeoutMs": 120000,
+  "shellCommandCountTotal": 12,
+  "reportValidation": "PASS: JSON parse, five unique findings, all recorded current source hashes stable, exact worktree HEAD unchanged"
+}

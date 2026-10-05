@@ -1,0 +1,71 @@
+--- PR-346933c/sites/kids/src/app/globals.css
++++ post-PR/sites/kids/src/app/globals.css
+@@ -54,8 +54,7 @@
+   border-color: var(--kids);
+ }
+ 
+-button:focus-visible,
+-summary:focus-visible {
++:focus-visible {
+   outline: 3px solid var(--focus);
+   outline-offset: 3px;
+ }
+@@ -240,6 +239,9 @@
+ }
+ 
+ .activity-message {
++  min-height: 3lh;
++  display: flex;
++  align-items: center;
+   margin: 0;
+   color: var(--fg-2);
+   font-size: 0.98rem;
+@@ -293,6 +295,11 @@
+ }
+ 
+ .choice-symbol {
++  display: grid;
++  place-items: center;
++  width: 2rem;
++  height: 2rem;
++  flex: none;
+   font-size: 1.8rem;
+   line-height: 1;
+ }
+@@ -304,6 +311,7 @@
+ }
+ 
+ .piece-count {
++  font-variant-numeric: tabular-nums;
+   margin: 12px 0 0;
+   color: var(--fg-2);
+   font-size: 0.86rem;
+@@ -330,9 +338,28 @@
+ 
+ .grownups summary {
+   width: fit-content;
++  min-height: 44px;
++  padding: 8px 12px;
++  border: 1px solid var(--line);
++  border-radius: 8px;
+   color: var(--fg);
+   cursor: pointer;
+   font-weight: 750;
++}
++
++.grownups summary:hover,
++.grownups[open] summary {
++  background: var(--bg-control);
++  border-color: var(--fg-2);
++}
++
++/* SAFETY: paint only; keyboard activation, pressed state and reducers are unchanged. */
++button:active:not(:disabled) {
++  box-shadow: inset 0 -3px 0 var(--fg-2);
++}
++
++.choice.is-selected {
++  box-shadow: inset 0 -3px 0 var(--bg-base);
+ }
+ 
+ .grownups p {

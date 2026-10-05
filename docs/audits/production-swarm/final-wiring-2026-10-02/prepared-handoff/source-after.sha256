@@ -1,0 +1,5 @@
+80912d7d6236154b691e8fb51834565a1e55ae695df09826cd5789ae70169131  apps/desktop-shell/src/session.ts
+8b419062f1d1b5edba4514921fd10c483afdece9ab536a35f40e4e04de395594  apps/desktop-shell/test/prepared-asset-handoff.test.ts
+d28d48d0c85c894777b9d45428b382d19821344bafe7a6be8951ae0881cd31db  desktop/linux/src/lib/bridge.ts
+56987340c882be08a94fca66d34f24c48be51bca0f29e327f6ceee06b64fde1b  desktop/linux/scripts/build.mjs
+b506f43b4da6318b310063de5ef02596831dc0195825f5fc9ec14075ba9478a5  desktop/linux/test/prepared-asset-handoff.test.ts

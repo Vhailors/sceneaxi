@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-10-01T20:00:51.516Z",
+  "sources": [
+    "finish-assets-kids.json",
+    "finish-authoring.json",
+    "finish-cli-desktop.json",
+    "finish-engine.json",
+    "finish-integration-audit-desktop-linux.json",
+    "finish-integration-audit-desktop-macos.json",
+    "finish-integration-audit-desktop-windows.json",
+    "finish-integration-audit-root.json",
+    "finish-integration-audit-sites-catalog-game-after.json",
+    "finish-integration-audit-sites-catalog-game.json",
+    "finish-integration-audit-sites-catalog-web-after.json",
+    "finish-integration-audit-sites-catalog-web.json",
+    "finish-integration-audit-sites-kids-after.json",
+    "finish-integration-audit-sites-kids.json",
+    "finish-integration-audit-sites-umbrella-after.json",
+    "finish-integration-audit-sites-umbrella.json"
+  ],
+  "rowSources": 16,
+  "rows": 65,
+  "statusCounts": {
+    "DONE_IMPLEMENTED_VERIFIED": 58,
+    "NOT_CLOSED_SHARED_OWNERSHIP": 1,
+    "RECLASSIFIED_INTENTIONAL": 2,
+    "RECLASSIFIED_EXTERNAL": 4
+  },
+  "notes": [
+    "finish-integration-audit-desktop-linux.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-desktop-macos.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-desktop-windows.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-root.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-catalog-game-after.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-catalog-game.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-catalog-web-after.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-catalog-web.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-kids-after.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-kids.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-umbrella-after.json: no row array (keys: actions,advisories,muted,metadata)",
+    "finish-integration-audit-sites-umbrella.json: no row array (keys: actions,advisories,muted,metadata)"
+  ],
+  "verification": {
+    "build": "pass",
+    "gate": "294 files / 4513 tests + 40 Node contracts, exit 0",
+    "golden": "57 files / 544 tests, exit 0",
+    "sdk": "163 entries / 440273 bytes",
+    "sites": "four production builds + typechecks pass",
+    "browserProofs": "12+16+5 assertions",
+    "providerSuites": "24+7 tests"
+  },
+  "residuals": [
+    "padded-8MiB GUI reload stall: open known defect, importer unchanged, 120s stall evidence in finish-cli-desktop notes",
+    "sharp advisories blocked by Next allowed range: documented triage"
+  ]
+}

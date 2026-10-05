@@ -1,0 +1,26 @@
+# own-session auxiliary acceptance
+
+Task ID: capacity-own-session-2026-10-02. Product source is frozen; this directory alone is writable. This is supplementary proof, not a duplicate review or a claim that a fix landed.
+
+## Result and reproducible evidence
+
+Run `python3 docs/audits/production-swarm/capacity-work-2026-10-02/own-session/contract-check.py` from any directory. `evidence.json` records each exact input, observed response/refusal/header, SHA-256, assertion and current source fingerprint; `acceptance.log` records the run. Existing TypeScript transpiles unchanged AST-selected declarations in memory. No dist artifact was used or assumed current. This exercises actual source handler/adapter contracts with injected synthetic verifier/provider fixtures, **not** a running Next endpoint or Better Auth/database integration.
+
+Executed: 20 observations (15 PASS, four boundary gaps, one missing endpoint); both negative controls PASS by detecting deliberately wrong user binding and bypassed no-store wrapping. Python syntax checked. Initial extraction runs failed with ENOENT for absent server-fetch and unbound extraction constants; harness now records absence and executes real source constants. Final source-only assertions pass.
+
+## Exact subjects / observed gaps
+
+- `sites/umbrella/src/app/api/auth/[...all]/route.ts:6-7`: GET/POST statically point to `betterAuthProviderHandler` (route SHA-256 `d79348ef34a463aa1c1d6eef329b902e032811dcd917f0ab627963747bf8f9cb`).
+- `sites/umbrella/src/provider/better-auth-provider.ts:630-642,652-695`: actual handler factory returns `/api/auth/own-session` **404 NOT_FOUND**, cache-control **no-store**, without invoking the provider fixture. Existing `/api/auth/get-session` is a separate provider contract, not an invented own-session success. Handler enforces no-store even when fixture emits public caching; unavailable runtime returns 503. Missing/hostile Origin reaches the injected provider: wrapper-boundary observation only, **not proof** of bypassing real Better Auth origin validation.
+- `sites/umbrella/src/lib/identity-plane.ts:383-396,903-944`: absent/malformed carry makes zero verifier calls; explicit `session-a.secret-a` passes exact sessionId/token/surface; expired verifier refusal becomes `IDENTITY_SESSION_EXPIRED`. Positive principal preserves matching user/session binding. Injected cross-user principal is not independently rejected by this adapter: upstream IdentityPort validation is NOT RUN, so this is not a full product vulnerability claim. Identity source SHA-256 `e3091b9fc0817439c43364333698097809df7f251a4ad8e9f9fefbc9b33bcd34`.
+- `packages/site-kit/src/site-session.ts:19-21,134-147`: existing explicit `x-sceneaxi-session` precedence, no ambient cookie lookup; configured Origin comparison refuses missing/hostile Origin with `SITE_REQUEST_CROSS_ORIGIN`. General form helper falls back to request URL without configuration: own-session must require configured origin separately.
+- `packages/site-kit/src/catalog-identity.ts:65-73`: actual catalog viewer forwards only supplied carry and source-owned surface; omitted carry stays omitted.
+- `packages/site-kit/src/server-fetch.ts`, `packages/site-kit/src/catalog-server-fetch.ts`, and `sites/catalog-game/src/lib/identity-plane.ts` are **MISSING in the current checkout**. No adapter/network cookie-forwarding PASS can be claimed. Full fingerprints and exact response headers are in evidence.
+
+## Concrete serial integration handoff
+
+`own-session-handler.patch` is an unapplied minimum injectable handler/interface proposal, not landed source. It consumes existing SiteIdentityPort, configured-origin resolver result and `SITE_SESSION_HEADER`; issues no tokens and invents no SSO. Integrator must compose the existing source-owned authenticated identity port plus `resolveUmbrellaOriginConfiguration(env).origin`, add the explicit `/api/auth/own-session` GET route, review response/refusal/status contract, and implement missing server-fetch/catalog adapters with explicit carry, no ambient Cookie/Authorization forwarding, no-store fetch, redirect refusal and bounded response handling. Handler checks authenticated user/session binding; only explicit header is consumed. Proposal typechecking and route composition are deferred.
+
+`socket-acceptance.py` is an executable real HTTP acceptance oracle, **NOT RUN**. Preconditions: explicit handoff, isolated deployment/unique caller-owned port, proposed route/adapters integrated, deterministic valid and expired credentials from a synthetic existing IdentityPort fixture, configured origin matching `--base`, no production/provider access. Run its documented command; it checks missing/hostile Origin, cookie-only refusal, exact no-store/pragma/Vary, authenticated user/session/surface, expiry and a live wrong-user negative control. Credentials in emitted evidence must remain synthetic. It launches no services and never follows redirects.
+
+Resources: no ports, services, fixtures outside this directory, dependencies, credentials, browser, builds or containers created; no cleanup required. Product tree was not edited, staged, committed, pushed, merged or deployed. All heavy/full-runtime checks remain NOT RUN. This is auxiliary proof only, not a duplicate full-review claim.

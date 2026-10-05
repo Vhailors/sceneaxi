@@ -10,11 +10,17 @@ import {
   type DesktopLocalBridgePermission,
   type DesktopLocalBridgeToolName,
   type JsonObject,
+  type JsonValue,
+  type DesktopLocalBridgeResponse,
 } from "@sceneaxi/schemas";
 import { callDesktopLocalBridge, type DesktopLocalBridgeClient } from "./desktop-client.js";
 import { failure, success, type CliOutcome, type ResultPayload } from "./envelope.js";
 import { parseVerbArgs, requireFlag } from "./verb-args.js";
 import { refuseUnknownArgs } from "./verb-support.js";
+
+type BridgeCall = { descriptorPath?: string; permission: DesktopLocalBridgePermission; tool: DesktopLocalBridgeToolName; input: JsonObject };
+
+type BridgeErrorDetails = { bridgeCode: string; bridgeDetail: string | null; transaction?: Extract<DesktopLocalBridgeResponse, { ok: false }>["error"]["transaction"] };
 
 export function runDesktopBridgeTools(): ResultPayload {
   return Object.freeze({
@@ -24,10 +30,19 @@ export function runDesktopBridgeTools(): ResultPayload {
     commandSchemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
     commands: EDITOR_COMMAND_REGISTRY,
     tools: DESKTOP_LOCAL_BRIDGE_TOOLS,
+    workflows: {
+      play: "sceneaxi.run.play",
+      stop: "sceneaxi.run.stop",
+      build: "sceneaxi.project.build",
+      localAssistantBuild: "sceneaxi.assistant.local.start",
+      webExport: "Packaged Ship menu; no admitted RPC export tool",
+      nativeRelease: "Separate host/signing/publication authority; project.build is not a release",
+    },
   });
 }
 
 const STATUS_FLAGS = new Set(["--descriptor"]);
+
 const CALL_FLAGS = new Set(["--tool", "--input-json", "--allow", "--descriptor"]);
 
 function invoke(
@@ -44,10 +59,12 @@ function invoke(
     ...call,
     id: "sceneaxi-cli-1",
   });
+
   if (!result.ok) {
     const failureClass = result.code === "LOCAL_BRIDGE_RESPONSE_INVALID"
       ? "BRIDGE_PROTOCOL"
       : "BRIDGE_UNAVAILABLE";
+
     return failure(failureClass, result.message, {
       path,
       details: { bridgeCode: result.code },
@@ -57,27 +74,27 @@ function invoke(
       ],
     });
   }
+
   if (!result.response.ok) {
+    const details: BridgeErrorDetails = { bridgeCode: result.response.error.code, bridgeDetail: result.response.error.detail };
+
+    if (result.response.error.transaction !== undefined) details.transaction = result.response.error.transaction;
+
     return failure("BRIDGE_REFUSED", result.response.error.message, {
       path,
-      details: {
-        bridgeCode: result.response.error.code,
-        bridgeDetail: result.response.error.detail,
-        ...(result.response.error.transaction === undefined
-          ? {}
-          : { transaction: result.response.error.transaction }),
-      },
+      details,
       help: [
         `The desktop bridge refused ${call.tool}`,
         "Run `sceneaxi desktop bridge status --json` to verify the active desktop instance",
       ],
     });
   }
+
   return success(
     Object.freeze({
       connected: true,
       tool: call.tool,
-      response: result.response.result as Record<string, unknown>,
+      response: result.response.result,
     }),
     [
       "The response came from the discovered same-user desktop Unix socket",
@@ -93,50 +110,64 @@ export function runDesktopBridgeCall(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, CALL_FLAGS, path);
+
   if (unknown) return unknown;
+
   for (const flag of ["--tool", "--input-json", "--allow", "--descriptor"]) {
     if (args.switches.has(flag)) return callValidation(path, `Missing value for ${flag}`);
   }
+
   const toolFlag = requireFlag(args, "--tool");
+
   if (!toolFlag.ok) return callValidation(path, toolFlag.message);
   const definition = desktopLocalBridgeTool(toolFlag.value);
+
   if (definition === undefined) {
     return callValidation(path, `Unknown desktop bridge tool: ${toolFlag.value}`);
   }
+
   const allow = requireFlag(args, "--allow");
+
   if (!allow.ok) {
     return callValidation(
       path,
       `${allow.message}; ${definition.name} requires --allow ${definition.permission}`,
     );
   }
+
   if (allow.value !== definition.permission) {
     return callValidation(
       path,
       `Permission ${allow.value} does not match ${definition.name}; required: ${definition.permission}`,
     );
   }
+
   const rawInput = args.flags.get("--input-json") ?? "{}";
-  let input: unknown;
+  let input: JsonValue;
+
   try {
-    input = JSON.parse(rawInput) as unknown;
+    // SAFETY: JSON.parse produces a JSON value from CLI bytes; the tool schema is validated below.
+    input = JSON.parse(rawInput) as JsonValue;
   } catch {
     return callValidation(path, "--input-json must be valid JSON.");
   }
-  const toolName = definition.name as DesktopLocalBridgeToolName;
+
+  const toolName = definition.name;
+
   if (!validateDesktopLocalBridgeToolInput(toolName, input)) {
     return callValidation(
       path,
       `--input-json does not match the checked-in schema for ${definition.name}.`,
     );
   }
+
   const descriptorPath = args.flags.get("--descriptor");
-  return invoke(path, client, {
-    ...(descriptorPath === undefined ? {} : { descriptorPath }),
-    permission: definition.permission,
-    tool: toolName,
-    input,
-  });
+
+  const call: BridgeCall = { permission: definition.permission, tool: toolName, input };
+
+  if (descriptorPath !== undefined) call.descriptorPath = descriptorPath;
+
+  return invoke(path, client, call);
 }
 
 function callValidation(path: readonly string[], message: string): CliOutcome {
@@ -169,17 +200,20 @@ export function runDesktopBridgeStatus(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, STATUS_FLAGS, path);
+
   if (unknown) return unknown;
+
   if (args.switches.has("--descriptor")) {
     return failure("VALIDATION", "Missing value for --descriptor", { path });
   }
+
   const descriptorPath = args.flags.get("--descriptor");
-  return invoke(path, client, {
-    ...(descriptorPath === undefined ? {} : { descriptorPath }),
-    permission: "bridge:connect",
-    tool: "sceneaxi.bridge.handshake",
-    input: {},
-  });
+
+  const call: BridgeCall = { permission: "bridge:connect", tool: "sceneaxi.bridge.handshake", input: {} };
+
+  if (descriptorPath !== undefined) call.descriptorPath = descriptorPath;
+
+  return invoke(path, client, call);
 }
 
 export function desktopBridgeStatusHelp(): ResultPayload {
@@ -190,4 +224,21 @@ export function desktopBridgeStatusHelp(): ResultPayload {
       "--descriptor": "Override the local discovery descriptor path (tests and isolated installs)",
     }),
   });
+}
+
+
+/** Thin discoverable aliases keep the exact permission/input validation of bridge call. */
+export function runDesktopAlias(path: readonly string[], tokens: readonly string[], tool: string, client?: DesktopLocalBridgeClient): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, new Set(["--input-json", "--allow", "--descriptor"]), path);
+
+  if (unknown) return unknown;
+
+  return runDesktopBridgeCall(path, ["--tool", tool, ...tokens], client);
+}
+
+export function desktopAliasHelp(command: string, tool: string): ResultPayload {
+  const definition = desktopLocalBridgeTool(tool);
+
+  return { command, description: `Permission-bound alias for ${tool}; requires a running same-user desktop`, flags: { "--allow": `Required: ${definition?.permission ?? "unknown"}`, "--input-json": "Exact input schema from desktop bridge tools", "--descriptor": "Local discovery path" }, tool, inputSchema: definition?.inputSchema };
 }

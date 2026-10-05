@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T19:00:00Z",
+  "title": "Design System: SceneAxi",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Signal Orange", "canonical": "#FF6B2C", "tonalRamp": ["#3A1405", "#5C210A", "#8A3210", "#B84418", "#E35A22", "#FF6B2C", "#FF8A54", "#FFC2A3"] },
+      "ok": { "role": "secondary", "displayName": "Verified Mint", "canonical": "#5EEAD4", "tonalRamp": ["#0D2422", "#14403B", "#1E5F57", "#2C8378", "#3FA99B", "#5EEAD4", "#93F1E3", "#CCF8F1"] },
+      "danger": { "role": "secondary", "displayName": "Refusal Red", "canonical": "#FF4D5E", "tonalRamp": ["#1A1113", "#3A2126", "#6B2530", "#A3303F", "#D63C4E", "#FF4D5E", "#FF8590", "#FFC4C9"] },
+      "stale": { "role": "tertiary", "displayName": "Stale Bronze", "canonical": "#7A6448", "tonalRamp": ["#1E1912", "#30281D", "#45392A", "#5C4C38", "#7A6448", "#9A835F", "#BBA683", "#DDD0B8"] },
+      "kids": { "role": "tertiary", "displayName": "Kids Violet", "canonical": "#A78BFA", "tonalRamp": ["#160F22", "#2E2542", "#4A3B73", "#6A55A8", "#8A6FD6", "#A78BFA", "#C4B2FC", "#E3DAFE"] },
+      "bg-base": { "role": "neutral", "displayName": "Bench Black", "canonical": "#07080A", "tonalRamp": ["#07080A", "#0D0F12", "#12151A", "#191D23", "#2C323B", "#3F464F", "#8A929C", "#EDEFF2"] },
+      "desktop-accent": { "role": "primary", "displayName": "Desktop Cyan", "canonical": "#46D8EC", "tonalRamp": ["#05121A", "#10242C", "#1E5A66", "#2B8EA0", "#38B6CB", "#46D8EC", "#74E3F2", "#B9F1F8"] },
+      "desktop-canvas": { "role": "neutral", "displayName": "Graphite Canvas", "canonical": "#0A0F1A", "tonalRamp": ["#05080E", "#070B13", "#0A0F1A", "#0F1624", "#131B2C", "#182236", "#243044", "#3D5274"] }
+    },
+    "typographyMeta": {
+      "display-xl": { "displayName": "Display XL", "purpose": "Umbrella home and storefront home H1 only." },
+      "display-l": { "displayName": "Display L", "purpose": "Interior route H1; section H2 on landing pages." },
+      "heading": { "displayName": "Heading", "purpose": "Section H2 on interior, docs and state routes." },
+      "subhead": { "displayName": "Subhead", "purpose": "H3, card and state-panel titles." },
+      "body": { "displayName": "Body", "purpose": "Prose at 65-72ch; 16px on sites, 13-14px in editor chrome." },
+      "label": { "displayName": "Label", "purpose": "Mono micro labels and status chips; 11px is the text floor (pending DV-F1)." },
+      "mono": { "displayName": "Mono", "purpose": "Machine output only: digests, pointers, ids, credits, exit codes." }
+    },
+    "shadows": [
+      { "name": "float", "value": "0 24px 60px -16px rgba(0,0,0,.9)", "purpose": "Dialogs, menus, palette. Pending DV-F3: 0 10px 14px -6px at the same ink, 1px strong edge kept." },
+      { "name": "raised-inset", "value": "inset 0 1px 0 rgba(255,255,255,.03)", "purpose": "Headers and toolbars." },
+      { "name": "control-inset", "value": "inset 0 1px 0 rgba(255,255,255,.05)", "purpose": "Buttons and chips at rest." }
+    ],
+    "motion": [
+      { "name": "duration-press", "value": "120ms", "purpose": "Press-in and focus halo (pending DV-F7)." },
+      { "name": "duration-micro", "value": "160ms", "purpose": "Hover state layers, press release." },
+      { "name": "duration-state", "value": "200ms", "purpose": "Chip, status line and number changes." },
+      { "name": "duration-panel", "value": "280ms", "purpose": "Panels, drawers, dialogs opening." },
+      { "name": "duration-panel-exit", "value": "200ms", "purpose": "Every close and exit." },
+      { "name": "duration-route", "value": "320ms", "purpose": "Route entrance, hero aperture, focal resolution." },
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Micro feedback and exits." },
+      { "name": "ease-out-quint", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "State and number changes." },
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Panels, routes, focal moments." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "620px" },
+      { "name": "tablet", "value": "860px" },
+      { "name": "laptop", "value": "1024px" },
+      { "name": "desktop", "value": "1180px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one accent fill per viewport: the action that resolves pending work.",
+      "html": "<button class=\"ds-btn-primary\">Download</button>",
+      "css": ".ds-btn-primary { position: relative; display: inline-flex; align-items: center; height: 46px; padding: 0 24px; border-radius: 5px; border: 1px solid var(--accent, #FF6B2C); background: var(--accent, #FF6B2C); color: var(--bg-base, #07080A); font: 600 15px/1 'Archivo', system-ui, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: var(--accent-hi, #FF8A54); border-color: var(--accent-hi, #FF8A54); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action on the bench: transparent with a strong hairline.",
+      "html": "<button class=\"ds-btn-quiet\">Open the proof</button>",
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; height: 46px; padding: 0 24px; border-radius: 5px; border: 1px solid var(--line-strong, #2C323B); background: transparent; color: var(--fg, #EDEFF2); font: 500 15px/1 'Archivo', system-ui, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-quiet:hover { background: var(--bg-control, #191D23); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; } .ds-btn-quiet:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip-status",
+      "description": "One of the six published statuses; names a state the contract entitles the surface to show.",
+      "html": "<span class=\"ds-chip ds-chip-review\"><span class=\"ds-chip-dot\"></span>Needs review</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 3px; font: 500 11px/1.4 'JetBrains Mono', ui-monospace, monospace; } .ds-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; } .ds-chip-review { color: #FF6B2C; background: #191207; border: 1px solid #4A3820; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Inset field on the bench; errors name the problem in text.",
+      "html": "<label class=\"ds-field\"><span>JSON Pointer</span><input value=\"/data/entities/0/x\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; font: 500 13px/1.4 'Archivo', system-ui, sans-serif; color: var(--fg-2, #8A929C); } .ds-field input { height: 38px; padding: 0 12px; border-radius: 3px; border: 1px solid var(--line, #1C2129); background: var(--bg-field, #08090B); color: var(--fg, #EDEFF2); font: 400 13px/1 'JetBrains Mono', ui-monospace, monospace; } .ds-field input:hover { border-color: var(--line-strong, #2C323B); } .ds-field input:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; }"
+    },
+    {
+      "name": "Named State Panel",
+      "kind": "custom",
+      "refersTo": "card-panel",
+      "description": "First-class refusal/pending/verified state: tone chip, title, mono reason, a link forward. No side rail.",
+      "html": "<section class=\"ds-state\"><span class=\"ds-chip ds-chip-refused\">Refused</span><h3>Sign-in is unavailable</h3><code>IDENTITY_PLANE_NOT_WIRED</code><a href=\"/\">Back to the overview</a></section>",
+      "css": ".ds-state { display: grid; gap: 12px; padding: 24px; border-radius: 9px; border: 1px solid #3A2126; background: var(--bg-panel, #0D0F12); color: var(--fg, #EDEFF2); font: 400 16px/1.6 'Archivo', system-ui, sans-serif; } .ds-state h3 { margin: 0; font-size: 17px; font-weight: 600; } .ds-state code { font: 400 13px/1.5 'JetBrains Mono', ui-monospace, monospace; color: var(--fg-2, #8A929C); } .ds-chip-refused { color: #FF4D5E; background: #1A1113; border: 1px solid #3A2126; } .ds-state a { color: var(--accent, #FF6B2C); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Review Bench",
+    "overview": "SceneAxi is a dark workbench under one good light. The bench itself recedes; the only bright things are the work waiting on you, what has been verified, and what was refused. Foundations v2 dresses the sites; Cinematic Pro dresses the Engine Desktop; Kids alone changes scale, radius and hue on its own origin.",
+    "keyCharacteristics": [
+      "Near-black, tonally layered surfaces; depth from tone and hairlines, not shadow.",
+      "One accent per surface, spent only on pending work and the primary action.",
+      "Machine output always in mono with tabular figures.",
+      "Named states are first-class components, not fallbacks.",
+      "Small radii on sites (2-9px), softer on desktop (10-16px), 16px only on Kids."
+    ],
+    "rules": [
+      { "name": "The Pending Rule", "body": "Accent means pending. If nothing is waiting on you, there is almost no orange on screen, which is how you find work.", "section": "colors" },
+      { "name": "The Bronze Rule", "body": "A diff never uses red for its old value. Being replaced is not an error.", "section": "colors" },
+      { "name": "The Measured Ink Rule", "body": "Every text colour is contrast-measured in the gate against every surface it can sit on; dimming is painted, never composited with opacity.", "section": "colors" },
+      { "name": "The Machine Voice Rule", "body": "Mono is for what a machine produced or will parse. Never prose, never a costume.", "section": "typography" },
+      { "name": "The Float-Only Rule", "body": "Shadows belong to things that float. A docked card, a button or a viewport frame never casts a drop shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do read every colour from the token layer; sites declare no colour literal of their own.",
+      "Do show digests, pointers and refusal codes in mono with tabular figures.",
+      "Do keep wide evidence inside its own scroll region with a role and label.",
+      "Do dim inert controls by paint (INERT tokens), never by opacity.",
+      "Do keep every text pairing at or above 4.5:1 (3:1 for large text) and measure it."
+    ],
+    "donts": [
+      "Don't use red for the old value in a diff; it is Stale Bronze.",
+      "Don't spend accent on decoration; accent means pending.",
+      "Don't put mint on a button.",
+      "Don't cast a shadow from a docked surface.",
+      "Don't set text below 11px or in --fg-4.",
+      "Don't link, name or theme the Kids origin from any other surface."
+    ]
+  }
+}

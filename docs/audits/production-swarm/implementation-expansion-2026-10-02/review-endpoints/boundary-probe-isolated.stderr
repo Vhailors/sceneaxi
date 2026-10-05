@@ -1,0 +1,10 @@
+/home/devuser/Documents/Projects/sceneaxi/sites/umbrella/src/lib/login-flow.ts:18
+  SITE_LOGIN_PATH,
+  ^
+SyntaxError: The requested module '@sceneaxi/site-kit' does not provide an export named 'SITE_LOGIN_PATH'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:455:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:553:5)
+    at async node:internal/modules/esm/loader:647:26
+    at async file:///home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/implementation-expansion-2026-10-02/review-endpoints/boundary-probe.mjs:22:38
+
+Node.js v24.21.0

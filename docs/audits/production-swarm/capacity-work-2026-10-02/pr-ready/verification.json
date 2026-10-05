@@ -1,0 +1,4871 @@
+{
+  "scriptSha256": "2f6c70efcf2be7608e9f807ec4cf734a4f974d92c93729a5c16357ee398528bd",
+  "pythonSyntax": "PASS",
+  "candidateNegativeControl": {
+    "command": [
+      "python3",
+      "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/capacity-work-2026-10-02/pr-ready/compare_trees.py",
+      "--candidate",
+      "346933c105305224d575bf9319256301c1eeabfa"
+    ],
+    "exit": 2,
+    "diffCounts": {
+      "added": 0,
+      "blobChanged": 113,
+      "missing": 1616,
+      "modeChanged": 0,
+      "typeChanged": 0
+    },
+    "assertion": "published candidate refused: complete checkout paths omitted"
+  },
+  "deferredCommandGuard": {
+    "exit": 2,
+    "stderr": "NOTRUN: requires Astra release, serial integrator authority, exclusive heavy token and exact clean candidate checkout\n",
+    "heavyExecuted": false
+  },
+  "nativeRenameAwareDiff": [
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/SKILL.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/check"
+    },
+    {
+      "status": "M",
+      "path": ".bb/skills/verify-sceneaxi/features/README.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/features/assistant.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/features/documents.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/features/profiles.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/features/three-viewport.md"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/verify"
+    },
+    {
+      "status": "D",
+      "path": ".bb/skills/verify-sceneaxi/viewport.mjs"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/desktop-artifact-expiry.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/desktop-linux.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/desktop-macos.yml"
+    },
+    {
+      "status": "A",
+      "path": ".github/workflows/desktop-windows.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/engine-sdk.yml"
+    },
+    {
+      "status": "M",
+      "path": ".github/workflows/gate.yml"
+    },
+    {
+      "status": "M",
+      "path": ".oxlintrc.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-game/README.md"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-game/package.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-game/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-game/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-game/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/README.md"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/fixtures/web-golden-fixture.human-verdict.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/package.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/test/dormant-listing.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/catalog-web/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/README.md"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/bin/sceneaxi-desktop.mjs"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/package.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/app.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/src/chrome.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/commands.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/src/interaction-commands.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/product-loop.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/protocol-client.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/src/session.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/src/visual-model.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/src/visual-tokens.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/app.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/bin-smoke.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/test/chrome.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/desktop-shell/test/control-accounting.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/open-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/product-loop.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/protocol-client.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/session-recovery.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/visual-model.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/test/visual-tokens.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/desktop-shell/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/README.md"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/bin/sceneaxi-web-shell.mjs"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/package.json"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/src/account-panel.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/assistant-default.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/src/assistant-panel.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/dev-server.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/src/inspector-app.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/inspector.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/open-path-view.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/src/panel-support.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/src/protocol-client.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/account-panel.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/test/assistant-panel.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/bin-smoke.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/dev-server.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "apps/web-shell/test/inspector-app.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/inspector.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/minimum-e2.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/open-path-view.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/refuse-matrix.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "apps/web-shell/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "db/README.md"
+    },
+    {
+      "status": "A",
+      "path": "db/local-postgres-oracle.mjs"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0000_schema_migrations.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0001_identity.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0002_credits_billing.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0003_checkout_session_intent_price_immutability.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0004_stripe_connect_audit.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0005_better_auth_provider.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0006_credit_reconciliation.sql"
+    },
+    {
+      "status": "D",
+      "path": "db/migrations/0007_stripe_live_mode_audit.sql"
+    },
+    {
+      "status": "A",
+      "path": "db/migrations/0008_credit_chain_hosted_budget.sql"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/PRODUCT.md"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/README.md"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/electron-builder.yml"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/package.json"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/pnpm-workspace.yaml"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/build-linux.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/build.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/check-renderer.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/dist.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/renderer-bundle.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/scripts/smoke-diagnostics.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/scripts/smoke.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/electron/live-transport.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/electron/main.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/electron/preload.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/electron/provider-key-store.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/electron/provider-runtime.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/asset-picker-host.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/assistant-viewport.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/lib/bridge-contract.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/lib/bridge.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/byo-configuration-contract.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/byo-configuration-view.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/lib/byo-configuration.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/lib/chrome-document.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/contained-file.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/lib/desktop-scene.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/diagnostics.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/input-action-contract.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/input-action-host.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/local-rpc.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-browser-contract.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-browser.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-host.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-lifecycle-contract.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-lifecycle.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/project-seed.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/provider-key-store.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/web-export.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/lib/workspace-layout-host.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/native/publish-no-replace.c"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/assistant-inspection.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/assistant-poll.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/assistant-runtime.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/assistant-start.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/renderer/byo-configuration.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/playback-report.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/src/renderer/viewport-playback.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/linux/src/renderer/viewport.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/test/local-rpc.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "desktop/linux/test/production-hardening.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/test/viewport-input-actions.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/linux/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/README.md"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/electron-builder.yml"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/entitlements.mac.plist"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/package.json"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/pnpm-workspace.yaml"
+    },
+    {
+      "status": "A",
+      "path": "desktop/macos/scripts/artifact-validation.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/scripts/build.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/scripts/dist.mjs"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/scripts/release-provenance.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/scripts/smoke.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/src/electron/main.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/macos/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/macos/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "desktop/windows/README.md"
+    },
+    {
+      "status": "D",
+      "path": "desktop/windows/electron-builder.yml"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/package.json"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "desktop/windows/pnpm-workspace.yaml"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/build.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/dist.mjs"
+    },
+    {
+      "status": "A",
+      "path": "desktop/windows/scripts/native-runtime-smoke.mjs"
+    },
+    {
+      "status": "A",
+      "path": "desktop/windows/scripts/package-release.d.mts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/package-release.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/release-preflight.d.mts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/release-preflight.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/release.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/scripts/smoke.mjs"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/src/electron/main.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/windows/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "desktop/windows/src/lib/update-policy.ts"
+    },
+    {
+      "status": "A",
+      "path": "desktop/windows/test/final-release-acceptance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "desktop/windows/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "docs/DEPENDENCY-MATRIX.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/README.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0001-game-kernel-command-snapshot-session.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0002-presentation-runtime-deep-seam.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0003-editor-sequencing-e1-first-e2-specified.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0004-no-plugin-ports-before-two-adapters.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0005-plugin-host-capability-manifest.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0006-hybrid-core-and-ai-sculpt.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0007-sceneaxi-owned-sculpt-artifacts.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0008-experimental-three-preview-non-decision.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0009-kernel-owned-toy-physics-animation.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0010-multi-pass-sculpt-quality-gates.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0011-animation-ready-hierarchy-and-procedural-emit.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0012-offline-agent-assistance-default-off.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0013-sculpt-quality-minimal-support-bound.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0014-scene-composition-contract.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0015-scene-minimal-multi-object-open-path.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0016-portable-kernel-digest.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0017-three-product-presentation-core.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0018-sites-tier-three-vercel-one-neon.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0019-public-engine-sdk-zip-not-npm.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0020-minimum-e2-web-editor-entitlement.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0021-identity-credits-injected-adapters.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0022-umbrella-owns-the-public-viewport.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0023-open-path-bootstrap-and-session-lifecycle.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0024-linux-desktop-electron-tier.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0025-presentation-authored-scene-environment.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0026-parametric-material-overrides.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0027-physics-world-host.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/0028-seeded-decorative-effects.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/adr/README.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/agents/layout.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/asset-ingestion.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/go-live-backlog.json"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/go-live-gaps-2026-09-26.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/audits/initiation/Gap-Register.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/audits/initiation/Initiation-Audit.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/audits/initiation/Requirements-Traceability.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/audits/initiation/requirements-authority.json"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/initiation/requirements.json"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/initiation/runtime-surfaces.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/FINAL.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/FINAL.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/MEGALIST.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/MEGALIST.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/PR-EVIDENCE.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/assets-plugins.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/authoring.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/billing-data.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/cli.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/delivery-ops.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/desktop-linux.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/desktop-release.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/engine.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/identity.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/profiles-kids.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/shells.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/assignments/sites-ui.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-assets-plugins.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-assets-plugins.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-authoring.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-authoring.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-billing-data.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-billing-data.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-cli.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-cli.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-delivery-ops.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-delivery-ops.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-desktop-linux.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-desktop-linux.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-desktop-release.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-desktop-release.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-engine.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-engine.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-identity.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-identity.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-profiles-kids.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-profiles-kids.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-shells.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-shells.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-sites-ui.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/audit-sites-ui.md"
+    },
+    {
+      "status": "R099",
+      "path": "docs/audits/surface-probe.json",
+      "to": "docs/audits/production-swarm/baseline-front-doors.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/baseline-public-seams.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/baseline-shell-cli-provider.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/baseline.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/baseline.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/decision-log.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-assets-kids.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-assets-kids.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-authoring.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-authoring.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-cli-desktop.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-cli-desktop.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-engine.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-engine.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-desktop-linux.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-desktop-macos.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-desktop-windows.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-root.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-catalog-game-after.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-catalog-game.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-catalog-web-after.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-catalog-web.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-kids-after.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-kids.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-umbrella-after.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration-audit-sites-umbrella.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-integration.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/finish-visual-qa.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-assets-plugins.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-assets-plugins.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-authoring.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-authoring.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-billing-data.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-billing-data.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-cli.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-cli.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-delivery-ops.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-delivery-ops.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-desktop-linux.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-desktop-linux.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-desktop-release.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-desktop-release.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-engine.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-engine.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-profiles-kids.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-profiles-kids.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-shells.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-sites-ui.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/fix-sites-ui.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/inherited-builder.diff"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/integration-pass-2-production-browser.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/integration-root-audit-before.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/integration-verification-receipts.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/integration.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/integration.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/judge.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/judge.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/remaining-local-113.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/catalog-game-home-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/catalog-game-home-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/catalog-web-home-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/catalog-web-home-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/kids-home-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/kids-home-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/linux-packaged.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/linux-runtime.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-account-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-account-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-editor-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-editor-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-home-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-home-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-login-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-login-375.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-open-1280.png"
+    },
+    {
+      "status": "A",
+      "path": "docs/audits/production-swarm/screenshots/umbrella-open-375.png"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/surface-map.html"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/surface-map.json"
+    },
+    {
+      "status": "M",
+      "path": "docs/audits/surface-map.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/auth-credits.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/authoring-contracts.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/bootstrap.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/catalog-intake.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/delivery-handoff.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/dependency-matrix.json"
+    },
+    {
+      "status": "D",
+      "path": "docs/design-foundations.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/desktop-linux.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/desktop-local-bridge.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/desktop-macos.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/desktop-windows.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/engine-desktop-surface.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/full-editor-v1-capability-matrix.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/getting-started.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/held-key-enforcement.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/kernel-browser-open.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/kids-first-release.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/module-coverage.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/open-path-policy.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/plugins.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/production-activation.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/program/NEXT-STEP.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/program/SPEC.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/program/site-domain-topology.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/program/spec-41.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/proof/README.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/proof/stage-0-acceptance-contract-template.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/proof/stage-1-counting-adjudication-worksheet.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/proof/stage-1-paired-replicate-run-sheet.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/publish-readiness.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/rarity-engine.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/runnable-surfaces.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/scene-composition.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/sculpt-quality.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/stripe-connect-operations.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/stripe-live-activation.md"
+    },
+    {
+      "status": "M",
+      "path": "docs/three-presentation-core.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/web-consumer.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/web-editor-shell.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/web-experience-editor.md"
+    },
+    {
+      "status": "D",
+      "path": "docs/websites-deploy.md"
+    },
+    {
+      "status": "M",
+      "path": "package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/admin.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/better-auth-adapter.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/bootstrap.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/identity-port.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/principal-provenance.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/refusals.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/roles.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/session-token.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/store.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/src/testing/principal-issuance.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/test/admin.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/test/identity-port.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/test/principal-provenance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/test/role-guard.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/auth/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/internal/project-git-authority.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/authoring-core/src/apply-journal.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/assistant-sculpt.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/authoring-core/src/atomic-write.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/content-hash.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/json-invariants.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/json-pointer.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/minimum-e2.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/model-provider-port.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/project-git.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/authoring-core/src/project-model.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/authoring-core/src/propose-apply.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/rarity-authoring.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/rarity-evidence.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/scene-composition.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/sculpt-procedural-emit.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/sculpt-reconstruction.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/src/unified-diff.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/assistant-sculpt.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/authoring-core/test/final-acceptance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/journal-recovery.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/model-provider-port.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/project-git.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/authoring-core/test/project-model.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/scene-composition.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/sculpt-reconstruction.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/test/transaction-history.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/authoring-core/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/catalog-listings.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/checkout.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/credit-packs.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/entitlements.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/fixture-commerce.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/src/hosted-ai.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/src/ledger.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/live-mode.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/metering.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/refusals.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/revenue-share.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/src/store.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/stripe-connect.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/src/stripe-webhook.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/src/support-ledger.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/catalog-listings.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/credit-pack-archive.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/credit-pack-grant-anchor.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/entitlements.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/fixture-commerce.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/test/hosted-ai.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/test/ledger.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/live-mode.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/metering.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/revenue-share.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/seam.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/billing/test/store-boundary.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/stripe-checkout.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/stripe-connect.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/test/stripe-webhook-reconciliation.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/billing/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/README.md"
+    },
+    {
+      "status": "A",
+      "path": "packages/cli/bin/build-archive.mjs"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/bin/sceneaxi.mjs"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/asset-verbs.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/commands.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/desktop-client.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/desktop-socket-worker.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/desktop-verbs.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/dispatcher.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/envelope.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/exit-codes.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/format.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/held-keys/gate.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/held-keys/generate.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/held-keys/registry.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/held-keys/shipped.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/project-lifecycle.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/project-verbs.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/registry-verbs.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/src/run.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/scene-verbs.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/cli/src/templates.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/verb-args.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/verb-support.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/src/version.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/test/__snapshots__/envelope.snapshot.test.ts.snap"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/test/bin-smoke.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/cli/test/capabilities.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/desktop-bridge.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/desktop-socket-worker-lockstep.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/cli/test/distribution.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/envelope.snapshot.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/exit-codes.golden.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/cli/test/final-acceptance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/fixtures/held-keys/firstmate-export.epoch2.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/fixtures/held-keys/firstmate-export.epoch3.all-resolved.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/fixtures/held-keys/firstmate-export.markdown-source.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/fixtures/held-keys/snapshot.schema-invalid.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/held-keys.command-map.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/held-keys.generator.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/test/held-keys.refusal-table.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/held-keys.regressions.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/json-equivalence.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/profile-open-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/project-lifecycle.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/project-propose-apply.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/cli/test/refusal.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/registry-verbs.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/scene-compose.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/cli/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/src/errors.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-kernel/src/gameplay.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/src/portable-digest.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/src/rarity.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/src/scene-session.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/src/sculpt-session.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/src/session.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/test/browser-open-play.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-kernel/test/final-acceptance.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-kernel/test/gameplay.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-kernel/test/kernel-contract.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/test/portable-digest.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-kernel/test/production-hardening.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/test/rarity.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-kernel/test/scene-session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/test/sculpt-session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/test/session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-kernel/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-orchestrator/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-orchestrator/src/open-path.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/src/refusals.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/test/fixtures.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/test/golden-path-orchestrated.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/test/open-path.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-orchestrator/test/production-hardening.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/test/refuse-matrix.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-orchestrator/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/audio-playback.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/src/contained-image.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/src/orbit-camera.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/src/render-loop.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/src/runtime.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/src/sculpt-mount.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/three-core.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/src/three-presentation-error.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/three-runtime.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/three-sculpt.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/src/three-surface.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/src/triangle-animation.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/.finish-results.json"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/audio-playback.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/browser-engine-frontdoors.mjs"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/browser-production-proof.mjs"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/completion.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/contained-image.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/declaration-consumer.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/engine-presentation/test/production-hardening.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/test/runtime.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/test/sculpt-mount.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/test/three-presentation.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/engine-presentation/test/three-surface.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/engine-presentation/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/importers/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/importers/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/importers/src/contained-gltf.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/importers/src/index.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/importers/test/baseline-regression-proof.mjs"
+    },
+    {
+      "status": "M",
+      "path": "packages/importers/test/contained-gltf.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/importers/test/document-import.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/importers/test/fixtures/source.sceneaxi.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/importers/test/fixtures/unsupported-schema.sceneaxi.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/importers/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/importers/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/physics-rapier/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/physics-rapier/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/physics-rapier/src/world.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/physics-rapier/test/production-hardening.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/physics-rapier/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/physics-rapier/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/plugin-host/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/src/host-api-range.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/src/host.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/plugin-host/src/isolation.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/plugin-host/src/pipeline.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/src/types.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/plugin-host/test/cache-front-door-proof.mjs"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/test/load-refuse.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/test/refuse-matrix.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/plugin-host/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/plugin-host/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/test/conformance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/test/open-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-game/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/PRODUCT.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/profile-kids/src/kids-activity.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/profile-kids/test/activity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/test/policy.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/test/refuse-matrix.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-kids/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/profile-web/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/test/authoring.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/profile-web/test/browser-experience-proof.mjs"
+    },
+    {
+      "status": "A",
+      "path": "packages/profile-web/test/experience-scenarios.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/profile-web/test/open-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/test/policy.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/profile-web/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/provider-openrouter/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/provider-openrouter/package.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/provider-openrouter/src/index.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/provider-openrouter/src/live-transport.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/provider-openrouter/test/adapter.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/provider-openrouter/test/fixtures/complete.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/provider-openrouter/test/fixtures/tool-call.json"
+    },
+    {
+      "status": "A",
+      "path": "packages/provider-openrouter/test/live-transport.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/provider-openrouter/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/authoring-jobs.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/authoring-jobs.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/billing-checkout.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/catalog-item.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/catalog-listings.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/catalog-listings.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/catalog-metadata-unavailable-tombstone.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/cli-command-map.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/cli-protocol-envelope.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/credit-ledger.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/credit-packs.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/credit-packs.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/credit-reconciliation.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/delivery-handoff.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/desktop-local-bridge.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/document.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/editor-command-registry.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/entitlement-decision.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/entitlement-matrix.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/entitlement-matrix.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/held-key-registry.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/identity.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/input-action-map.schema.json"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/contracts/kernel-session.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/model-provider-port.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/object-sculpt-spec.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/open-path-policy.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/open-path-policy.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/plugin-capability-registry.1.0.0.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/plugin-capability-registry.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/plugin-manifest.inert.example.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/plugin-manifest.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/profile-conformance.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/project-asset-manifest.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/project-manifest.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/proposal.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/rarity.fixtures.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/rarity.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/revenue-share.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/scene-composition.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/sculpt-artifact.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/sculpt-intake.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/contracts/stripe-connect.schema.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/asset-render-mesh.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/billing.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/catalog-listing.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/catalog-listings.data.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/catalog.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/credit-packs.data.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/credit-reconciliation.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/credits.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/delivery-handoff.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-assistant-ask.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-extension-seams.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-local-bridge.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-play-session.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-profile-evidence.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-project-build.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-animation.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-edit.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-effects.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-environment.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-materials.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-package.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/src/desktop-scene-physics.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-prefab.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-scene-transform.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/desktop-workspace-layout.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/src/document.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/editor-command-registry.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/editor-shell.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/entitlements.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/exact-semver.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/gltf-animation.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/identity.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/input-action-registry.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/src/kernel-session.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/model-provider.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/open-path-policy.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/src/physics-world-host.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/plugin-capability-registry.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/plugin-capability-sculpt-intake.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/plugin.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/profile-conformance-suite.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/profile-conformance.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/project-git.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/project-manifest.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/proposal.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/provenance.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/rarity.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/record-validation.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/revenue-share.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/scene-composition.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/sculpt-json.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/sculpt-procedural.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/sculpt.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/stripe-connect.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/testing/scene-composition.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/unambiguous-json.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/src/web-experience-authoring.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/billing.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/catalog-pipeline.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/credits.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/delivery-handoff.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-assistant-ask.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-extension-seams.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-local-bridge.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-play-session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-profile-evidence.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-project-build.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-animation.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-edit.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-effects.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-environment.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-materials.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-package.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/schemas/test/desktop-scene-physics.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-prefab.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-scene-transform.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/desktop-workspace-layout.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/document-proposal.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/editor-command-registry.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/entitlements.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/identity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/input-action-registry.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/model-provider.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/open-path-policy.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/physics-world-host.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/plugin-capability-registry.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/plugin-capability-sculpt-intake.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/plugin-manifest.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/profile-conformance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/project-manifest.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/rarity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/revenue-share.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/scene-composition.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/sculpt.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/stripe-connect.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/test/unambiguous-json.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/schemas/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/README.md"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/package.json"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/access-states.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/src/admin-reauth.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/src/catalog-browse.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/src/catalog-durable.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/catalog-identity.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/src/catalog-pipeline.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/src/catalog.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/change-review.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/commerce-notice.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/deep-link.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/design-tokens.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/desktop-app-offer.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/src/editor-session.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/editor-shell.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/editor-state.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/engine-sdk-offer.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/entitlement.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/live-open.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/mountable-scene.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/src/offline-web-export.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/ports.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/profile-contracts.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/src/purchase-history.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/src/refusals.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/site-element.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/site-search-params.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/site-session.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/starter-artifact.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/starter-prop-intake.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/state-panel.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/web-editor.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/src/web-experience-editor.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/access-states.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/catalog.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/change-review.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/commerce-notice.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/design-tokens.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/desktop-app-offer.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/editor-session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/editor-shell.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/editor-state.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/entitlement.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/test/final-sites-acceptance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/live-open.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/login-plane.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/mountable-scene.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "packages/site-kit/test/offline-web-browser-proof.mjs"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/ports.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "packages/site-kit/test/refuse-matrix.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/seam.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/site-config.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/site-element.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/site-session.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/state-panel.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/web-editor.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/test/web-experience-editor.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "packages/site-kit/tsconfig.json"
+    },
+    {
+      "status": "M",
+      "path": "pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "scripts/build-engine-sdk.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/build-engine-sdk.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-boundaries.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-contracts.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-contracts.test.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-desktop-artifact-expiry.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-desktop-artifact-expiry.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-desktop.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-publish-ready.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-publish-ready.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-sites.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-syntax.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-traceability.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-traceability.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-vercel-package.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/check-vercel-package.mjs"
+    },
+    {
+      "status": "M",
+      "path": "scripts/db-migrate.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/delivery-local-oracle.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "scripts/docs-api.mjs"
+    },
+    {
+      "status": "M",
+      "path": "scripts/engine-sdk-files.json"
+    },
+    {
+      "status": "A",
+      "path": "scripts/finish-catalog-browser-proof.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/lib/package-exports.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/lib/zip.d.mts"
+    },
+    {
+      "status": "D",
+      "path": "scripts/lib/zip.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/local-sbom.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/probe-surfaces.mjs"
+    },
+    {
+      "status": "M",
+      "path": "scripts/surface-map.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/tutorial-local-oracle.test.mjs"
+    },
+    {
+      "status": "D",
+      "path": "scripts/workspace-dist-resolver.mjs"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/.env.example"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/.npmrc"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/README.md"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/next.config.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/package.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/page-extensions.json"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/pnpm-workspace.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/security-headers.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/commerce-notice.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/digest-figure.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/family-bar.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/listing-card.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/listing-tile.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/state-panel.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_components/test-pipeline-proof.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/_session.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/error.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/app/globals.css"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/icon.svg"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/app/item/[itemId]/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/app/layout.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/not-found.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/app/opengraph-image.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/app/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/app/publish/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/lib/catalog-facts.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/lib/digest-sigil.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/lib/family-bar.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/src/lib/foundations.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-game/src/lib/site-config.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/catalog-game/src/middleware.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-game/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/.env.example"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/.npmrc"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/README.md"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/next.config.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/package.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/page-extensions.json"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/pnpm-workspace.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/security-headers.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/commerce-notice.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/digest-figure.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/family-bar.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/listing-card.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/listing-tile.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/state-panel.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_components/test-pipeline-proof.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/_session.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/error.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/app/globals.css"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/icon.svg"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/app/item/[itemId]/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/app/layout.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/not-found.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/app/opengraph-image.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/app/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/app/publish/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/index.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/lib/catalog-facts.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/lib/digest-sigil.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/lib/family-bar.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/src/lib/foundations.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/catalog-web/src/lib/site-config.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/catalog-web/src/middleware.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/catalog-web/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/.env.example"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/README.md"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/next.config.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/kids/package.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/page-extensions.json"
+    },
+    {
+      "status": "M",
+      "path": "sites/kids/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/pnpm-workspace.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/security-headers.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/src/app/_components/kids-studio.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/kids/src/app/globals.css"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/src/app/layout.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/src/app/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/kids/src/lib/kids-activity.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/src/lib/security-policy.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/kids/test/production-activity.spec.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/kids/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/.env.example"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/.npmrc"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/README.md"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/VISUAL-EVIDENCE.md"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/next.config.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/package.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/page-extensions.json"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/playwright.config.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/pnpm-lock.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/pnpm-workspace.yaml"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/security-headers.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/capability-table.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/download-cta.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/hero-viewport.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/sculpt-viewport.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/site-nav.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_components/state-panel.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/_session.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/account/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/admin/ledger/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/api/admin/ledger/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/auth/[...all]/route.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/api/checkout/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/editor/catalog-intake/route.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/app/api/editor/export/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/health/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/login/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/logout/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/api/stripe/webhook/route.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/docs/_components/help-doc-page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/docs/cli/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/docs/credits-and-pricing/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/docs/faq/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/docs/getting-started/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/docs/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/editor/_components/editor-shell.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/editor/_components/editor-viewport.tsx"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/app/editor/_components/project-persistence.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/editor/_components/web-experience-editor.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/editor/layout.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/editor/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/engine/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/error.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/globals.css"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/icon.svg"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/layout.tsx"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/app/login/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/not-found.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/open/_components/live-viewport.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/open/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/opengraph-image.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/pricing/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/profiles/page.tsx"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/robots.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/app/sitemap.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/index.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/lib/catalog-submission.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/credit-pack-offers.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/credit-webhook.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/download-platform.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/editor-viewport.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/foundations.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/help-docs.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/lib/identity-plane.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/launch-marketing.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/live-open.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/login-flow.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/profile-matrix.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/lib/provider-adapters.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/request-authority.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/server-logger.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/site-config.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/site-content.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/lib/viewport-letterbox.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/middleware.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/provider/LIFECYCLE-CONTRACT.md"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/provider/account-lifecycle.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/src/provider/better-auth-provider-refusals.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/src/provider/better-auth-provider.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/src/provider/recovery-contract.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/test/account-lifecycle.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/test/better-auth-provider.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/test/docs-page.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/test/first-release.visual.spec.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/test/identity.visual.spec.ts"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/test/production-sites-proof.mjs"
+    },
+    {
+      "status": "A",
+      "path": "sites/umbrella/test/project-persistence.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "sites/umbrella/test/provider-adapters.integration.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/tsconfig.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/tsconfig.test.json"
+    },
+    {
+      "status": "D",
+      "path": "sites/umbrella/vitest.config.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/boundary/injected-desktop-violations.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/boundary/injected-site-violations.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/boundary/injected-violations.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/injected-credit-pack-drift.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/injected-entitlement-drift.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/injected-listing-drift.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/injected-open-path-drift.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/injected-traceability-violations.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/contracts/no-committed-secrets.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/db/migrate-process.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/db/schema-lockstep.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop-artifact-expiry.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-asset-picker-host.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-byo-secure-storage.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/desktop/desktop-linux-seams.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/desktop/desktop-macos-packaging.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-opencode-live-transport.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-project-browser.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-project-lifecycle.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/desktop/desktop-scene-property.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/desktop/desktop-windows-packaging.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/capability-matrix-audit.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/capability-matrix-audit.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/module-coverage.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/module-coverage.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/docs/production-activation.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/stripe-live-activation.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/traceability-check.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/docs/traceability-runtime-surfaces.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/asset-ingestion-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/asset-pipeline-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/assistant-panel-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/auth-credits-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/auth-credits-refuse-matrix.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/catalog-fixture-commerce-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/cli-golden-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/contained-git-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-animation-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-asset-import-order-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-assistant-ask-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-assistant-scene-loop-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/desktop-capability-matrix-audit.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-cli-local-bridge-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/desktop-command-interactions-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-control-inventory-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-extension-seams-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-hierarchy-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-linux-bridge-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-package-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-physics-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-play-session-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-prefab-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/desktop-product-loop-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-profile-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-project-browser-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-project-build-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-project-lifecycle-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-provider-authoring-engine-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-provider-host-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-scene-property-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-transform-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-web-export-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/desktop-workspace-layout-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/editor-catalog-intake-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/examples-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/desktop-web-export/golden-digests.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/golden-project.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/hybrid-sculpt/README.md"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/hybrid-sculpt/demo-image-brief.intake.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/hybrid-sculpt/structured-spec.intake.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/importers/README.md"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/physics-rapier-golden.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/illegal-claim/package.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-capability/package.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-capability/plugin.js"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-capability/sceneaxi.plugin.manifest.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-inert/package.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-inert/plugin.js"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sample-inert/sceneaxi.plugin.manifest.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source-broken/package.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source-broken/plugin.js"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source-broken/sceneaxi.plugin.manifest.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source/package.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source/plugin.js"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/plugin-host/sculpt-intake-source/sceneaxi.plugin.manifest.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/profile-game/golden-digests.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/profile-web/golden-digests.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/scene-composition/README.md"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/scene-composition/golden-digests.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/scene-composition/mount-support-evidence.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/scene-composition/workshop-bay.scene.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/sculpt-quality/README.md"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/sculpt-quality/golden-digests.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/sculpt-quality/hard-surface-service-crate.intake.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/sculpt-quality/minimal-support-evidence.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/fixtures/sculpt-quality/richer-field-drone.intake.json"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/full-editor-transactions-golden.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/e2e/hosted-ai-metering-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/hybrid-sculpt-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/importers-plugin-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/input-actions-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/module-coverage-evidence.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/physics-rapier-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/plugin-capability-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/profile-game-scene-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/profile-kids-refuse-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/profile-web-golden-path.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/rarity-engine-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/rarity-provider-desktop-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/runtime-provenance-refusal.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/scene-composition-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/sculpt-quality-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/umbrella-editor-viewport-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/e2e/umbrella-live-open-golden.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/helpers/electron-runtime-stub.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/helpers/fixture.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/helpers/scoped-tmpdir.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/helpers/traceability-runtime.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/parity/editor-shell-parity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/parity/open-path-policy-parity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/parity/shell-cli-parity.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/publish/injected-publish-violations.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sdk/engine-sdk.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "tests/sites/billing-final-acceptance.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/catalog-storefronts.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/sites/credit-pack-purchase-ux.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/desktop-download.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/desktop-offer-lockstep.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "tests/sites/finish-catalog-history.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/sites/identity-plane-wiring.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/kids-surface.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/provider-adapters.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/site-kit-component-collapse.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/sites/site-response-hardening.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/site-seams.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/umbrella-launch-marketing.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/umbrella-login-flow.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/umbrella-profile-matrix.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "tests/sites/umbrella-visual.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/vercel-package.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/sites/web-experience-editor.test.ts"
+    },
+    {
+      "status": "D",
+      "path": "tests/syntax/check-syntax.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "vitest.config.ts"
+    }
+  ],
+  "initialHarnessFailure": "parents[6] root off by one: git exit128 not a git repository; corrected to parents[5], rerun exit2 with controls PASS",
+  "resourcesCleaned": "No temporary fixtures, services or ports; only owned evidence files"
+}

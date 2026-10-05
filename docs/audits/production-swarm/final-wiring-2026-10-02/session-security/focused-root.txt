@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi
+
+··········································································································
+
+ Test Files  5 passed (5)
+      Tests  106 passed (106)
+   Start at  16:47:22
+   Duration  4.00s (transform 10.38s, setup 0ms, import 9.75s, tests 2.96s, environment 0ms)
+

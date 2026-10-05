@@ -1,0 +1,47 @@
+{
+  "taskId": "catalog-ui-polish",
+  "status": "PASS_SCOPED_SOURCE_HANDED_BACK",
+  "fullAcceptance": "NOT_READY_BROWSER_AND_INTEGRATED_PROOF_PENDING",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "ledgerIds": ["VS-05", "UI-001", "UI-002"],
+  "sourceHandback": true,
+  "furtherSourceWritesPlanned": false,
+  "files": [
+    {"path":"sites/catalog-game/src/app/page.tsx","sha256":"952bc1d2f33ccbf48931561dfcb9652ac677f4acbeb3e9413f8b7615992c9150","symbols":["CataloguePage:37","renderSearchControls:43","inventory:68","results status:141"],"changes":["safe scalar URL defaults and inline editable GET refusal recovery","associated bounded search help and results","unexpected errors rethrow to existing boundary","stable full-inventory facets and distinct empty state"]},
+    {"path":"sites/catalog-game/src/app/globals.css","sha256":"ee98fef25a7ae0a2042e257da69e347177d9babd8350652de46b4af2dab998ec","symbols":["forced-colors focus:193","catalog-controls:699","card-price:866","min-width 30rem:1470"],"changes":["mobile-first readable controls and stacked title/price","wrap prices","system focus outline","style recovery form and search help"]},
+    {"path":"sites/catalog-game/src/app/_components/listing-card.tsx","sha256":"e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e","symbols":["ListingCard:20","refused-model hint:60"],"changes":["explicit detail-only/no-purchase message for compact and regular variants"]},
+    {"path":"sites/catalog-game/test/catalog-ux-regression.test.ts","sha256":"c000ad7b6c1b0eb8a615be76041482e1cd238c6e6860d53806934c570aee238b","symbols":["sourceLoader:21","13 node:test cases:60-220"],"changes":["permanent real-source render/control/public-model oracles","schema-validated empty-surface and long-title fixtures","live original-semantics negative controls"]}
+  ],
+  "preservedAlreadyFixed": ["readonly scalar isSearchText(SearchParams[string])","canonical configured origins","semantic GET and public bounded query helper","busy loading","redacted errors and local recovery","model-derived prices and creator share","held TEST commerce refusal","Foundations tokens/text floors/shared skeleton/reduced motion","existing root test assertions"],
+  "before": {
+    "initial":{"command":"node --test sites/catalog-game/test/catalog-ux-regression.test.ts","exitCode":1,"passed":2,"failed":7,"log":"fail-before.log","limits":"Two imprecise assertions: React form attribute reordering and legitimate digest tooltip. Corrected before source edits."},
+    "corrected":{"command":"node --test sites/catalog-game/test/catalog-ux-regression.test.ts","exitCode":1,"passed":3,"failed":6,"log":"fail-before-corrected.log","genuinePredicateFailures":["filtered facets differ/vanish","missing query descriptions/results links","no card purchase-refusal explanation","no narrow one-column/forced-colors rule"],"invalidHarnessFailures":["empty fixture injection hit getter-only barrel exports","unexpected failure injection hit getter-only barrel exports"],"limits":"These two are NOT product failure executions. Corrected underlying module seam; empty coverage now uses actual schema-valid web-only inventory. Prior empty/catch-all semantics separately reproduced by live memory negative controls after edits."}
+  },
+  "after": [
+    {"command":"node --test sites/catalog-game/test/catalog-ux-regression.test.ts","exitCode":0,"passed":13,"failed":0,"skipped":0,"log":"pass-after.log","scope":"actual source SSR/public query and URL model/real validated fixture variations/control attributes/loading/error plus negative controls; not Next HTTP/browser"},
+    {"command":"pnpm exec vitest run tests/sites/catalog-storefronts.test.ts --reporter=dot","exitCode":0,"passed":82,"failed":0,"log":"storefront-regression.log","scope":"unchanged shared bytes/mobile-first/token/contrast/source-negative oracles"},
+    {"command":"pnpm exec eslint sites/catalog-game/src/app/page.tsx sites/catalog-game/src/app/_components/listing-card.tsx sites/catalog-game/test/catalog-ux-regression.test.ts","exitCode":0,"log":"lint.log"},
+    {"command":"git diff --check -- sites/catalog-game/src/app/page.tsx sites/catalog-game/src/app/globals.css sites/catalog-game/src/app/_components/listing-card.tsx sites/catalog-game/test/catalog-ux-regression.test.ts","exitCode":0}
+  ],
+  "toolLimit":"Dedicated project test tool detected no command for this separate install root; manual explicit commands are the proof.",
+  "evidenceSha256": {
+    "fail-before.log":"448ad8edc497f70d5b0117b1678cd39cdac82ee390a5087c77224a262b692c99",
+    "fail-before-corrected.log":"f211809565198b5a794319ce85e121d72acffda26a7fa8687d615e632f647013",
+    "page-after.log":"72da1e00bc33d561b694ae244f7748405b14ac119b35d9e7cee78d33ca9c9abf",
+    "pass-after.log":"7fec70670aba8f5c918ce9b558867fb70f5dbfc5bbf5104aad4332bb55567ab3",
+    "storefront-regression.log":"4c4232afdfafea12fc0daa197c1d410fd41cd609f0bb34d344375ab41cb972df",
+    "lint.log":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "dependencies": ["existing public site-kit/schema source contracts","bg-119 exact CSS suffix/card mirror completed","serial owner current frozen builds/typecheck/HTTP/browser/full gate after all child handbacks"],
+  "exportRequests": [],
+  "testRegistrationRequest":"Root Vitest include excludes sites tests. Explicit serial/CI command: node --test sites/catalog-game/test/catalog-ux-regression.test.ts; no install or manifest edit performed by builder.",
+  "deferred": [
+    {"command":"pnpm --dir sites/catalog-game exec tsc --noEmit --incremental false","status":"NOT_RUN"},
+    {"command":"pnpm --dir sites/catalog-game build","status":"NOT_RUN"},
+    {"command":"node sites/catalog-game/test/repair-accessibility-proof.mjs","status":"NOT_RUN","requirements":"stable rebuilt sites/exclusive browser owner; search+price+sort GET URL preservation, clear/refused-form recovery, stable no-match rail, actual 390px long valid title/dual-price/select Tab geometry/occlusion/contrast/forced-colors"},
+    {"command":"pnpm gate","status":"NOT_RUN"}
+  ],
+  "historicalFailures":"Prior visual cycles and 299-failure browser receipt remain failed/unresolved; no production PASS or immutable integrated candidate claimed.",
+  "resources":"Memory-only loaders/fixtures. Foreground proof processes exited. No services/ports/network/browser/container/temp/install/provider resources created.",
+  "sourceScope":"Only four authorized game paths and own report/evidence folder edited. No identity/manifests/root exports/staging/commit/push/deploy/productionDB/provider/account/secrets changes. Web files modified only by their exclusive owner."
+}

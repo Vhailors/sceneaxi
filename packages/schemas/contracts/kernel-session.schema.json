@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sceneaxi.invalid/contracts/kernel-session/v1",
   "title": "SceneAxi Kernel Session save/replay artifact (v1)",
-  "description": "Versioned save/replay artifact for the Game Kernel command/snapshot session (ADR 0001 Design A). Carries schema + kernel/BOM versions. Consumers MUST refuse major schemaVersion mismatches. Behavioral semantics: packages/engine-kernel; normative invariants in docs/adr/0001-game-kernel-command-snapshot-session.md.",
+  "description": "Versioned Game Kernel save/replay contract. Consumers refuse schemaVersion != 1 and kernel/BOM major != 0 with KERNEL_VERSION_UNSUPPORTED until migration exists; same-major minor/patch replay remains accepted. Queue 4096, entities 4096, retained events 100000; advance commits candidates atomically. Supported old 0.0.0 save digests are unchanged.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -20,42 +20,267 @@
     },
     "kernelVersion": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "engine-kernel package version that produced the artifact."
+      "pattern": "^0\\.[0-9]+\\.[0-9]+$",
+      "description": "Supported engine/BOM major 0; no cross-major migration exists."
     },
     "bomVersion": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Core-train BOM version stamped at save time."
+      "pattern": "^0\\.[0-9]+\\.[0-9]+$",
+      "description": "Supported engine/BOM major 0; no cross-major migration exists."
     },
     "productManifest": {
       "type": "object",
-      "required": ["productId", "seed"],
+      "required": [
+        "productId",
+        "seed"
+      ],
       "additionalProperties": false,
       "properties": {
         "productId": {
           "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9-]*$"
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "maxLength": 128
         },
         "seed": {
           "type": "integer",
-          "description": "Determinism seed; identical seed + event sequence yields identical digests."
+          "description": "Determinism seed; identical seed + event sequence yields identical digests.",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
         },
         "entities": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["id", "x", "y"],
+            "required": [
+              "id",
+              "x",
+              "y"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-              "x": { "type": "integer" },
-              "y": { "type": "integer" }
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "maxLength": 128
+              },
+              "x": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              }
             }
-          }
+          },
+          "maxItems": 4096
         },
         "rarity": {
           "$ref": "./rarity.schema.json#/$defs/namespace"
+        },
+        "gameplay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile",
+            "initialState",
+            "actions",
+            "timers"
+          ],
+          "properties": {
+            "profile": {
+              "enum": [
+                "game",
+                "web"
+              ]
+            },
+            "initialState": {
+              "type": "object",
+              "maxProperties": 64,
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              }
+            },
+            "actions": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "effects"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                  },
+                  "effects": {
+                    "type": "array",
+                    "maxItems": 64,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "key",
+                            "value"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "add-state",
+                                "set-state"
+                              ]
+                            },
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                            },
+                            "value": {
+                              "type": "integer",
+                              "minimum": -1000000,
+                              "maximum": 1000000
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "actor",
+                            "axis"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "move"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                            },
+                            "axis": {
+                              "type": "array",
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "items": {
+                                "type": "integer",
+                                "minimum": -1000000,
+                                "maximum": 1000000
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "timers": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "afterMs",
+                  "effects"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                  },
+                  "effects": {
+                    "type": "array",
+                    "maxItems": 64,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "key",
+                            "value"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "add-state",
+                                "set-state"
+                              ]
+                            },
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                            },
+                            "value": {
+                              "type": "integer",
+                              "minimum": -1000000,
+                              "maximum": 1000000
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "actor",
+                            "axis"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "move"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                            },
+                            "axis": {
+                              "type": "array",
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "items": {
+                                "type": "integer",
+                                "minimum": -1000000,
+                                "maximum": 1000000
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "afterMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  },
+                  "repeatMs": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -63,27 +288,56 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["kind"],
+        "required": [
+          "kind"
+        ],
         "properties": {
-          "kind": { "type": "string", "enum": ["dispatch", "advance"] },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "dispatch",
+              "advance"
+            ]
+          },
           "command": {
             "type": "object",
-            "required": ["type"],
+            "required": [
+              "type"
+            ],
             "properties": {
-              "type": { "type": "string", "enum": ["move", "spawn", "rarity-roll"] },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "move",
+                  "spawn",
+                  "rarity-roll",
+                  "action"
+                ]
+              },
               "actor": {
                 "type": "string",
-                "pattern": "^[a-z0-9][a-z0-9-]*$"
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "maxLength": 128
               },
               "axis": {
                 "type": "array",
                 "minItems": 2,
-                "items": { "type": "integer" }
+                "items": {
+                  "type": "integer",
+                  "minimum": -1000000,
+                  "maximum": 1000000
+                },
+                "maxItems": 2
               },
               "position": {
                 "type": "array",
                 "minItems": 2,
-                "items": { "type": "integer" }
+                "items": {
+                  "type": "integer",
+                  "minimum": -1000000,
+                  "maximum": 1000000
+                },
+                "maxItems": 2
               },
               "eventId": {
                 "type": "string",
@@ -94,21 +348,252 @@
               },
               "providerEvidence": {
                 "$ref": "./rarity.schema.json#/$defs/providerEvidence"
+              },
+              "actionId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9.-]{0,63}$"
               }
-            }
+            },
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "properties": {
+                  "type": {
+                    "const": "move"
+                  }
+                },
+                "required": [
+                  "type",
+                  "actor",
+                  "axis"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "position"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "eventId"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "request"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "providerEvidence"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "actionId"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "spawn"
+                  }
+                },
+                "required": [
+                  "type",
+                  "actor",
+                  "position"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "axis"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "eventId"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "request"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "providerEvidence"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "actionId"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "rarity-roll"
+                  }
+                },
+                "required": [
+                  "type",
+                  "eventId",
+                  "request"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "actor"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "axis"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "position"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "actionId"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "type": {
+                    "const": "action"
+                  }
+                },
+                "required": [
+                  "type",
+                  "actionId"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "actor"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "axis"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "position"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "eventId"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "request"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "providerEvidence"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
           },
-          "timestampMs": { "type": "integer" },
+          "timestampMs": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "clock": {
             "type": "object",
-            "required": ["tick", "deltaMs"],
+            "required": [
+              "tick",
+              "deltaMs"
+            ],
             "additionalProperties": false,
             "properties": {
-              "tick": { "type": "integer" },
-              "deltaMs": { "type": "integer" }
+              "tick": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "deltaMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60000
+              }
             }
           }
-        }
-      }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "properties": {
+              "kind": {
+                "const": "dispatch"
+              }
+            },
+            "required": [
+              "kind",
+              "command",
+              "timestampMs"
+            ],
+            "not": {
+              "required": [
+                "clock"
+              ]
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "advance"
+              }
+            },
+            "required": [
+              "kind",
+              "clock"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "command"
+                  ]
+                },
+                {
+                  "required": [
+                    "timestampMs"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maxItems": 100000
     },
     "terminalDigest": {
       "type": "string",

@@ -1,0 +1,20 @@
+# REVIEW PROPOSAL ONLY — NOT applied. Requires typed site-kit proposal exports first.
+# Preserve existing catch-all; this explicit Next route must take precedence.
+--- /dev/null
++++ b/sites/umbrella/src/app/api/auth/catalog-session/route.ts
+@@ -0,0 +1,15 @@
++import { createOwnSessionHandler, refuse } from "@sceneaxi/site-kit";
++import { umbrellaRequestAuthority } from "../../../../lib/request-authority.js";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++export const GET = createOwnSessionHandler({
++  refuse,
++  verifyOrigin: (signals) => umbrellaRequestAuthority().verifyFormOrigin(signals),
++  plane: (sessionToken) => umbrellaRequestAuthority().plane({ sessionToken }),
++});
++
++// No readSessionToken(): this interface accepts explicitly carried server header only.
++// Proposed kit implementation must preserve private/no-store, vary, bounded output,
++// named refusals and existing identity-plane validation; no direct auth/billing imports.

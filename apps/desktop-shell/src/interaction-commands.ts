@@ -18,6 +18,7 @@ import {
 } from "@sceneaxi/schemas";
 
 export const DESKTOP_MENU_IDS = Object.freeze(["file", "edit", "run"] as const);
+
 export type DesktopMenuId = (typeof DESKTOP_MENU_IDS)[number];
 
 export const DESKTOP_MENU_LABELS: Readonly<Record<DesktopMenuId, string>> =
@@ -45,7 +46,10 @@ function interaction<
     | "project-migration-propose" | "project-migration-commit" | "project-migration-recover"
     | "project-build" | "extension-inspect" | "extension-start"
     | "profile-inspect" | "project-inspect"
-    | "input-action-rebind" | "input-actions-reset">,
+    | "input-action-rebind" | "input-actions-reset" | "input-actions-inspect"
+    | "scene-prefab-inspect" | "scene-prefab-define" | "scene-prefab-instance"
+    | "scene-prefab-override" | "scene-prefab-refresh"
+    | "viewport-source-set" | "physics-evaluate">,
   Row extends Readonly<{
     menu: DesktopMenuId;
   }>,
@@ -54,9 +58,11 @@ function interaction<
   row: Row,
 ) {
   const command = editorCommand(id);
+
   if (command === undefined) throw new Error(`Missing editor command ${id}`);
   const action = inputActionForCommand(id);
   const binding = action?.defaultBinding;
+
   return Object.freeze({
     id,
     label: command.label,
@@ -82,16 +88,22 @@ export function formatInputBinding(binding: InputActionBinding): string {
       alt: "Alt",
       shift: "Shift",
     })[modifier]);
+
     const key = binding.code.startsWith("Key") ? binding.code.slice(3)
       : binding.code.startsWith("Digit") ? binding.code.slice(5)
       : binding.code;
+
     return [...parts, key].join("+");
   }
+
   if (binding.device === "pointer") return `Pointer ${binding.button} ${binding.gesture}`;
+
   if (binding.device === "wheel") return `Wheel ${binding.axis.toUpperCase()}`;
+
   if (binding.device === "gamepad") {
     return `Gamepad ${binding.gamepad + 1} ${binding.input} ${binding.control}`;
   }
+
   return `Controller ${binding.controller + 1} ${binding.input} ${binding.control}`;
 }
 
@@ -137,7 +149,9 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
     "workspace-layout-inspect", "workspace-layout-apply", "workspace-layout-reset",
     "project-migration-propose", "project-migration-commit", "project-migration-recover",
     "project-build", "extension-inspect", "extension-start", "profile-inspect",
-    "project-inspect", "input-action-rebind", "input-actions-reset",
+    "project-inspect", "input-actions-inspect", "input-action-rebind", "input-actions-reset",
+    "scene-prefab-inspect", "scene-prefab-define", "scene-prefab-instance",
+    "scene-prefab-override", "scene-prefab-refresh", "viewport-source-set", "physics-evaluate",
   ] as const).map((id) => interaction(id, {
     menu: "file" as const,
     accelerator: "",
@@ -157,12 +171,15 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
 
 export type DesktopInteractionCommand =
   (typeof DESKTOP_INTERACTION_COMMANDS)[number];
+
 export type DesktopInteractionCommandId = DesktopInteractionCommand["id"];
 
 const paletteAction = inputAction("editor.palette.open");
+
 if (paletteAction === undefined || paletteAction.defaultBinding.device !== "keyboard") {
   throw new Error("Missing keyboard input action editor.palette.open");
 }
+
 export const DESKTOP_PALETTE_SHORTCUT = Object.freeze({
   id: "palette-open",
   actionId: paletteAction.id,

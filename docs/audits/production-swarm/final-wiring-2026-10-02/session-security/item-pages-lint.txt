@@ -1,0 +1,9 @@
+
+/home/devuser/Documents/Projects/sceneaxi/sites/catalog-game/test/item-session-wiring.test.ts
+  82:51  error  Do not delete dynamically computed property keys  @typescript-eslint/no-dynamic-delete
+
+/home/devuser/Documents/Projects/sceneaxi/sites/catalog-web/test/item-session-wiring.test.ts
+  82:51  error  Do not delete dynamically computed property keys  @typescript-eslint/no-dynamic-delete
+
+✖ 2 problems (2 errors, 0 warnings)
+

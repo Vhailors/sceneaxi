@@ -1,0 +1,208 @@
+{
+  "report": "06-runtime-containment",
+  "verdict": "FAIL",
+  "narrowGoal": "FAIL in reviewed runtime artifact completeness/compatibility criteria; visual improvement inclusion delegated, not independently certified here",
+  "broaderProduction": "FAIL; NOT100%; no valid complete denominator supplied",
+  "artifacts": {
+    "prHead": "346933c105305224d575bf9319256301c1eeabfa",
+    "prBase": "dd77cc9cb91d24091082e0c5bc20a130f0f51ffc",
+    "worktreeHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+    "worktree": "dirty staged and unstaged; per-source hashes below"
+  },
+  "findings": [
+    {
+      "id": "06-01",
+      "severity": "P0",
+      "status": "FAIL",
+      "artifacts": [
+        "PR"
+      ],
+      "location": "346933c105305224d575bf9319256301c1eeabfa:packages/{authoring-core,importers,engine-kernel,engine-presentation}/{package.json,tsconfig.json}",
+      "expectation": "Mergeable complete package graph and all existing negative oracles retained.",
+      "observed": "Exact base..head diff removes all four manifests/tsconfigs, authoring-core src/index.ts, kernel portable-digest/errors, presentation orbit-camera and owning seam/recovery tests. Scoped diff94 files,+5282/-18424. Current worktree still contains these; local test greens cannot certify PR.",
+      "reproduction": "REPRODUCED by git diff/tree, no PR execution",
+      "fixAcceptance": "Rebuild complete PR tree preserving untouched files/modes; verify fresh exact-head checkout gate and restored seam/recovery/portable negative suites."
+    },
+    {
+      "id": "06-02",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifacts": [
+        "PR",
+        "worktree"
+      ],
+      "location": "packages/schemas/src/desktop-scene-physics.ts:10,42-47,72-80,114-134; packages/physics-rapier/src/world.ts:67-70",
+      "expectation": "Existing v1 physics saved JSON and public shape APIs stay compatible or explicitly migrate/version.",
+      "observed": "Same schemaVersion1 replaces shapes/shapeId/ScenePhysicsShape with colliders/colliderId/ScenePhysicsCollider. Current and PR parser accepts old shapes object unchanged, missing colliders; new Rapier requires colliders. Old public exports removed without alias.",
+      "reproduction": "REPRODUCED parser from independently transpiled current,PR,base source. Both current/PR source SHA256 ae53c3500cb3ed6166ef64415ed4038de949eda65da0c5d7a9335a0b450669a0. Source-backed downstream rejection, not executed Rapier.",
+      "fixAcceptance": "Keep old symbols and normalize v1 shapes to colliders with stable IDs or introduce schema2 plus v1 migration; public legacy fixture must evaluate/save/reload on toy and Rapier."
+    },
+    {
+      "id": "06-03",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifacts": [
+        "PR",
+        "worktree"
+      ],
+      "location": "packages/schemas/src/desktop-scene-physics.ts:121,126-127",
+      "expectation": "Hostile physics input returns named invalid/null rather than property-access exception.",
+      "observed": "world:null passes typeof object and throws TypeError reading engine. This defect also exists at PR base; unresolved retained defect, not newly introduced regression.",
+      "reproduction": "REPRODUCED current,exactPR,base using source parser in-memory transpile, not package build",
+      "fixAcceptance": "Validate non-null plain world/all catalog arrays and fields before cast; preserve rejection without mutation; add null/proxy/accessor/legacy fixture public-boundary negatives."
+    },
+    {
+      "id": "06-04",
+      "severity": "P1",
+      "status": "FAIL",
+      "artifacts": [
+        "worktree"
+      ],
+      "location": "packages/importers/src/contained-gltf.ts:489-511,2084,2098; packages/importers/test/contained-gltf.test.ts:926-946,949-974; packages/importers/README.md:17",
+      "expectation": "Production admitted padded8MiB import AND reload have measured bounded responsiveness; no closure by different binary oracle.",
+      "observed": "Fresh padded admission passed135ms; direct current-source initial staging121ms/reload200ms, RSS351 to387MiB. Reported multi-second padded reload stall REFUTED for this one-asset staging probe, not certified absent across production file/apply/browser paths. AP08 uses16x8MiB WOFF2, not JSON reload. README expressly disclaims responsiveness SLA; production latency/event-loop/soak acceptance uncovered.",
+      "reproduction": "Admission and one-asset hot reload REPRODUCED successfully; no current stall reproduced. P1 FAIL denotes full-production coverage criterion, not confirmed latency defect. Two prior loader setup failures retained below.",
+      "fixAcceptance": "Profile actual current production import/reload/front door, set explicit time/RSS/event-loop budget, bound/stream/cancel canonical parsing and replay; preserve16x8MiB,count17,next-byte,alias/rollback oracles."
+    },
+    {
+      "id": "06-05",
+      "severity": "P2",
+      "status": "FAIL",
+      "artifacts": [
+        "PR",
+        "worktree"
+      ],
+      "location": "sites/kids/pnpm-lock.yaml:312-314,519,544; docs/audits/production-swarm/FINAL.md:61; PR-EVIDENCE.md:19,48",
+      "expectation": "Security advisories have source-backed applicability/fix acceptance; exact-artifact verification not historical greens.",
+      "observed": "Current Kids lock pins sharp0.34.5. No fresh advisory exploitability/safe-version determination performed in this runtime scope. Known sharp advisory disposition remains unverified locally; neither Kids no-network observations nor presentation containment proves image-processing CVE safety. Historical4513 tests are not transferred.",
+      "reproduction": "Lock version REPRODUCED; advisory identity/exploitability NOT VERIFIED, no claim of confirmed vulnerability. Coverage hole fails full-production security criterion.",
+      "fixAcceptance": "Owning security reviewer records advisory ID/affected/fixed range, lock+installed+PR versions, reachable image paths; update authorized local dependencies if affected and rerun retained image/bounds/site checks. Do not mark genuine local patch as external/intentional."
+    }
+  ],
+  "liveChecks": {
+    "targetedCurrent": {
+      "command": "pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts packages/engine-kernel/test/production-hardening.test.ts packages/engine-presentation/test/production-hardening.test.ts packages/engine-presentation/test/audio-playback.test.ts --reporter=dot",
+      "exit": 0,
+      "output": "PASS (82) FAIL (0)",
+      "artifact": "dirty worktree only"
+    },
+    "paddedAdmission": {
+      "command": "pnpm exec vitest run packages/importers/test/contained-gltf.test.ts -t admits the8MiB byte ceiling --reporter=verbose",
+      "exit": 0,
+      "passed": 1,
+      "unselected": 17,
+      "testMs": 135,
+      "suiteMs": 137,
+      "wallSeconds": 2.674
+    },
+    "paddedReload": {
+      "exit": 0,
+      "stdout": "{\"case\":\"initial\",\"ok\":true,\"durationMs\":121,\"rssMiB\":351}\n{\"case\":\"reload\",\"ok\":true,\"durationMs\":200,\"rssMiB\":387}\n",
+      "stderr": "",
+      "wallSeconds": 2.351,
+      "method": "current source TS transpileModule in-memory module hooks; no dist, filesystem writes, browser, build or typecheck"
+    },
+    "failedProbeAttempts": [
+      {
+        "exit": 1,
+        "output": "ERR_MODULE_NOT_FOUND: @sceneaxi/importers (root package alias not resolved)"
+      },
+      {
+        "exit": 1,
+        "output": "A composed scene requires at least 2 placements; found 1."
+      }
+    ],
+    "skipped": [
+      "Whole-repo build/gate owned by build reviewer; not rerun.",
+      "PR package execution impossible in incomplete artifact; source-only independent parser comparison not a PR suite green.",
+      "Browser/physical GPU/audio, all hostile proxies/TOCTOU schedules, complete importer suite and sharp live audit not executed."
+    ]
+  },
+  "sourceArtifacts": [
+    {
+      "path": "packages/authoring-core/src/propose-apply.ts",
+      "worktreeSha256": "47fc6d05ae2d786772dc068aaaf3cc620af2c0c610e3fcd2807e0472639fe22a",
+      "prBlob": "fec35dbdf516a2af436023833f3ae07993b9f34e",
+      "stagedBlob": "fec35dbdf516a2af436023833f3ae07993b9f34e"
+    },
+    {
+      "path": "packages/authoring-core/src/apply-journal.ts",
+      "worktreeSha256": "d9b11dbb3310e3803cb3d3b185a21efb28c2545ebc0a10038bdcb4d729631d84",
+      "prBlob": "49e80078b249f8a854b335edeb98f8b00dd8b025",
+      "stagedBlob": "49e80078b249f8a854b335edeb98f8b00dd8b025"
+    },
+    {
+      "path": "packages/authoring-core/src/atomic-write.ts",
+      "worktreeSha256": "39fbb2d720350e17a31060ff2166c94544af059a1d230320692166b1b9ec5e5d",
+      "prBlob": "2ed65f25b161129bd4f8d8f4a98e76b571778b35",
+      "stagedBlob": "2ed65f25b161129bd4f8d8f4a98e76b571778b35"
+    },
+    {
+      "path": "packages/authoring-core/src/project-model.ts",
+      "worktreeSha256": "367c2599795b5fabcfe8464c4c19bf37dfd45465fb633f9fa7380a24ed7086c5",
+      "prBlob": "186fe3bc606d8e4728b5b595de30ec92b2bf3b12",
+      "stagedBlob": "186fe3bc606d8e4728b5b595de30ec92b2bf3b12"
+    },
+    {
+      "path": "packages/importers/src/contained-gltf.ts",
+      "worktreeSha256": "a1dd9f305203851ca4141cdf066c8f08b356192689c055b057ea952c1e6cea1b",
+      "prBlob": "0ece0f463334e9b5bf8af0e06a6252127e410975",
+      "stagedBlob": "2385d3f0651038d69fe9342c967f94d9de105cba"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "worktreeSha256": "0b65406f48536c6b67755c3f5c4573347193f0594a70f7892bccfc4ab4135f3e",
+      "prBlob": "931b3b322614e5777a9b8bb8f74d4d3bff2644b9",
+      "stagedBlob": "44a473ce31056bd43ace94ade22e6c5d8ac801eb"
+    },
+    {
+      "path": "packages/engine-kernel/src/session.ts",
+      "worktreeSha256": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+      "prBlob": "2180ef2cbf30be7bd6f4c0c7319eada4597380a5",
+      "stagedBlob": "62a2600fa413d6bc9e72eccb6d63da36bfb43fae"
+    },
+    {
+      "path": "packages/engine-presentation/src/three-sculpt.ts",
+      "worktreeSha256": "fd9c8d3f57d6142a440705f88ef56a80b434064b672fec3222fbef237d7c7098",
+      "prBlob": "7028bcbe155f4291350cd6a5b40b95207ec3d556",
+      "stagedBlob": "81d5d63d6af3af0165a368d2fe1208f64056e8e0"
+    },
+    {
+      "path": "packages/engine-presentation/src/audio-playback.ts",
+      "worktreeSha256": "96cf5a1ddf116a2a4ca21b93875215f82a6c84cf86bf45706f6f2568bb8c3062",
+      "prBlob": "a4c613d00172bb2a9513f4e4bec6bdd502dc7439",
+      "stagedBlob": "a4c613d00172bb2a9513f4e4bec6bdd502dc7439"
+    },
+    {
+      "path": "packages/engine-presentation/src/triangle-animation.ts",
+      "worktreeSha256": "f6a800ca54ca3ed0a8bd27abc7a8d8b132ca5ea0cf0074271ff3001749e0609c",
+      "prBlob": "98f35e183672ec70eb6bfa8665dd1ef1b29516da",
+      "stagedBlob": "0e4134585d241e31e24bf59159d8cba0b6352a4c"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "worktreeSha256": "ae53c3500cb3ed6166ef64415ed4038de949eda65da0c5d7a9335a0b450669a0",
+      "prBlob": "e7d8769669a0d518ecfb843d67164bb81320a95b",
+      "stagedBlob": "81fbba125867400396248313334e894c982b20d4"
+    }
+  ],
+  "refutations": [
+    {
+      "claim": "Authoring unknown-to-typed rewrite necessarily prevents hostile runtime inputs",
+      "result": "REFUTED locally: ProposeInput.newValue remains unknown at propose-apply.ts:55-58; generic helper218-235 performs isJsonValue guard. Targeted current65 authoring tests participate in82green; not a root build certification."
+    },
+    {
+      "claim": "Old partial-allocation/dispose bug remains categorical",
+      "result": "REFUTED for fresh targeted oracles only: production-hardening.test.ts:38-53,119-150 preserve last good root and cleanup; three-sculpt.ts:404-406,630-634 guard disposed state. Passed current suite, not proof of all allocation schedules."
+    },
+    {
+      "claim": "Capacity/numeric corruption still unbounded in current kernel",
+      "result": "Narrowed/refuted: session.ts:72-79,154,762,780 enforce bounds; fresh production-hardening passes. No100000events/physical/browser soak executed."
+    },
+    {
+      "claim": "Cubic capability requires removing old negative oracle",
+      "result": "REFUTED source: triangle-animation.ts:11-43 implements cubic and production-hardening.test.ts:84 still rejects malformed cubic value layout; no assertion removed."
+    }
+  ],
+  "scope": "Selective deep review of named runtime files, selected tests, git baseline/PR/staged/worktree, adjacent physics compatibility contract. Not exhaustive file review. EMPRYO.md absent. AGENTS/layout/FINAL/PR-EVIDENCE read. No product/config/source/git edits, install, commit,push,deploy,accounts or spend. Only these numbered report files written."
+}

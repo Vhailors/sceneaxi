@@ -19,6 +19,7 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
     ] as const) {
       const decision = applyKidsActivityAction(state, request);
       expect(decision.ok, JSON.stringify(request)).toBe(true);
+
       if (decision.ok) state = decision.state;
     }
 
@@ -54,9 +55,12 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
         action: "piece.add",
         pieceId: "friend",
       });
+
       expect(decision.ok).toBe(true);
+
       if (decision.ok) state = decision.state;
     }
+
     expect(applyKidsActivityAction(state, { action: "piece.add", pieceId: "tree" })).toEqual({
       ok: false,
       action: "piece.add",
@@ -89,23 +93,32 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
     const built = (() => {
       let state = createKidsActivityState();
       const decision = applyKidsActivityAction(state, { action: "piece.add", pieceId: "star" });
+
       if (decision.ok) state = decision.state;
+
       return state;
     })();
+
     const playing = (() => {
       const decision = applyKidsActivityAction(built, { action: "play.start" });
+
       if (!decision.ok) throw new Error("play.start must be allowed from a built scene.");
+
       return decision.state;
     })();
+
     const full = (() => {
       let state = createKidsActivityState();
+
       for (let index = 0; index < KIDS_ACTIVITY_PIECE_LIMIT; index += 1) {
         const decision = applyKidsActivityAction(state, {
           action: "piece.add",
           pieceId: "friend",
         });
+
         if (decision.ok) state = decision.state;
       }
+
       return state;
     })();
 
@@ -129,6 +142,7 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
         state: playing,
         request: { action: "piece.add", pieceId: "tree" },
       },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.noChange, state: built, request: { action: "world.choose", worldId: "meadow" } },
       { reason: KIDS_ACTIVITY_REFUSE_REASONS.alreadyPlaying, state: playing, request: { action: "play.start" } },
       { reason: KIDS_ACTIVITY_REFUSE_REASONS.alreadyStopped, state: built, request: { action: "play.stop" } },
     ] as const;
@@ -154,13 +168,16 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
 
   it("keeps play a read-only mode for every editing action", () => {
     let state = createKidsActivityState();
+
     for (const request of [
       { action: "piece.add", pieceId: "rocket" },
       { action: "play.start" },
     ] as const) {
       const decision = applyKidsActivityAction(state, request);
+
       if (decision.ok) state = decision.state;
     }
+
     expect(state).toMatchObject({ mode: "play", pieceIds: ["rocket"], revision: 2 });
 
     for (const request of [
@@ -176,6 +193,7 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
         message: "Stop play before changing your world.",
       });
     }
+
     expect(state).toMatchObject({ mode: "play", pieceIds: ["rocket"], revision: 2 });
   });
 
@@ -193,12 +211,56 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
     );
   });
 
+  it("counts only real changes, refusing repeated reset and same-world choices", () => {
+    let state = createKidsActivityState();
+
+    const change = (request: Parameters<typeof applyKidsActivityAction>[1]) => {
+      const previous = state;
+      const decision = applyKidsActivityAction(state, request);
+      expect(decision.ok).toBe(true);
+
+      if (!decision.ok) throw new Error("Expected a real change.");
+      state = decision.state;
+      expect(state.revision).toBe(previous.revision + 1);
+    };
+
+    const noChange = (request: Parameters<typeof applyKidsActivityAction>[1]) => {
+      const before = JSON.stringify(state);
+      const decision = applyKidsActivityAction(state, request);
+      expect(decision).toMatchObject({ ok: false, reason: KIDS_ACTIVITY_REFUSE_REASONS.noChange });
+      expect(decision).not.toHaveProperty("state");
+      expect(JSON.stringify(state)).toBe(before);
+    };
+
+    noChange({ action: "scene.reset" });
+    noChange({ action: "world.choose", worldId: "meadow" });
+    change({ action: "piece.add", pieceId: "star" });
+    noChange({ action: "world.choose", worldId: "meadow" });
+    change({ action: "world.choose", worldId: "moon" });
+    expect(state.pieceIds).toEqual(["star"]);
+    noChange({ action: "world.choose", worldId: "moon" });
+    change({ action: "scene.reset" });
+    noChange({ action: "scene.reset" });
+    change({ action: "world.choose", worldId: "ocean" });
+    change({ action: "scene.reset" });
+    change({ action: "play.start" });
+
+    for (const request of [{ action: "scene.reset" }, { action: "world.choose", worldId: "meadow" }]) {
+      expect(applyKidsActivityAction(state, request)).toMatchObject({
+        ok: false, reason: KIDS_ACTIVITY_REFUSE_REASONS.buildPaused,
+      });
+    }
+
+    expect(state.revision).toBe(6);
+  });
+
   it("refuses forged state and accessor-backed requests without executing them", () => {
     const accessor = Object.defineProperty({}, "action", {
       get() {
         throw new Error("must not execute");
       },
     });
+
     const revocable = Proxy.revocable({}, {});
     revocable.revoke();
 
@@ -217,6 +279,7 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
       ok: false,
       reason: KIDS_ACTIVITY_REFUSE_REASONS.stateInvalid,
     });
+
     for (const request of [accessor, revocable.proxy]) {
       expect(() => applyKidsActivityAction(createKidsActivityState(), request)).not.toThrow();
       expect(applyKidsActivityAction(createKidsActivityState(), request)).toMatchObject({

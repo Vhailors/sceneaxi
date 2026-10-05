@@ -62,15 +62,19 @@ export async function readOwnedLedger(
   userId: string,
 ): Promise<LedgerReadOutcome> {
   let state: LedgerState | undefined;
+
   try {
     state = await credits.ledgerFor(userId);
   } catch {
     return Object.freeze({ ok: false, failure: "unavailable" });
   }
+
   if (state === undefined) {
     return Object.freeze({ ok: false, failure: "missing" });
   }
+
   const validated = validateLedgerState(state);
+
   if (!validated.ok) {
     return Object.freeze({
       ok: false,
@@ -79,20 +83,24 @@ export async function readOwnedLedger(
       message: validated.message,
     });
   }
+
   if (validated.value.account.userId !== userId) {
     return Object.freeze({ ok: false, failure: "owner-mismatch" });
   }
+
   return Object.freeze({ ok: true, state: validated.value });
 }
 
 /** The injected clock's reading, or `undefined` if it did not give one. */
 export function readEpochClock(clock: () => number): number | undefined {
   let now: unknown;
+
   try {
     now = clock();
   } catch {
     return undefined;
   }
+
   return isEpochMilliseconds(now) ? now : undefined;
 }
 
@@ -102,20 +110,29 @@ export function readEpochClock(clock: () => number): number | undefined {
  * The tail is captured and replaced *synchronously*, before the first await, so
  * two operations submitted in the same tick still queue behind each other.
  */
+export const MAX_QUEUED_PANEL_OPERATIONS = 8;
+
 export function createOperationQueue(): <Value>(
   operation: () => Promise<Value>,
+  onBusy: () => Value,
 ) => Promise<Value> {
   let tail: Promise<void> = Promise.resolve();
-  return async <Value>(operation: () => Promise<Value>): Promise<Value> => {
+  let admitted = 0;
+
+  return async <Value>(operation: () => Promise<Value>, onBusy: () => Value): Promise<Value> => {
+    // One executing operation plus eight waiting; rejection never enters the tail.
+    if (admitted >= MAX_QUEUED_PANEL_OPERATIONS + 1) return onBusy();
+    admitted += 1;
     const preceding = tail;
     let release = () => {};
-    tail = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+
+    tail = new Promise<void>((resolve) => { release = resolve; });
     await preceding;
+
     try {
       return await operation();
     } finally {
+      admitted -= 1;
       release();
     }
   };

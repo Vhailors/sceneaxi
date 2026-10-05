@@ -28,6 +28,18 @@ import {
   type SceneDocument,
   type SculptArtifact,
 } from "@sceneaxi/schemas";
+import {
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION_V2,
+  digestComposedSceneV2,
+  digestScenePlacementsV2,
+  projectSceneInstanceHierarchyV2,
+  resolveScenePlacementsV2,
+  validateComposedSceneV2,
+  validateSceneCompositionIntakeV2,
+  type ComposedSceneV2,
+  type ComposedSceneInstanceV2,
+} from "@sceneaxi/schemas";
 import { canonicalJson, digestJson, snapshotJsonValue } from "./json-invariants.js";
 
 export type SceneCompositionRefusalCode = SceneCompositionDiagnosticCode;
@@ -638,4 +650,106 @@ export function composeScene(
     sceneDigest: validated.value.evidence.sceneDigest,
     document: sceneDocumentFromComposedScene(validated.value, normalizedOptions),
   };
+}
+
+export type SceneCompositionResultV2 =
+  | { readonly ok: true; readonly scene: ComposedSceneV2; readonly sceneBytes: string;
+      readonly sceneDigest: string; readonly document: SceneDocument }
+  | Extract<SceneCompositionResult, { readonly ok: false }>;
+
+export function serializeComposedSceneV2(scene: ComposedSceneV2): string {
+  return `${canonicalJson(scene)}\n`;
+}
+
+/** v2 uses the existing text-canonical document/persistence seam, not a new file type. */
+export function sceneDocumentFromComposedSceneV2(scene: ComposedSceneV2, options: SceneCompositionOptions = {}): SceneDocument {
+  const capturedOptions = captureSceneCompositionOptions(options);
+  if (!capturedOptions.ok) throw new TypeError(capturedOptions.message);
+  const validated = validateComposedSceneV2(scene);
+  if (!validated.ok) throw new TypeError(validated.diagnostics[0]?.message);
+  const normalizedOptions = capturedOptions.value;
+  const base = { id: normalizedOptions.documentId ?? `${scene.sceneId}-scene`,
+    data: { [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: validated.value } };
+  const document = normalizedOptions.title === undefined ? createDocument(base)
+    : createDocument({ ...base, title: normalizedOptions.title });
+  const checked = validateDocument(document);
+  if (!checked.ok) throw new TypeError(checked.message);
+  return checked.document;
+}
+
+/** Explicit rotation-aware composition; composeScene() remains the v1 entry point. */
+export function composeSceneV2(intakeValue: unknown, artifactValues: readonly unknown[], options: SceneCompositionOptions = {}): SceneCompositionResultV2 {
+  const refusal = (code: SceneCompositionRefusalCode, path: string, message: string): SceneCompositionResultV2 => ({ ok: false, code, path, message });
+  const capturedOptions = captureSceneCompositionOptions(options);
+  if (!capturedOptions.ok) return refusal("invalid-field", capturedOptions.path, capturedOptions.message);
+  const capturedIntake = captureStableInput(intakeValue, "$");
+  if (!capturedIntake.ok) return refusal(capturedIntake.budgetExceeded ? "scene-budget-exceeded" : "invalid-field", capturedIntake.path, capturedIntake.message);
+  const intake = validateSceneCompositionIntakeV2(capturedIntake.value);
+  if (!intake.ok) {
+    const diagnostic = intake.diagnostics[0];
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene v2 intake refused.");
+  }
+  const capturedArtifacts = captureStableInput(artifactValues, "$.artifacts");
+  if (!capturedArtifacts.ok) return refusal(capturedArtifacts.budgetExceeded ? "scene-budget-exceeded" : "invalid-artifact", capturedArtifacts.path, capturedArtifacts.message);
+  if (!Array.isArray(capturedArtifacts.value)) return refusal("invalid-artifact", "$.artifacts", "Sculpt Artifacts must be supplied as an array.");
+  const artifacts = new Map<string, SculptArtifact>();
+  for (const [index, value] of capturedArtifacts.value.entries()) {
+    const artifact = validateSculptArtifact(value);
+    if (!artifact.ok) return refusal("invalid-artifact", `$.artifacts[${String(index)}]`, artifact.diagnostics[0]?.message ?? "Artifact refused.");
+    if (artifacts.has(artifact.value.artifactId)) return refusal("unknown-artifact-reference", `$.artifacts[${String(index)}].artifactId`, "Supply an instanced artifact exactly once.");
+    artifacts.set(artifact.value.artifactId, artifact.value);
+  }
+  const resolved = resolveScenePlacementsV2(intake.value);
+  if (!resolved.ok) {
+    const diagnostic = resolved.diagnostics[0];
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene placements refused.");
+  }
+  const placed = new Set<string>();
+  const instances: ComposedSceneInstanceV2[] = [];
+  for (const placement of resolved.value) {
+    const artifact = artifacts.get(placement.artifactId);
+    const index = intake.value.placements.findIndex(p => p.instanceId === placement.instanceId);
+    if (!artifact) return refusal("unknown-artifact-reference", `$.placements[${String(index)}].artifactId`, "Referenced artifact was not supplied.");
+    placed.add(placement.artifactId);
+    try {
+      const bounds = projectSceneInstanceHierarchyV2({ ...placement, artifact }).bounds;
+      instances.push({ ...placement, artifact, bounds });
+    } catch {
+      return refusal("invalid-artifact", `$.placements[${String(index)}].artifactId`, "Artifact projection exceeds the scene numeric domain.");
+    }
+  }
+  for (const id of artifacts.keys()) {
+    if (!placed.has(id)) return refusal("unplaced-artifact", "$.artifacts", "Supplied artifact was never placed.");
+  }
+  const draft: ComposedSceneV2 = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION_V2, kind: COMPOSED_SCENE_KIND,
+    sceneId: intake.value.sceneId, rootInstanceId: intake.value.rootInstanceId, instances,
+    evidence: { intakeDigest: digestJson(intake.value), placementDigest: digestScenePlacementsV2(resolved.value),
+      artifactDigests: instances.map(i => ({ instanceId: i.instanceId, artifactDigest: digestSceneArtifact(i.artifact) })), sceneDigest: "" },
+  };
+  const scene: ComposedSceneV2 = { ...draft, evidence: { ...draft.evidence, sceneDigest: digestComposedSceneV2(draft) } };
+  const validated = validateComposedSceneV2(scene);
+  if (!validated.ok) {
+    const diagnostic = validated.diagnostics[0];
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene refused its own validator.");
+  }
+  return { ok: true, scene: validated.value, sceneBytes: serializeComposedSceneV2(validated.value),
+    sceneDigest: validated.value.evidence.sceneDigest,
+    document: sceneDocumentFromComposedSceneV2(validated.value, capturedOptions.value) };
+}
+
+/** Migrate a validated persisted v1 scene explicitly, keeping all artifact bytes. */
+export function migrateComposedSceneV1ToV2(value: unknown, options: SceneCompositionOptions = {}): SceneCompositionResultV2 {
+  const captured = captureStableInput(value, "$");
+  if (!captured.ok) return { ok: false, code: "invalid-field", path: captured.path, message: captured.message };
+  const legacy = validateComposedScene(captured.value);
+  if (!legacy.ok) {
+    const diagnostic = legacy.diagnostics[0];
+    return { ok: false, code: diagnostic?.code ?? "invalid-field", path: diagnostic?.path ?? "$", message: diagnostic?.message ?? "Legacy scene refused." };
+  }
+  const artifacts = new Map(legacy.value.instances.map(i => [i.artifactId, i.artifact]));
+  return composeSceneV2({ schemaVersion: 2, kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: legacy.value.sceneId, rootInstanceId: legacy.value.rootInstanceId,
+    placements: legacy.value.instances.map(i => ({ instanceId: i.instanceId, artifactId: i.artifactId,
+      parentInstanceId: i.parentInstanceId, transform: i.localTransform })) }, [...artifacts.values()], options);
 }

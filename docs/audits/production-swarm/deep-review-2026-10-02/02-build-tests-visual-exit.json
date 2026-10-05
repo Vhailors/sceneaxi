@@ -1,0 +1,1 @@
+{"command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts apps/desktop-shell/test/visual-refinement.test.ts apps/web-shell/test/visual-postpr.test.ts", "exit": 0, "timeoutSeconds": 105}

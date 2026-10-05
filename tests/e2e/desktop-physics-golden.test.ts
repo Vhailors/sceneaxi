@@ -71,7 +71,7 @@ describe("full-editor physics vertical", () => {
     const host = createDesktopBridge(options);
     for (const mutation of [
       { kind: "body-upsert", bodyId: "falling", instanceId: "desktop-crate-beside", bodyKind: "dynamic", mass: 1 },
-      { kind: "shape-upsert", shapeId: "ball", bodyId: "falling", shapeKind: "sphere", size: 0.5 },
+      { kind: "shape-upsert", colliderId: "ball", bodyId: "falling", colliderKind: "sphere", size: 0.5 },
       { kind: "world-set", gravityY: -9.81, stepMs: 16, seed: 1, engine: "rapier" },
     ]) {
       expect(command(host, "physics-apply", "desktop-control", {
@@ -125,7 +125,7 @@ describe("full-editor physics vertical", () => {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       expectedContentHash: hash(host),
       profile: "game",
-      mutation: { kind: "shape-upsert", shapeId: "ball", bodyId: "falling", shapeKind: "sphere", size: 0.5 },
+      mutation: { kind: "shape-upsert", colliderId: "ball", bodyId: "falling", colliderKind: "sphere", size: 0.5 },
     })).toMatchObject({ ok: true });
     expect(command(host, "change-review-accept", "cli", {})).toMatchObject({ ok: true });
     const saved = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH));
@@ -159,7 +159,7 @@ describe("full-editor physics vertical", () => {
     });
   });
 
-  it("names missing targets, invalid shapes, unsupported constraints, and unstable steps", () => {
+  it("names missing targets, invalid colliders, unsupported constraints, and unstable steps", () => {
     const root = fixture();
     const host = bridge(root);
     expect(command(host, "physics-apply", "desktop-control", {
@@ -179,8 +179,8 @@ describe("full-editor physics vertical", () => {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       expectedContentHash: hash(host),
       profile: "game",
-      mutation: { kind: "shape-upsert", shapeId: "s1", bodyId: "b1", shapeKind: "mesh", size: 1 },
-    })).toMatchObject({ ok: false, reason: SCENE_PHYSICS_REFUSALS.shapeInvalid });
+      mutation: { kind: "shape-upsert", colliderId: "s1", bodyId: "b1", colliderKind: "mesh", size: 1 },
+    })).toMatchObject({ ok: false, reason: SCENE_PHYSICS_REFUSALS.colliderInvalid });
     expect(command(host, "physics-apply", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       expectedContentHash: hash(host),

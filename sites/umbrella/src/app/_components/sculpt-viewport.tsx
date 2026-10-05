@@ -477,15 +477,16 @@ export function SculptFrameReport({
           <code>{frame?.surface ?? "…"}</code>
         </dd>
         <dt>Pixels drawn</dt>
-        <dd>
+        {/* Each changing value is keyed by itself, so a new value remounts its cell and the readout's settle runs (motion row 16). */}
+        <dd key={`pixels-${frame === null ? "…" : String(frame.pixelsDrawn)}`}>
           <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
         </dd>
         <dt>Frame</dt>
-        <dd>{frame?.frame ?? "…"}</dd>
+        <dd key={`frame-${frame?.frame ?? "…"}`}>{frame?.frame ?? "…"}</dd>
         <dt>Draw calls</dt>
-        <dd>{frame?.drawCalls ?? "…"}</dd>
+        <dd key={`draws-${frame?.drawCalls ?? "…"}`}>{frame?.drawCalls ?? "…"}</dd>
         <dt>Mounted</dt>
-        <dd>
+        <dd key={`mounted-${frame?.instanceIds.join(", ") ?? "…"}`}>
           <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
         </dd>
       </dl>

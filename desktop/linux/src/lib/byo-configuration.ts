@@ -24,24 +24,45 @@ import {
   type DesktopByoProvider,
 } from "./byo-configuration-contract.js";
 
+/** Values crossing desktop IPC, event, and exception boundaries before field validation. */
+type DesktopBoundaryValue = string | number | boolean | null | undefined | bigint | symbol
+  | DesktopBoundaryObject | readonly DesktopBoundaryValue[] | Error | DesktopBoundaryMethod;
+
+interface DesktopBoundaryObject { readonly [key: string]: DesktopBoundaryValue }
+
+type DesktopBoundaryMethod = (...args: never[]) => DesktopBoundaryValue;
+
+function isDesktopObject<Value>(value: Value): value is Value & (object | null) {
+  return typeof value === "object";
+}
+
+function isDesktopText<Value>(value: Value): value is Value & string {
+  return typeof value === "string";
+}
+
+function isDesktopNumber<Value>(value: Value): value is Value & number {
+  return typeof value === "number";
+}
+
 export type DesktopByoConfiguration = Readonly<{
-  handle(request: unknown): Promise<DesktopByoConfigurationResponse>;
+  handle<DesktopRequest>(request: DesktopRequest): Promise<DesktopByoConfigurationResponse>;
 }>;
 
-function field(value: unknown, name: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
+function field<Value>(value: Value, name: string): DesktopBoundaryValue {
+  if (!isDesktopObject(value) || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
+
   return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }
 
-function isProvider(value: unknown): value is DesktopByoProvider {
+function isProvider<Value>(value: Value): value is Value & DesktopByoProvider {
   return (
-    typeof value === "string" &&
-    (DESKTOP_BYO_PROVIDERS as readonly string[]).includes(value)
+    isDesktopText(value) &&
+    new Set<string>(DESKTOP_BYO_PROVIDERS).has(value)
   );
 }
 
-function isProfile(value: unknown): value is DesktopAssistantProfile {
+function isProfile<Value>(value: Value): value is Value & (DesktopAssistantProfile ) {
   return (
     value === "@sceneaxi/profile-game" ||
     value === "@sceneaxi/profile-web" ||
@@ -59,6 +80,8 @@ function refusal(
 export type CreateDesktopByoConfigurationOptions = Readonly<{
   keyStore: ProviderKeyStore;
   providerRuntimeAvailable: boolean;
+  /** Exact provider served by the injected runner; omission preserves legacy fixtures. */
+  runtimeProvider?: DesktopByoProvider;
 }>;
 
 export function createDesktopByoConfiguration(
@@ -79,7 +102,9 @@ export function createDesktopByoConfiguration(
       keyStatus,
       operation,
       storageStatus,
-      runtimeStatus: options.providerRuntimeAvailable ? "ready" as const : "unavailable" as const,
+      runtimeStatus: options.providerRuntimeAvailable &&
+        (options.runtimeProvider === undefined || options.runtimeProvider === provider)
+        ? "ready" as const : "unavailable" as const,
     });
 
   /**
@@ -94,19 +119,22 @@ export function createDesktopByoConfiguration(
     response: DesktopByoConfigurationRefusal,
   ): Promise<DesktopByoConfigurationRefusal> => {
     const probe = await options.keyStore.removable(provider);
+
     return Object.freeze({ ...response, removable: probe.ok && probe.removable });
   };
 
-  const handle = async (request: unknown): Promise<DesktopByoConfigurationResponse> => {
+  const handle = async <DesktopRequest>(request: DesktopRequest): Promise<DesktopByoConfigurationResponse> => {
     // Profile is the first and only field read before the Kids guard. In
     // particular, a hostile key getter cannot run on a Kids request.
     const profile = field(request, "profile");
+
     if (!isProfile(profile)) {
       return refusal(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.requestMalformed,
         "BYOK configuration requires a SceneAxi profile.",
       );
     }
+
     if (profile === "@sceneaxi/profile-kids") {
       return refusal(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.kidsDenied,
@@ -116,6 +144,7 @@ export function createDesktopByoConfiguration(
 
     const action = field(request, "action");
     const provider = field(request, "provider") ?? DESKTOP_BYO_PROVIDERS[0];
+
     if (
       (action !== "status" && action !== "save" && action !== "remove") ||
       !isProvider(provider)
@@ -128,7 +157,8 @@ export function createDesktopByoConfiguration(
 
     if (action === "save") {
       const key = field(request, "key");
-      if (typeof key !== "string") {
+
+      if (!isDesktopText(key)) {
         return refusalFor(
           provider,
           refusal(
@@ -137,8 +167,11 @@ export function createDesktopByoConfiguration(
           ),
         );
       }
+
       const saved = await options.keyStore.save(provider, key);
+
       if (!saved.ok) return refusalFor(provider, saved);
+
       return answer(
         action,
         provider,
@@ -150,10 +183,12 @@ export function createDesktopByoConfiguration(
 
     if (action === "remove") {
       const removed = await options.keyStore.remove(provider);
+
       if (!removed.ok) return refusalFor(provider, removed);
       // Removal is the one success that proves nothing about the backend, so
       // the answer carries a resolved availability rather than an inferred one.
       const after = await options.keyStore.status(provider);
+
       return answer(
         action,
         provider,
@@ -164,7 +199,9 @@ export function createDesktopByoConfiguration(
     }
 
     const current = await options.keyStore.status(provider);
+
     if (!current.ok) return refusalFor(provider, current);
+
     return answer(action, provider, current.keyStatus, "status", "ready");
   };
 
@@ -215,6 +252,7 @@ export function createSecureDesktopByoAssistantRunner(
         "The desktop BYOK provider session is denied for Kids before secure-storage access.",
       );
     }
+
     if (options.createProviderSession === undefined) {
       throw new DesktopByoRunnerRefusal(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionUnavailable,
@@ -223,9 +261,11 @@ export function createSecureDesktopByoAssistantRunner(
     }
 
     const stored = await options.keyStore.read(options.provider);
+
     if (!stored.ok) {
       throw new DesktopByoRunnerRefusal(stored.reason, stored.message);
     }
+
     // Two separate lifetimes. The lease the provider may read from is revoked
     // before the session closes; the comparison copy the redaction measures
     // against outlives it until the session has closed, because a provider may
@@ -234,6 +274,7 @@ export function createSecureDesktopByoAssistantRunner(
     // progress is redacted rather than compared.
     let secret: string | null = stored.key;
     let leaseRevoked = false;
+
     const access: ProviderKeyAccess = Object.freeze({
       read(): string {
         if (leaseRevoked || secret === null) {
@@ -242,6 +283,7 @@ export function createSecureDesktopByoAssistantRunner(
             "The privileged provider credential lease has ended.",
           );
         }
+
         return secret;
       },
     });
@@ -252,16 +294,17 @@ export function createSecureDesktopByoAssistantRunner(
     // have it copied through the redaction branch.
     const redacted = (snapshot: AssistantSculptProgress): AssistantSculptProgress =>
       Object.freeze({
-        phase: (ASSISTANT_SCULPT_PROGRESS_PHASES as readonly string[]).includes(snapshot.phase)
+        phase: new Set<string>(ASSISTANT_SCULPT_PROGRESS_PHASES).has(snapshot.phase)
           ? snapshot.phase
           : "waiting-provider",
-        percent: typeof snapshot.percent === "number" && Number.isFinite(snapshot.percent)
+        percent: isDesktopNumber(snapshot.percent) && Number.isFinite(snapshot.percent)
           ? snapshot.percent
           : 0,
         message: "Provider progress was redacted.",
       });
 
     let session: DesktopByoProviderSession;
+
     try {
       session = options.createProviderSession({ provider: options.provider, key: access });
     } catch {
@@ -279,18 +322,23 @@ export function createSecureDesktopByoAssistantRunner(
         onProgress: (snapshot) => {
           if (secret === null || JSON.stringify(snapshot).includes(secret)) {
             request.onProgress(redacted(snapshot));
+
             return;
           }
+
           request.onProgress(snapshot);
         },
       });
+
       const result = await session.run(providerRequest);
+
       if (secret === null || JSON.stringify(result).includes(secret)) {
         throw new DesktopByoRunnerRefusal(
           DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
           "The privileged BYOK provider session returned credential material and was refused.",
         );
       }
+
       return result;
     } catch {
       throw new DesktopByoRunnerRefusal(
@@ -299,6 +347,7 @@ export function createSecureDesktopByoAssistantRunner(
       );
     } finally {
       leaseRevoked = true;
+
       try {
         await session.close();
       } catch {

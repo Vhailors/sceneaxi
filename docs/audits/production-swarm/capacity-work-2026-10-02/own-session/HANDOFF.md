@@ -1,0 +1,16 @@
+# Minimum serial integration proposal (not applied)
+
+Normative existing owner: repair-review-2026-10-02/fix-identity-provider.md:42 proposes `/api/auth/catalog-session`, a versioned existing SitePrincipal/refusal envelope and explicit carried server credentials. This is NOT new SSO, cookie sharing, origin-wide role issuance or a second store. Existing host-only umbrella browser login cannot make catalog credentials appear; no authenticated cross-origin browser claim is made.
+
+1. After explicit Astra/parent handoff, port `proposal.mjs` functions to typed framework-neutral site-kit code using SiteIdentityAdapter, SiteIdentityRequest, SiteResult<SitePrincipal|null>, SiteFormOriginSignals and Pick<UmbrellaRequestAuthority,...> compatible structural interfaces. Export narrowly and through site-kit owner; do not widen dependency matrix. `route.patch` is exact minimum wrapper with no provider import. Keep caught errors fixed, never echo credential.
+2. Both catalog server compositions inject `createConfiguredOriginAdapter` into existing `createCatalogIdentityPlane`. Supply only existing readSessionToken() output as an explicit credential. Fetch sends exactly Accept, Origin, x-sceneaxi-session; credentials omit, redirect error, no-store. No cookie/header bag forwarding, no request Host-derived target, no browser fetch or Domain cookie change. Missing deployment origin and hostile URL userinfo/path/query/hash refuse before fetch.
+3. Handler origin check uses facade verifyFormOrigin with NO requestUrl fallback: absent configured origin refuses; required Origin is configured umbrella origin. Credential solely x-sceneaxi-session. Forged query userId refuses before plane. Existing authoritative plane owns verification and user/session binding.
+4. Proposed wire envelope `{version:1,result:SiteResult<SitePrincipal>}` preserves fixed registry refusals; no new reasons. Success200, absent401, origin403, malformed400, thrown provider503. Review remaining distinctions (not-wired/unavailable status) with identity owner. Existing catalog port validates returned authenticated identity/refusals.
+
+Executed proposal uses real Request/Response but injected provider/runtime fixture collaborators, NOT a deployed endpoint. Product socket integration and strict typed compilation/boundaries are NOT RUN. Command after approved source integration, fresh source-fingerprinted site build and owned fixture service configured to loopback origin:
+
+```sh
+node docs/audits/production-swarm/capacity-work-2026-10-02/own-session/socket-check.mjs http://127.0.0.1:49187 fixture-session.fixture-token
+```
+
+Preconditions: integrator owns unique free port49187, fixture identity user fixture-own-user with genuine authenticated fixture session, production site build manifest/content fingerprint recorded (not presumed current), no live credentials/provider DB. Service launch/site build/provider lifecycle are deferred and not authorized by this packet. Harness requires fixture token and loopback target; cleanup service/fixture session afterward. Socket negative controls missing/hostile Origin and Cookie-only must be asserted alongside own-user positive. Full provider provenance remains owning auth lifecycle acceptance, not an injected fixture claim.

@@ -1,0 +1,52 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi/sites/umbrella
+
+························································x·x·······························
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/own-session.test.ts > real own-session route registration > dispatches the real GET route through the existing configured facade with no URL fallback
+AssertionError: expected 403 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 403
+
+ ❯ test/own-session.test.ts:161:29
+    159|     expect(route.runtime).toBe("nodejs"); expect(route.dynamic).toBe("…
+    160|     const response = await route.GET(request());
+    161|     expect(response.status).toBe(200);
+       |                             ^
+    162|     expect(await response.json()).toEqual({ version: 1, ok: true, valu…
+    163|     expect(verifyFormOrigin).toHaveBeenCalledExactlyOnceWith({ origin:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  test/own-session.test.ts > real own-session route registration > keeps thrown facade errors named and private on the real route
+AssertionError: expected 403 to be 503 // Object.is equality
+
+- Expected
++ Received
+
+- 503
++ 403
+
+ ❯ refusal test/own-session.test.ts:44:27
+     42| }
+     43| async function refusal(response: Response, reason: string, status: num…
+     44|   expect(response.status).toBe(status);
+       |                           ^
+     45|   expect(await response.json()).toEqual({ version: 1, ok: false, reaso…
+     46|   expect(response.headers.get("cache-control")).toBe("no-store");
+ ❯ test/own-session.test.ts:174:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 88 passed (90)
+   Start at  16:45:27
+   Duration  6.83s (transform 15.28s, setup 0ms, import 17.57s, tests 275ms, environment 0ms)
+

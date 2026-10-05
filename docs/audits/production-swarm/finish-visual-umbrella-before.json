@@ -1,0 +1,326 @@
+[
+  {
+    "name": "landing",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "SceneAxi — interactive engine and library",
+    "h1": "Build scenes. Keep the source.",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [],
+    "tiny": 7
+  },
+  {
+    "name": "open",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "Open a real artifact — SceneAxi",
+    "h1": "Open a real SceneAxi artifact",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 112,
+      "y": 133,
+      "width": 680,
+      "height": 248.296875,
+      "top": 133,
+      "right": 792,
+      "bottom": 381.296875,
+      "left": 112
+    },
+    "panels": [
+      {
+        "class": "state state-ok",
+        "text": "ValidatedPublic — no account, no creditsThis page needs no sign-in and consumes nothing. It also edits nothing: the boun"
+      },
+      {
+        "class": "state-head",
+        "text": "ValidatedPublic — no account, no credits"
+      },
+      {
+        "class": "state-body",
+        "text": "This page needs no sign-in and consumes nothing. It also edits nothing: the bounded Minimum E2 editor is a separate, ent"
+      }
+    ],
+    "tiny": 0
+  },
+  {
+    "name": "editor",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "Editor — SceneAxi",
+    "h1": "SceneAxi Engine Desktop editor",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedCatalog intake is not open on this deploymentreasonCATALOG_INTAKE_STORAGE_UNAVAILABLEThe injected TEST catalog in"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedCatalog intake is not open on this deploymentreasonCATALOG_INTAKE_STORAGE_UNAVAILABLE"
+      },
+      {
+        "class": "state-body",
+        "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.No intake record was built or read for t"
+      },
+      {
+        "class": "edshell",
+        "text": "SceneAxi Engine Desktop editorEDITOR_WINDOW_BELOW_MINIMUMThe editor chrome refuses below 900×600 rather than rendering a"
+      },
+      {
+        "class": "ed-cr-state",
+        "text": "applied"
+      }
+    ],
+    "tiny": 17
+  },
+  {
+    "name": "account",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "Account — SceneAxi",
+    "h1": "Your SceneAxi account",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 112,
+      "y": 133,
+      "width": 680,
+      "height": 222.265625,
+      "top": 133,
+      "right": 792,
+      "bottom": 355.265625,
+      "left": 112
+    },
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedSign-in is not activated on this deploymentreasonIDENTITY_PLANE_NOT_WIREDThis deployment has not supplied the ide"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedSign-in is not activated on this deploymentreasonIDENTITY_PLANE_NOT_WIRED"
+      },
+      {
+        "class": "state-body",
+        "text": "This deployment has not supplied the identity plane's provider handles, so no session can be created or verified. This i"
+      }
+    ],
+    "tiny": 2
+  },
+  {
+    "name": "login",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "Sign in — SceneAxi",
+    "h1": "Sign-in is not activated on this deployment",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 112,
+      "y": 133,
+      "width": 680,
+      "height": 144.15625,
+      "top": 133,
+      "right": 792,
+      "bottom": 277.15625,
+      "left": 112
+    },
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedSign-in is unavailablereasonIDENTITY_PLANE_NOT_WIREDSign-in is not available right now. Your named reason is show"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedSign-in is unavailablereasonIDENTITY_PLANE_NOT_WIRED"
+      },
+      {
+        "class": "state-body",
+        "text": "Sign-in is not available right now. Your named reason is shown above.This deployment sets the temporary server-side edit"
+      }
+    ],
+    "tiny": 2
+  },
+  {
+    "name": "docs",
+    "size": "desktop",
+    "status": 200,
+    "errors": [],
+    "title": "SceneAxi — interactive engine and library",
+    "h1": "SceneAxi help",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [],
+    "tiny": 2
+  },
+  {
+    "name": "landing",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "SceneAxi — interactive engine and library",
+    "h1": "Build scenes. Keep the source.",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [],
+    "tiny": 7
+  },
+  {
+    "name": "open",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "Open a real artifact — SceneAxi",
+    "h1": "Open a real SceneAxi artifact",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 32,
+      "y": 213,
+      "width": 326,
+      "height": 299.15625,
+      "top": 213,
+      "right": 358,
+      "bottom": 512.15625,
+      "left": 32
+    },
+    "panels": [
+      {
+        "class": "state state-ok",
+        "text": "ValidatedPublic — no account, no creditsThis page needs no sign-in and consumes nothing. It also edits nothing: the boun"
+      },
+      {
+        "class": "state-head",
+        "text": "ValidatedPublic — no account, no credits"
+      },
+      {
+        "class": "state-body",
+        "text": "This page needs no sign-in and consumes nothing. It also edits nothing: the bounded Minimum E2 editor is a separate, ent"
+      }
+    ],
+    "tiny": 0
+  },
+  {
+    "name": "editor",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "Editor — SceneAxi",
+    "h1": "SceneAxi Engine Desktop editor",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedCatalog intake is not open on this deploymentreasonCATALOG_INTAKE_STORAGE_UNAVAILABLEThe injected TEST catalog in"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedCatalog intake is not open on this deploymentreasonCATALOG_INTAKE_STORAGE_UNAVAILABLE"
+      },
+      {
+        "class": "state-body",
+        "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.No intake record was built or read for t"
+      },
+      {
+        "class": "edshell",
+        "text": "SceneAxi Engine Desktop editorEDITOR_WINDOW_BELOW_MINIMUMThe editor chrome refuses below 900×600 rather than rendering a"
+      },
+      {
+        "class": "ed-cr-state",
+        "text": "applied"
+      }
+    ],
+    "tiny": 0
+  },
+  {
+    "name": "account",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "Account — SceneAxi",
+    "h1": "Your SceneAxi account",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 32,
+      "y": 213,
+      "width": 326,
+      "height": 299.15625,
+      "top": 213,
+      "right": 358,
+      "bottom": 512.15625,
+      "left": 32
+    },
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedSign-in is not activated on this deploymentreasonIDENTITY_PLANE_NOT_WIREDThis deployment has not supplied the ide"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedSign-in is not activated on this deploymentreasonIDENTITY_PLANE_NOT_WIRED"
+      },
+      {
+        "class": "state-body",
+        "text": "This deployment has not supplied the identity plane's provider handles, so no session can be created or verified. This i"
+      }
+    ],
+    "tiny": 1
+  },
+  {
+    "name": "login",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "Sign in — SceneAxi",
+    "h1": "Sign-in is not activated on this deployment",
+    "overflow": 0,
+    "mainClass": "",
+    "head": {
+      "x": 32,
+      "y": 213,
+      "width": 326,
+      "height": 148.3125,
+      "top": 213,
+      "right": 358,
+      "bottom": 361.3125,
+      "left": 32
+    },
+    "panels": [
+      {
+        "class": "state state-deny",
+        "text": "RefusedSign-in is unavailablereasonIDENTITY_PLANE_NOT_WIREDSign-in is not available right now. Your named reason is show"
+      },
+      {
+        "class": "state-head",
+        "text": "RefusedSign-in is unavailablereasonIDENTITY_PLANE_NOT_WIRED"
+      },
+      {
+        "class": "state-body",
+        "text": "Sign-in is not available right now. Your named reason is shown above.This deployment sets the temporary server-side edit"
+      }
+    ],
+    "tiny": 1
+  },
+  {
+    "name": "docs",
+    "size": "mobile",
+    "status": 200,
+    "errors": [],
+    "title": "SceneAxi — interactive engine and library",
+    "h1": "SceneAxi help",
+    "overflow": 0,
+    "mainClass": "",
+    "panels": [],
+    "tiny": 3
+  }
+]

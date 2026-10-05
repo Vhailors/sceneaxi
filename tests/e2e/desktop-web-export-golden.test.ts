@@ -1259,6 +1259,7 @@ describe("desktop static Web export", () => {
       },
     );
     expect(readdirSync(join(appRoot, "dist")).sort()).toEqual([
+      "asset-preparation-worker.cjs",
       "index.html",
       "main.cjs",
       "preload.cjs",
@@ -1271,6 +1272,7 @@ describe("desktop static Web export", () => {
       { cwd: appRoot, stdio: "pipe" },
     );
     expect(readdirSync(join(appRoot, "dist")).sort()).toEqual([
+      "asset-preparation-worker.cjs",
       "index.html",
       "main.cjs",
       "preload.cjs",

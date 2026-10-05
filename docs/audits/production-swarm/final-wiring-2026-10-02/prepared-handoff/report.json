@@ -1,0 +1,166 @@
+{
+  "owner": "prepared-handoff",
+  "retry": {
+    "implementationAlreadyPresent": true,
+    "newEdits": ["Capture original cancellation signal before awaiting admission", "Bound descriptor reads to initial size plus a one-byte growth probe", "Add signal-replacement cancellation regression"],
+    "redBefore": { "receipt": "retry-red-before.log", "passed": 11, "failed": 1, "output": "expected proposal to be null" },
+    "greenAfter": { "receipt": "retry-green-after.log", "passed": 22, "failed": 0 },
+    "normalPublic": { "receipt": "retry-normal-public-tests.log", "files": 6, "passed": 102, "failed": 0 },
+    "scopedEslintExit": 0,
+    "scopedDiffCheckExit": 0,
+    "currentSourceHashManifest": "retry-source-after.sha256",
+    "serialDistProof": "Not run; parent-owned default-dist/main/native gate requests remain pending",
+    "resources": "Focused tests clean their own workers and project fixtures; no build/install/stage/commit performed",
+    "sourceHandback": "All five paths released to parent"
+  },
+  "status": "SOURCE_IMPLEMENTED_FOCUSED_VERIFIED_SERIAL_FRONTDOOR_PENDING",
+  "sourceHandback": true,
+  "sourceHandbackDisposition": "All three granted source files and the two new focused tests released. No further source edits by bg-133. Preserve inherited edits. Parent owns serial main adapter/build/native/gate acceptance.",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "sourcePaths": [
+    "desktop/linux/src/lib/bridge.ts",
+    "apps/desktop-shell/src/session.ts",
+    "desktop/linux/scripts/build.mjs",
+    "desktop/linux/test/prepared-asset-handoff.test.ts",
+    "apps/desktop-shell/test/prepared-asset-handoff.test.ts"
+  ],
+  "sourceAfterHashes": [
+    {
+      "path": "desktop/linux/src/lib/bridge.ts",
+      "sha256": "d28d48d0c85c894777b9d45428b382d19821344bafe7a6be8951ae0881cd31db"
+    },
+    {
+      "path": "apps/desktop-shell/src/session.ts",
+      "sha256": "ab2c8ac5cc3eab8bcf212f48dfbf897bdd41a037ad0c75f1c8ad9bb178732e8d"
+    },
+    {
+      "path": "desktop/linux/scripts/build.mjs",
+      "sha256": "56987340c882be08a94fca66d34f24c48be51bca0f29e327f6ceee06b64fde1b"
+    },
+    {
+      "path": "desktop/linux/test/prepared-asset-handoff.test.ts",
+      "sha256": "b506f43b4da6318b310063de5ef02596831dc0195825f5fc9ec14075ba9478a5"
+    },
+    {
+      "path": "apps/desktop-shell/test/prepared-asset-handoff.test.ts",
+      "sha256": "53f5dc552e10df2c29a4de258e9161e724265a41ad167d910fa0861d7870628c"
+    }
+  ],
+  "sourceBeforeEvidence": {
+    "fullSHA256": "Not captured before edits; no reconstructed baseline hash claimed",
+    "readHashFooters": {
+      "desktop/linux/src/lib/bridge.ts": "ade344b6a20e4220",
+      "apps/desktop-shell/src/session.ts": "2d15f5e207cdb610",
+      "desktop/linux/scripts/build.mjs": "c910e5349e73b905"
+    }
+  },
+  "redBefore": [
+    {
+      "receipt": "red-before.log",
+      "fresh": true,
+      "exit": 1,
+      "failed": 1,
+      "output": "Session lacked stagePreparedProposal: expected property function, received undefined."
+    },
+    {
+      "receipt": "focused-first.log",
+      "fresh": true,
+      "exit": 1,
+      "passed": 15,
+      "failed": 1,
+      "output": "Prepared acceptance response leaked original base64: JSON length89936 expected<6000. Fixed compact assetImport evidence projection; unchanged assertion passes."
+    }
+  ],
+  "greenAfter": {
+    "focused": {
+      "receipt": "green-after.log",
+      "command": "pnpm exec vitest run apps/desktop-shell/test/prepared-asset-handoff.test.ts desktop/linux/test/prepared-asset-handoff.test.ts --reporter=dot",
+      "exit": 0,
+      "passed": 20,
+      "note": "Subsequent close-generation oracle added; final normal-public run contains all21 focused assertions."
+    },
+    "normalPublicTests": {
+      "command": "pnpm exec vitest run apps/desktop-shell/test/prepared-asset-handoff.test.ts desktop/linux/test/prepared-asset-handoff.test.ts apps/desktop-shell/test/seam.test.ts apps/desktop-shell/test/session-recovery.test.ts tests/e2e/desktop-linux-bridge-golden.test.ts tests/e2e/asset-pipeline-golden.test.ts --reporter=dot",
+      "exit": 0,
+      "files": 6,
+      "passed": 101,
+      "focusedAssertions": 21,
+      "receipt": "normal-public-tests-final.log",
+      "config": "Unchanged default Vitest config; imports by public package names. Test-only Node source resolver launches real Worker/importer, never a fake entry."
+    },
+    "lint": {
+      "exit": 0,
+      "receipt": "lint-final.log"
+    },
+    "desktopSourceTypecheck": {
+      "command": "pnpm --dir desktop/linux exec tsc --noEmit",
+      "exit": 0,
+      "receipt": "desktop-typecheck-final.log"
+    },
+    "boundaries": {
+      "command": "node scripts/check-boundaries.mjs",
+      "exit": 0,
+      "receipt": "boundaries-final.log"
+    },
+    "scopedDiffCheck": {
+      "exit": 0
+    }
+  },
+  "implementation": [
+    "Bridge-owned native request factory consumes the actual public worker outcome privately; root/profile/lease/review authority retained. No arbitrary prepared-response IPC entry. Worker actual descriptor schema admits source request; no duplicate authoring implementation.",
+    "Session schema validates single exact E1 edit/diff, seals unchanged proposal identity, performs64KiB UTF8/O_NOFOLLOW descriptor stale-base/path/inode/stat verification, fences asynchronous admission against abort/reject/new-review. Accept/recovery/undo still use existing authoring-core operations.",
+    "Bridge compact display strips proposal/diff/base64 from prepared review, acceptance/recovery and status IPC only; exact raw E1/proposal/canonical document/original source digest/copy bytes retained. Legacy synchronous public importer and existing bridge asset-import remain unchanged.",
+    "CJS sibling emission is real importer source, common esbuild config/node22/platform node/CJS, included in output and recorded-offer leak inventory."
+  ],
+  "assertions": [
+    "Exact retained session proposal object/diff; seal rejects mutation and late display substitution",
+    "Byte-identical accepted document against actual public synchronous proposal applied via public authoring core in a twin fixture; exact project copy and original-source digest",
+    "Stable assetID with changed raw original digest hot reload and replacesDigest; replay no extra proposal",
+    "8MiB prepared admission uses compact response<6000 characters and unchanged<=100ms main heartbeat bound; rejects without writing",
+    "Stale-before-stage and stale-after-review apply refusal; no overwrite; existing single-review/recovery/undo golden assertions remain green",
+    "Cancel/reject/close/new-review fences prevent late staging/writes; Kids/path/symlink/accessor and forged prepared request fields refuse"
+  ],
+  "defaultDistProofRequests": [
+    {
+      "owner": "parent serial integrator",
+      "command": "node desktop/linux/scripts/build.mjs",
+      "assert": "Default dist contains nonempty dist/asset-preparation-worker.cjs emitted from actual packages/importers/src/asset-preparation-worker.ts; launch through CJS main factory/fixed sibling, verify real worker exit and exact public E1 result."
+    },
+    {
+      "owner": "parent serial integrator",
+      "command": "SCENEAXI_SMOKE_ASSET_CAPACITY=1 node desktop/linux/scripts/smoke.mjs",
+      "assert": "After main factory adaptation/source-bound build: actual picker/import/review/accept/hot-reload/cancel; unchanged4s/100ms/500ms/256MiB/32MiB bounds; actual Electron/RSS/resource cleanup. No8MiB apply/native timing claim from node staging test."
+    },
+    {
+      "owner": "parent serial integrator",
+      "command": "pnpm gate",
+      "assert": "Source-bound serial gate, no check weakening or matrix widening."
+    }
+  ],
+  "parentMainAdapterRequest": {
+    "path": "desktop/linux/src/electron/main.ts:334",
+    "api": "selectedBridge.prepareAssetImport(input) -> {generation,result:Promise<DesktopBridgeResponse>,cancel():Promise<DesktopBridgeResponse>}",
+    "change": "Replace startProjectAssetPreparation and legacy selectedBridge.handle asset-import after success. Await factory result directly; keep native window/root/bridge/generation fences. Existing pendingPreparation.job type can be inferred ReturnType<DesktopBridge[\"prepareAssetImport\"]>. Remove raw outcome.prepared metric access; compact response entry canonicalBase64ByteLength retains length evidence without byte payload. No source change to main by this agent."
+  },
+  "cleanup": {
+    "workers": "Real Worker.threadId=-1 asserted after every focused case; worker termination awaited. All own temp loader/project/twin directories removed in hooks.",
+    "resources": "No own server/native/browser/container/background job launched; no install/stage/commit/push/merge/deploy/spend.",
+    "verificationNotRun": [
+      "whole build",
+      "sites/browser/native/Docker",
+      "default emitted sibling execution",
+      "full gate"
+    ],
+    "policy": "Deferred exclusively to parent serial gate after source handback; not external blockers or completed production proof."
+  },
+  "receiptHashes": {
+    "red-before.log": "cf68449247808ff9aee99b48a69137d80bc4625c99aca6b2d6ef6d664c3c5f8f",
+    "focused-first.log": "6fad99b0896c32f98a0477e5b1e8bf82843d71e0b17937580a2d7964560e3655",
+    "green-after.log": "3020e275c404c4671835160c5fe07f9ce536c5d292414e483254dd76cb58c3d8",
+    "normal-public-tests-final.log": "9295509f1c49cb7d457cfa8e9021cceb5b345611231217a0f69904e5937151ee",
+    "lint-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "desktop-typecheck-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "boundaries-final.log": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "source-after.sha256": "e1eee0926db2d86558b94c642a23702ce646cfd0c66414bf6133481e45bd8109"
+  }
+}

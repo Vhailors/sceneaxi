@@ -1,0 +1,28 @@
+{
+  "lanes": 10,
+  "handedBack": 10,
+  "sourcePaths": 34,
+  "receiptHashMismatches": [],
+  "missingRequestedExportIdentifiers": 45,
+  "ledgerRowsMapped": 18,
+  "unmappedAliases": [
+    {
+      "id": "IR-06",
+      "lanes": [
+        "desktop-keyboard"
+      ],
+      "disposition": "Child alias/subject absent as exact ledger row id; no new row or fabricated closure"
+    },
+    {
+      "id": "IR-07",
+      "lanes": [
+        "unsigned-project-build"
+      ],
+      "disposition": "Child alias/subject absent as exact ledger row id; no new row or fabricated closure"
+    }
+  ],
+  "changedReports": [],
+  "changedSources": [],
+  "sharedChanged": [],
+  "ledgerUnchanged": true
+}

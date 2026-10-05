@@ -15,12 +15,17 @@ export default function RouteError({
   readonly error: Error & { readonly digest?: string };
 }) {
   return (
-    <div className="page">
+    <div className="page page-narrow page-state">
       <div className="page-head">
-        <p className="eyebrow">Something went wrong</p>
-        <h1>This page could not be rendered</h1>
+        <div className="title-row">
+          <h1>This page could not be rendered</h1>
+          <span className="chip chip-refused state-chip">
+            <span className="dot" aria-hidden="true" />
+            Something went wrong
+          </span>
+        </div>
         <p className="lede">Nothing was changed on your account.</p>
-        {error.digest ? <p className="mono">Reference {error.digest}</p> : null}
+        {error.digest ? <p className="mono field-well">Reference {error.digest}</p> : null}
       </div>
       <div className="actions">
         <a className="button" href="/">

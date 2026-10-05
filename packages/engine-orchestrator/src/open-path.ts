@@ -31,6 +31,7 @@
  */
 import {
   BOM_VERSION,
+  KernelSessionError,
   KERNEL_VERSION,
   open,
   openSceneKernelSession,
@@ -51,6 +52,7 @@ import {
   type SculptKernelSaveArtifact,
   type SculptKernelSession,
 } from "@sceneaxi/engine-kernel";
+import { validateSculptArtifact, validateComposedScene } from "@sceneaxi/schemas";
 import {
   ok,
   refuse,
@@ -164,7 +166,9 @@ export type OpenPathHandle<K extends OpenPathKind, S> = {
 };
 
 export type ProductOpenPathHandle = OpenPathHandle<"product", KernelSession>;
+
 export type SculptOpenPathHandle = OpenPathHandle<"sculpt", SculptKernelSession>;
+
 export type SceneOpenPathHandle = OpenPathHandle<"scene", SceneKernelSession>;
 
 export type AnyOpenPathHandle =
@@ -173,10 +177,14 @@ export type AnyOpenPathHandle =
   | SceneOpenPathHandle;
 
 /** Read one own data property without invoking an accessor the value may define. */
-function ownField(value: unknown, field: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
+type OwnDataField<Value, Field extends string> = Value extends object ? Field extends keyof Value ? Value[Field] : undefined : undefined;
+
+function ownField<Value, Field extends string>(value: Value, field: Field): OwnDataField<Value, Field> | undefined {
+  if (!isObjectValue(value) || value === null) return undefined;
+
   try {
     const descriptor = Object.getOwnPropertyDescriptor(value, field);
+
     return descriptor !== undefined && "value" in descriptor
       ? descriptor.value
       : undefined;
@@ -186,13 +194,17 @@ function ownField(value: unknown, field: string): unknown {
 }
 
 /** Read one own string data property, or `""` when it is absent or not a string. */
-function ownString(value: unknown, field: string): string {
+function ownString<Value, Field extends string>(value: Value, field: Field): string {
   const found = ownField(value, field);
-  return typeof found === "string" ? found : "";
+
+  return isStringValue(found) ? found : "";
 }
 
-function kernelMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function kernelMessage(cause: unknown): string {
+  // Never invoke toString, Error.message getters or proxy traps for diagnostics.
+  const message = ownErrorMessage(cause);
+
+  return isStringValue(message) ? message.slice(0, 512) : "operation failed";
 }
 
 type ResolvedHost = {
@@ -211,21 +223,24 @@ type ResolvedHost = {
  * bootstrapped product session from failing at its first command instead.
  */
 function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
-  if (typeof host !== "object" || host === null) {
+  if (!isObjectValue(host) || host === null) {
     return refuse("OPEN_PATH_HOST_INVALID", "host is not an object");
   }
 
   let clock: unknown;
+
   try {
     clock = host.nowMs;
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
-  if (typeof clock !== "function") {
+
+  if (!isClockSource(clock)) {
     return refuse("OPEN_PATH_HOST_INVALID", "host.nowMs is required");
   }
 
   let digest: KernelDigest;
+
   try {
     digest = resolveKernelDigest(host.digest);
   } catch (error) {
@@ -233,12 +248,14 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   }
 
   let openedAtMs: unknown;
+
   try {
     openedAtMs = host.nowMs();
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
-  if (typeof openedAtMs !== "number" || !Number.isInteger(openedAtMs)) {
+
+  if (!isNumberValue(openedAtMs) || !Number.isSafeInteger(openedAtMs)) {
     return refuse(
       "OPEN_PATH_HOST_INVALID",
       "host.nowMs must return an integer number of milliseconds",
@@ -273,6 +290,7 @@ function sessionIdOf(
 ): OrchestratorResult<string> {
   const mode = resumed ? "resume" : "open";
   let hex: unknown;
+
   try {
     hex = digest(
       `sceneaxi.open-path:${kind}:${subjectId}:${String(openedAtMs)}:${mode}`,
@@ -280,12 +298,14 @@ function sessionIdOf(
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
-  if (typeof hex !== "string" || !SESSION_ID_DIGEST_RE.test(hex)) {
+
+  if (!isStringValue(hex) || !SESSION_ID_DIGEST_RE.test(hex)) {
     return refuse(
       "OPEN_PATH_HOST_INVALID",
       "host digest must return 64 lowercase hex characters",
     );
   }
+
   return ok(`sha256:${hex}`);
 }
 
@@ -294,6 +314,7 @@ function createHandle<K extends OpenPathKind, S>(
   kernelSession: S,
 ): OpenPathHandle<K, S> {
   let live = true;
+
   return Object.freeze({
     kind: bootstrap.kind,
     bootstrap,
@@ -306,7 +327,7 @@ function createHandle<K extends OpenPathKind, S>(
   });
 }
 
-type Bootstrapped<K extends OpenPathKind, S> = OrchestratorResult<
+export type Bootstrapped<K extends OpenPathKind, S> = OrchestratorResult<
   OpenPathHandle<K, S>
 >;
 
@@ -322,16 +343,20 @@ function bootstrapWith<K extends OpenPathKind, S>(
   openSession: (resolved: ResolvedHost) => S,
 ): Bootstrapped<K, S> {
   const resolved = resolveHost(host);
+
   if (!resolved.ok) return resolved;
+
   if (subjectId === "") {
     return refuse("OPEN_PATH_SUBJECT_UNIDENTIFIED", `${kind} request`);
   }
 
   const { openedAtMs, digest } = resolved.value;
   const sessionId = sessionIdOf(kind, subjectId, openedAtMs, resumed, digest);
+
   if (!sessionId.ok) return sessionId;
 
   let kernelSession: S;
+
   try {
     kernelSession = openSession(resolved.value);
   } catch (error) {
@@ -358,14 +383,17 @@ function bootstrapWith<K extends OpenPathKind, S>(
 }
 
 /** Refuse a request whose shape says nothing usable about which path it wants. */
-function refuseRequest(request: unknown): OrchestratorRefusal {
-  if (typeof request !== "object" || request === null) {
+function refuseRequest(request: OpenPathRequest | ResumeOpenPathRequest): OrchestratorRefusal {
+  if (!isObjectValue(request) || request === null) {
     return refuse("OPEN_PATH_REQUEST_MALFORMED", "request is not an object");
   }
+
   const kind = ownField(request, "kind");
-  if (typeof kind !== "string" || kind === "") {
+
+  if (!isRequestKindText(kind)) {
     return refuse("OPEN_PATH_REQUEST_MALFORMED", "request.kind is required");
   }
+
   return refuse("OPEN_PATH_KIND_UNKNOWN", kind);
 }
 
@@ -398,44 +426,63 @@ export function bootstrapOpenPath(
 ): OrchestratorResult<AnyOpenPathHandle> {
   switch (ownField(request, "kind")) {
     case "product": {
-      const productManifest = ownField(
-        request,
-        "productManifest",
-      ) as ProductManifest;
+      const productManifest = ownField(request, "productManifest");
+
       return bootstrapWith(
         "product",
         host,
         ownString(productManifest, "productId"),
         false,
-        (resolved) => open(productManifest, resolved.kernelHost),
+        (resolved) => {
+          if (productManifest === undefined) throw new KernelSessionError("productManifest.productId is required");
+
+          return open(productManifest, resolved.kernelHost);
+        },
       );
     }
+
     case "sculpt": {
       const artifact = ownField(request, "artifact");
-      const options = ownField(request, "options") as SculptKernelOptions;
+      const options = ownField(request, "options");
+
       return bootstrapWith(
         "sculpt",
         host,
         ownString(artifact, "artifactId"),
         false,
-        (resolved) =>
-          openSculptKernelSession(artifact, options, {
-            digest: resolved.digest,
-          }),
+        (resolved) => {
+          const parsed = validateSculptArtifact(artifact);
+
+          if (!parsed.ok) throw new KernelSessionError(parsed.diagnostics[0]?.message ?? "invalid Sculpt Artifact");
+
+          if (options === undefined) throw new KernelSessionError("sculpt options.seed must be an integer");
+
+          return openSculptKernelSession(parsed.value, options, { digest: resolved.digest });
+        },
       );
     }
+
     case "scene": {
       const scene = ownField(request, "scene");
-      const options = ownField(request, "options") as SceneKernelOptions;
+      const options = ownField(request, "options");
+
       return bootstrapWith(
         "scene",
         host,
         ownString(scene, "sceneId"),
         false,
-        (resolved) =>
-          openSceneKernelSession(scene, options, { digest: resolved.digest }),
+        (resolved) => {
+          const parsed = validateComposedScene(scene);
+
+          if (!parsed.ok) throw new KernelSessionError(parsed.diagnostics[0]?.message ?? "invalid ComposedScene");
+
+          if (options === undefined) throw new KernelSessionError("sculpt options.seed must be an integer");
+
+          return openSceneKernelSession(parsed.value, options, { digest: resolved.digest });
+        },
       );
     }
+
     default:
       return refuseRequest(request);
   }
@@ -470,38 +517,94 @@ export function resumeOpenPath(
 ): OrchestratorResult<AnyOpenPathHandle> {
   switch (ownField(request, "kind")) {
     case "product": {
-      const save = ownField(request, "save") as KernelSessionSaveArtifact;
+      const save = ownField(request, "save");
+
       return bootstrapWith(
         "product",
         host,
         ownString(ownField(save, "productManifest"), "productId"),
         true,
-        (resolved) => replay(save, resolved.kernelHost),
+        (resolved) => {
+          if (!isProductSave(save)) throw new KernelSessionError("invalid save artifact");
+
+          return replay(save, resolved.kernelHost);
+        },
       );
     }
+
     case "sculpt": {
-      const save = ownField(request, "save") as SculptKernelSaveArtifact;
+      const save = ownField(request, "save");
+
       return bootstrapWith(
         "sculpt",
         host,
         ownString(ownField(save, "artifact"), "artifactId"),
         true,
-        (resolved) =>
-          replaySculptKernelSession(save, { digest: resolved.digest }),
+        (resolved) => {
+          if (!isSculptSave(save)) throw new KernelSessionError("invalid sculpt save artifact");
+
+          return replaySculptKernelSession(save, { digest: resolved.digest });
+        },
       );
     }
+
     case "scene": {
-      const save = ownField(request, "save") as SceneKernelSaveArtifact;
+      const save = ownField(request, "save");
+
       return bootstrapWith(
         "scene",
         host,
         ownString(ownField(save, "scene"), "sceneId"),
         true,
-        (resolved) =>
-          replaySceneKernelSession(save, { digest: resolved.digest }),
+        (resolved) => {
+          if (!isSceneSave(save)) throw new KernelSessionError("invalid scene save artifact");
+
+          return replaySceneKernelSession(save, { digest: resolved.digest });
+        },
       );
     }
+
     default:
       return refuseRequest(request);
   }
+}
+
+function ownErrorMessage(cause: unknown): string | undefined {
+  if (cause === null || !isObjectValue(cause)) return undefined;
+
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(cause, "message");
+    const message: unknown = descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
+
+    return isStringValue(message) ? message : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isObjectValue<Value>(value: Value): value is Value & object { return value !== null && typeof value === "object"; }
+
+function isStringValue<Value>(value: Value): value is Value & string { return typeof value === "string"; }
+
+function isClockSource<Value>(value: Value): value is Value & OpenPathHost["nowMs"] { return typeof value === "function"; }
+
+function isNumberValue<Value>(value: Value): value is Value & number { return typeof value === "number"; }
+
+type SavedSession = KernelSessionSaveArtifact | SculptKernelSaveArtifact | SceneKernelSaveArtifact;
+
+// These own fields distinguish the typed save variants; each kernel replay still validates the full untrusted payload.
+function isProductSave(value: SavedSession | undefined): value is KernelSessionSaveArtifact {
+  return value !== undefined && isObjectValue(value) && Object.hasOwn(value, "productManifest");
+}
+
+function isSculptSave(value: SavedSession | undefined): value is SculptKernelSaveArtifact {
+  return value !== undefined && isObjectValue(value) && Object.hasOwn(value, "artifact");
+}
+
+function isSceneSave(value: SavedSession | undefined): value is SceneKernelSaveArtifact {
+  return value !== undefined && isObjectValue(value) && Object.hasOwn(value, "scene");
+}
+
+function isRequestKindText<Value>(value: Value): value is Value & string {
+  return typeof value === "string" && value !== "";
 }

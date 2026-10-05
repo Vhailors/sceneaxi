@@ -1,0 +1,76 @@
+{
+  "command": "gh pr checks 312 --repo Vhailors/sceneaxi --json name,state,link,bucket",
+  "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+  "exit": 0,
+  "capturedAt": "2026-10-02T09:02:09.928574+00:00",
+  "timeoutSeconds": 45,
+  "data": [
+    {
+      "bucket": "skipping",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602157273",
+      "name": "native-runtime",
+      "state": "SKIPPED"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602098989",
+      "name": "static-staging",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652103/job/110602098831",
+      "name": "desktop-linux",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652105/job/110602099911",
+      "name": "desktop-macos",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652102/job/110602098929",
+      "name": "engine-sdk",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099368",
+      "name": "gate",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099454",
+      "name": "sites-build (umbrella)",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099406",
+      "name": "sites-build (catalog-game)",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099285",
+      "name": "sites-build (catalog-web)",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "fail",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099217",
+      "name": "kids-build",
+      "state": "FAILURE"
+    },
+    {
+      "bucket": "skipping",
+      "link": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602100572",
+      "name": "native-candidate",
+      "state": "SKIPPED"
+    }
+  ],
+  "stderr": ""
+}

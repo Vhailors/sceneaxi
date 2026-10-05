@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
-import { defineConfig } from "@playwright/test";
+import { defineConfig, type LaunchOptions } from "@playwright/test";
 
 const configuredChrome = process.env.SCENEAXI_CHROME_PATH;
+
 const executablePath =
   configuredChrome ?? (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined);
 
@@ -11,6 +12,10 @@ const executablePath =
  */
 const sandboxUnavailable =
   process.env.CI !== undefined || process.env.SCENEAXI_CHROME_NO_SANDBOX === "1";
+
+const launchOptions: LaunchOptions = { args: sandboxUnavailable ? ["--no-sandbox"] : [] };
+
+if (executablePath !== undefined) launchOptions.executablePath = executablePath;
 
 export default defineConfig({
   testDir: "./test",
@@ -26,10 +31,7 @@ export default defineConfig({
     headless: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    launchOptions: {
-      ...(executablePath === undefined ? {} : { executablePath }),
-      args: sandboxUnavailable ? ["--no-sandbox"] : [],
-    },
+    launchOptions,
   },
   webServer: {
     command: "pnpm dev --hostname 127.0.0.1 --port 4173",
@@ -37,6 +39,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
+      NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://127.0.0.1:4173",
       NEXT_TELEMETRY_DISABLED: "1",
     },
   },

@@ -1,0 +1,4 @@
+packages/engine-presentation/src/scene-transforms.ts(3,3): error TS2724: '"@sceneaxi/schemas"' has no exported member named 'projectSceneInstanceHierarchyV2'. Did you mean 'projectSceneInstanceHierarchy'?
+packages/engine-presentation/src/scene-transforms.ts(4,3): error TS2724: '"@sceneaxi/schemas"' has no exported member named 'validateComposedSceneV2'. Did you mean 'validateComposedScene'?
+packages/engine-presentation/src/scene-transforms.ts(5,8): error TS2724: '"@sceneaxi/schemas"' has no exported member named 'ComposedSceneV2'. Did you mean 'ComposedScene'?
+packages/engine-presentation/src/scene-transforms.ts(6,8): error TS2724: '"@sceneaxi/schemas"' has no exported member named 'PlacedSceneInstanceHierarchyV2'. Did you mean 'PlacedSceneInstanceHierarchy'?

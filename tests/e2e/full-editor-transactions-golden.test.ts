@@ -31,6 +31,7 @@ function appliedSession(transactionId: string): DesktopSession {
   return Object.freeze({
     snapshot: () => snapshot,
     proposeEdit: () => snapshot,
+    stagePreparedProposal: () => { throw new Error("transaction result must not stage an asset"); },
     accept: () => snapshot,
     reject: () => snapshot,
     refreshRecovery: () => snapshot,

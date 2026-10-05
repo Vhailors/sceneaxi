@@ -9,6 +9,21 @@ import type { RarityNamespace, RarityRollRequest } from "./rarity.js";
 /** Major version of the Kernel Session contract (schema const). */
 export const KERNEL_SESSION_SCHEMA_VERSION = 1 as const;
 
+export type GameplayEffect =
+  | Readonly<{ kind: "add-state" | "set-state"; key: string; value: number }>
+  | Readonly<{ kind: "move"; actor: string; axis: readonly [number, number] }>;
+
+export type GameplayDefinition = Readonly<{
+  profile: "game" | "web";
+  initialState: Readonly<Record<string, number>>;
+  actions: readonly Readonly<{ id: string; effects: readonly GameplayEffect[] }>[];
+  timers: readonly Readonly<{ id: string; afterMs: number; repeatMs?: number; effects: readonly GameplayEffect[] }>[];
+}>;
+
+export type GameplayActionCommand = Readonly<{ type: "action"; actionId: string }>;
+
+export type GameplaySnapshot = Readonly<{ state: Readonly<Record<string, number>>; elapsedMs: number; nextTimers: readonly Readonly<{ id: string; atMs: number | null }>[] }>;
+
 /** Product document used to open a kernel session. */
 export interface ProductManifest {
   readonly productId: string;
@@ -16,6 +31,7 @@ export interface ProductManifest {
   readonly entities?: ReadonlyArray<ProductEntitySeed>;
   /** Project-owned deterministic rarity policy and accepted roll records. */
   readonly rarity?: RarityNamespace;
+  readonly gameplay?: GameplayDefinition;
 }
 
 export interface ProductEntitySeed {
@@ -52,6 +68,7 @@ export type KernelCommand =
       readonly actor: string;
       readonly position: Position2;
     }
+  | GameplayActionCommand
   | RarityRollCommand;
 
 /** Frame clock passed to advance — only advance mutates authoritative state. */
@@ -77,6 +94,7 @@ export interface KernelSnapshot {
   /** Present only when the opened product manifest owns a rarity namespace. */
   readonly rarity?: RarityNamespace;
   /** Opaque canonical digest used for determinism and replay checks. */
+  readonly gameplay?: GameplaySnapshot;
   readonly digest: string;
 }
 
@@ -92,8 +110,10 @@ export type KernelSessionEvent =
     };
 
 /**
- * Save/replay artifact. Stamped with schema + kernel/BOM versions; major
- * schemaVersion mismatch on load refuses.
+ * Save/replay artifact. Stamped with schema + kernel/BOM versions; schemaVersion != 1 or engine/BOM major != 0 refuses. Unsupported engine/BOM
+ * majors report KERNEL_VERSION_UNSUPPORTED; no cross-major migration exists.
+ * Seeds/ticks/timestamps are safe integers; coordinates are within +/-1000000.
+ * Delta is 0..60000ms; queues/entities 4096 and retained events 100000.
  */
 export interface KernelSessionSaveArtifact {
   readonly schemaVersion: number;

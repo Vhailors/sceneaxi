@@ -40,3 +40,9 @@ they are read from it here rather than copied into this page.
 
 Note that this is independent of Profile Conformance, which still lists Web as
 `not-yet-claimed` — the two grade different things.
+
+## Bounded use-case demonstrations
+
+`test/experience-scenarios.test.ts` demonstrates public authoring/propose/apply and deterministic kernel save/replay for hero scenes, configurators, storytelling, and microsites. `test/browser-experience-proof.mjs` additionally drives four accessible test-only controls with real Chromium keyboard events, verifies changed WebGL drawing-buffer pixels and byte-identical replay pixels, captures PNG bytes, and releases each owned context. After `pnpm -s build`, run `node packages/profile-web/test/browser-experience-proof.mjs /usr/bin/chromium` from the repository root; it reuses existing desktop bundling and umbrella browser tooling without a new dependency edge.
+
+These are offline engine/profile demonstrations with a test-only HTML shell, not production editor feature acceptance, a deployed site, a physical-GPU assertion, CMS functionality, or a shared conformance claim. Unreviewed live-data scopes and shipping claims remain explicitly refused.

@@ -1,0 +1,1400 @@
+{
+  "lane": "desktop-cli",
+  "status": "NEEDS_LOCAL_FIX",
+  "repairPass": 3,
+  "repairBoundReached": true,
+  "independentReview": "NOT_EXECUTED; no Astra PASS claimed",
+  "baselineHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "sourceHashes": {
+    "apps/desktop-shell/src/chrome.ts": "1c45e9cdb94fdd251cdf2703b7801c63db54ae36f867693a36121d409662008f",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "212dfa0f9e041bff72a96387829efda97fa8e4b89d5ede03384eb6066f18a363",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs": "3238417fc29fd870dde4906eb282f6777cdfcdaa38de4bbfd16917df99010c7d",
+    "desktop/linux/src/electron/main.ts": "3c005ae7977a15ec648c428f0c8f0b30492c11a1ccd98c321e0279d4a53e5997",
+    "desktop/linux/scripts/smoke.mjs": "1362203257ab8486136c4325bded4f8050b921b3a742a04268ddb918d3ba0dcb",
+    "desktop/linux/src/lib/desktop-scene.ts": "28d28a405c4a618450b482a4178a16fd671b2905b62ef2f4d0ef25ff6205fc79",
+    "tests/e2e/asset-pipeline-golden.test.ts": "b2f401660951e51dc40e9bca140e74e01b872bc5958701e6d6eef4d16402392e",
+    "packages/schemas/src/document.ts": "3a50c64a37bd781a68ef9ecf119d4a87fcdc6dcd361c354bc586963eb08a3004"
+  },
+  "maximumRepairPasses": 3,
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "createdAt": "2026-10-02T09:15:02.094704+00:00",
+  "artifact": "dirty local worktree, not published PR",
+  "rows": [
+    {
+      "id": "CLI-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm build && pnpm exec vitest run packages/cli/test/refusal.test.ts packages/cli/test/bin-smoke.test.ts; both reproductions plus constructor/__proto__/toString at all group depths produce exit2 UNKNOWN_COMMAND schema1 JSON, empty stderr, no throw."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "CLI-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm build && pnpm exec vitest run packages/cli/test/refusal.test.ts packages/cli/test/bin-smoke.test.ts packages/cli/test/json-equivalence.test.ts; reproductions exit2 UNKNOWN_FLAG or AMBIGUOUS_INPUT; bare -v/-V/--version stays exit0."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "CLI-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm build && pnpm exec vitest run packages/cli/test/held-keys.refusal-table.test.ts packages/cli/test/held-keys.regressions.test.ts packages/cli/test/held-keys.command-map.test.ts; future/NaN/Infinity/negative runtime tests refuse with HELD_KEY, fresh exact budget remains documented, NvsN+1 and offline/env regressions unchanged."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "CLI-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm build && pnpm exec vitest run packages/cli/test/bin-smoke.test.ts; reproduction naturally exits0 once with ordinary help JSON and no mode/cycle/watch, while actual edit+SIGINT watch regressions continue passing."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "CLI-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm exec vitest run packages/cli/test/bin-smoke.test.ts packages/cli/test/exit-codes.golden.test.ts; docs match emitted streaming behavior without implying shipping or sentinel readiness."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-SEC-01",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Forbidden HTTP/userinfo/port/PRC/untrusted origin reads zero keys/fetches; approved HTTPS positive; redirects/body limits/timeouts redact; initial HTTP spy is failing-before oracle."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-BYOK-02",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "OpenRouter unavailable in actual opencode composition; opencode ready only with runner; encrypted replace/remove/locked/Kids remain; selected unavailable provider does not imply another provider usable."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-COV-03",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Each required action has typed-input/result/bytes/hash/reopen/frame oracle, no skipped/weakened assertions; 3 consecutive full packaged runs and real captures."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-COV-04",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Repeat both documented paths with unchanged selection/frame predicates; retain initial failure and route reproducible failure within three passes."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-HARD-05",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Actual enforced CSP permits real existing chrome/viewport and refuses injected remote script/frame/permission/non-main IPC; no unsafe-eval/matrix widening."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-PRIV-06",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Default/BYOK sessions no raw dumps; structured local event/reload still pass; synthetic consent/retention/removal tests without real secrets."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-DOC-07",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Docs parity based on actual controls/evidence; no unpublished local offer promoted."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DL-PERF-08",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Measured bounds with platform identified, resource teardown/plateau and physical-GPU coverage separately recorded."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "E12 exits 0 after real command refuses Linux",
+          "default Windows smoke unchanged",
+          "genuine native smoke --packaged requires recorded signed bytes and real pixels"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "verification failure invokes zero uploader calls",
+          "token/tag/real draft checks preserved",
+          "pnpm exec vitest run tests/desktop/desktop-windows-packaging.test.ts"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "prior output unchanged on refusal",
+          "commit mismatch/dirty checkout/duplicates/traversal rejected",
+          "pnpm exec vitest run tests/desktop/desktop-windows-packaging.test.ts"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "packaged+config-only calls zero ports",
+          "smoke calls zero",
+          "explicit validated configured release calls one",
+          "pnpm exec vitest run tests/desktop/desktop-windows-packaging.test.ts"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "omitted/duplicate/traversal/size/hash/update mismatch fixtures fail without signing simulation",
+          "pnpm exec vitest run tests/desktop/desktop-macos-packaging.test.ts",
+          "native pnpm smoke --packaged later"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-006",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "public package job contained output, no overwrite, deterministic evidence, rollback/refusal",
+          "existing project-build/Web-export goldens remain strict",
+          "no fabricated readiness/authority success"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "DR-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "pnpm --dir desktop/macos install --frozen-lockfile",
+          "pnpm --dir desktop/windows install --frozen-lockfile",
+          "pnpm --dir desktop/macos typecheck && pnpm --dir desktop/macos build && pnpm --dir desktop/macos smoke",
+          "pnpm --dir desktop/windows typecheck && pnpm --dir desktop/windows build && pnpm --dir desktop/windows smoke",
+          "pnpm check:desktop && pnpm check:boundaries"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "COVERAGE-CLI",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact command/exit/assertions/platform recorded; tested input/result/persistence or pixels where required.",
+          "Full unchanged gate plus relevant actual front doors; 3-pass FAIL routing; every unresolved hole classified local/intentional/external.",
+          "No production sentinel/export trust or authorization exists; default gated refusal expected.",
+          "No genuine running packaged desktop host connection asserted by this lane; real CLI missing/insecure transport refusal tested, existing local-bridge golden passes.",
+          "Only Linux Node24 exercised; macOS/Windows transport/signing/distribution proof belongs native lanes.",
+          "Workspace binary tested against existing baseline build; builders must rebuild before after-fix oracle. No new stack/API introduced, so no new external API documentation requirement invoked.",
+          "Startup sampled; no large-directory/large-document sustained-memory/load benchmark or product performance SLO claimed.",
+          "No extracted outsider tarball runtime proof; manifest limitations explicitly retained under backlog79.",
+          "No passing-after evidence for new defects because this auditor may not edit source; builder/integration owns regression closure."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "COVERAGE-SHELLS",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact command/exit/assertions/platform recorded; tested input/result/persistence or pixels where required.",
+          "Full unchanged gate plus relevant actual front doors; 3-pass FAIL routing; every unresolved hole classified local/intentional/external.",
+          "Native packaged Electron launch and GPU pixels not performed by this node",
+          "All66 native GUI commands not exercised",
+          "Gamepad hardware/OS keychain/live BYOK not exercised",
+          "No long-duration exhaustion/concurrent queue load measurement",
+          "No real provider/production billing/signing/macOS/Windows proof",
+          "No automated accessibility audit; control accounting is not full accessibility certification"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "COVERAGE-DESKTOP-LINUX",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact command/exit/assertions/platform recorded; tested input/result/persistence or pixels where required.",
+          "Full unchanged gate plus relevant actual front doors; 3-pass FAIL routing; every unresolved hole classified local/intentional/external.",
+          "Native New/Open/Recent dialogs and full current registered GUI controls",
+          "Native Redo/hierarchy/import-reload/Ask-Build-approve-apply/cancel-timeout through actual controls",
+          "Actual supported OS-keyring credential save/replace/remove and configured live provider",
+          "Native bridge project rebind/crash/close discovery lifecycle through packaged controls",
+          "AppImage mount and deb installation",
+          "Physical GPU/driver matrix and maximum-admitted-assets sustained performance",
+          "Screenshot pixels captured but layout/accessibility not visually reviewed",
+          "macOS/Windows signing/platform launch/public release/update proof",
+          "Real authenticated umbrella editor browser gate"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "COVERAGE-DESKTOP-RELEASE",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact command/exit/assertions/platform recorded; tested input/result/persistence or pixels where required.",
+          "Full unchanged gate plus relevant actual front doors; 3-pass FAIL routing; every unresolved hole classified local/intentional/external.",
+          {
+            "id": "LOCAL-INSTALL-STAGING",
+            "kind": "local-achievable",
+            "description": "macOS/Windows frozen install/typecheck/staging builds not executed by source-read-only auditor; missing node_modules is not external blocker",
+            "task": "DR-007"
+          },
+          {
+            "id": "EXT-MAC-NATIVE",
+            "kind": "external-evidence",
+            "description": "Actual signed/stapled universal dmg/zip, Intel+Apple Silicon launch/pixels/Gatekeeper/install/uninstall/update validation unavailable"
+          },
+          {
+            "id": "EXT-WIN-NATIVE",
+            "kind": "external-evidence",
+            "description": "Actual Windows signed NSIS install/launch/uninstall/publisher/update/native pixel acceptance unavailable"
+          },
+          {
+            "id": "EXT-RELEASE-DOWNLOAD",
+            "kind": "external-evidence",
+            "description": "Historical workflow artifact not authenticated/downloaded; no new public release or feed authorized"
+          },
+          {
+            "id": "PERF-NATIVE",
+            "kind": "unmeasured",
+            "description": "Whole-file hash buffers and synchronous signing/build RSS/latency not measured on actual-sized native artifacts; no performance PASS"
+          }
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "CLI-EXT-01",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Real authorized endpoint evidence plus matching refreshed map/snapshot; offline/stale/invalid/NvsN+1 refuse. Keep synthetic fixtures explicitly non-production."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": "Do not wire a fabricated sentinel or self-issue authority. Existing default refusal is correct and20 ungated verbs remain runnable."
+    },
+    {
+      "id": "SHELL-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Real GUI click reaches host; actual mutation or evidence change verified; invalid/Kids/stale hash refuse."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Each real GUI valid-input case reaches host and changes fixture/effective binding; reject/stale/escape/unauthorized/Kids stay refused."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Reject/idle/error/null snapshots never display old proposal as current; accepted historical view remains honestly labeled."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Abort/nonJSON/uncertain Accept: no pageerror, explicit feedback, disabled unsafe retry until reconciliation; no duplicate or blind write."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Valid root replacement submits/reviews; invalid document still refuses and reject leaves bytes untouched."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-006",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Sentinel absent in500 both sync/async public boundaries and real socket; reason/status unchanged; server survives; expected diagnostics retain contract."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SHELL-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Boundary/UTF8/120-turn/concurrency probes remain bounded; existing credit/Kids/refusal tests unchanged; no race-and-forget provider timeout."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "SH-T09",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Actual packaged Linux controls/input and source ownership verified for new GUI actions; canonical persistence/replay and real viewport changes. Native environment failure must be recorded, not hidden."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "GATE-PUBLICATION",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": "Later separate authority naming exact independently verified source/candidate/hash/release record/target/feed/operator/window/evidence/rollback; genuine durable downloaded release hashes and update evidence. A local archive/workflow artifact is not public release."
+    },
+    {
+      "id": "GATE-MACOS",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": "Real Apple Silicon and Intel hosts, Xcode codesign/xcrun/stapler, genuine Developer ID certificate via CSC_LINK/CSC_KEY_PASSWORD, APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID, approved HTTPS SCENEAXI_MACOS_RELEASE_BASE_URL, clean source SHA, platform/candidate signing authority and real signature/Gatekeeper/install/uninstall/update/pixel evidence. Names only."
+    },
+    {
+      "id": "GATE-WINDOWS",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": "Real Windows x64 host/SDK SignTool, genuine WIN_CSC_LINK/WIN_CSC_KEY_PASSWORD, clean source SHA and exact platform/candidate signing authority; real NSIS per-user installer/hash/publisher/install/uninstall/native-launch/update evidence. Token/tag/gh only for later separately authorized upload."
+    },
+    {
+      "id": "GATE-EPOCH",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": "Genuine FirstMate structured export, trusted authenticated current epoch endpoint/trust/timeout policy and separately authorized actual held operation. staticEpochAuthority is a fixture, never production currency."
+    },
+    {
+      "id": "SCOPE-COMPOSE-UI",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Supported bounded workflows and named unsupported/refused states match actual controls/public tests; broader capability remains visible until genuinely implemented."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-054",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact passing current lane evidence only; residual gap IDs below remain open."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-057",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact passing current lane evidence only; residual gap IDs below remain open."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-060",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact passing current lane evidence only; residual gap IDs below remain open."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-074",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Exact passing current lane evidence only; residual gap IDs below remain open."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-089",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current bounded criterion in lane audit remains satisfied; external/full-capability proof is separately tracked rather than inferred from old done."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-HOLD-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "enforced-with-local-hardening-gap"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-HOLD-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "mandatory-regressions-pass"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-HOLD-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "map-coverage-pass"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "PARTIAL_CURRENT_VOCABULARY_TESTED_GUI_INPUT_COVERAGE_OPEN"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "EXPECTED_STANDALONE_RUNTIME_REFUSAL"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "CURRENT_LOCAL_PACKAGE_ONE_RENDERER_PROVEN_ASSISTANT_GUI_HOLE"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "SOURCE_AND_LIFECYCLE_GOLDEN_PASS_NATIVE_DIALOGS_UNDRIVEN"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "REAL_SOCKET_AND_SPAWNED_CLI_PROOF_NATIVE_REBIND_CRASH_CLEANUP_HOLE"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-006",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "ENCRYPTED_LEASED_REDACTED_FIXTURE_PROOF_NOT_REAL_KEYRING_PROVIDER"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "REAL_PACKAGED_CONTAINED_EXPORT_HANDOFF_DIGESTS_PROVEN_NO_DEPLOY"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-008",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "CROSS_LANE_NATIVE_RELEASE_PROOF_MISSING"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-009",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "HEADLESS_ACCESS_URL_PARITY_TESTED_REAL_AUTHENTICATED_BROWSER_HOLE"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-DESK-010",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "LOCAL_FIXTURE_LOOPS_PASS_HOSTED_KIDS_EXPECTED_DENY_BYOK_GUI_LIVE_PROOF_HOLE"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "bounded-tests-pass-with-coverage-defect"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "held-not-executed"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "authority-preserved"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "runbook-only"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "truthful-IA-with-native-coverage-hole"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-006",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "holds-preserved"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-REL-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "dated-host-failure-claim-superseded-in-owner-doc"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "startable-with-local-defects"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "bounded-local-proof"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "bounded-local-proof-with-local-defects"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+          "FRESH_LOCAL_R2_PACKAGE_LAUNCHES_DRAWS_FULL_LIFECYCLE_EDITOR_ACCEPTANCE_INCOMPLETE"
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "VD-01",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Publish intended complete artifact under separate authority; include these actual subsequent visual diffs, owning tests and genuine captures; rerun required checks on that exact new SHA. No publish action performed here.",
+          "Complete path/blob/mode inventory matches reviewed intended artifact; every deletion has explicit approval; handler/tests/evidence included.",
+          "Required CI is successful on exactly the current published SHA; local or historical greens are not substitutes."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "serialCommands": [
+          "git ls-tree -rz <exact-candidate-sha>",
+          "git diff --name-status dd77cc9cb91d24091082e0c5bc20a130f0f51ffc <exact-candidate-sha>",
+          "pnpm gate",
+          "gh pr view 312 --repo Vhailors/sceneaxi --json headRefOid,statusCheckRollup",
+          "gh pr checks 312 --repo Vhailors/sceneaxi --required"
+        ],
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "VD-02",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Include local wrapping/dark paint fix in intended PR artifact; assert >=4.5 contrast on resolved background and overflow at relevant widths/state fixtures on exact artifact."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    },
+    {
+      "id": "VD-03",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Enter refusal through actual renderer action/state; assert visible dialog, diagnostic text, nonzero geometry, and accessible dismissal before capture; replace invalid captures without relabeling blank screen as successful refusal coverage."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "LOCAL_ASSERTIONS_EXECUTED; independent review pending",
+      "evidence": "repair-pass2.json refused scenario executes real project-open refusal, nonblank diagnostics, geometry, forward/reverse modal focus, and Escape dismissal. Same assertions executed before later menu-pressed failure in current-source pass3. No whole-capture PASS asserted.",
+      "missingInput": "Astra review of actual renderer capture and current-source three-pass result; no new publication by this lane."
+    },
+    {
+      "id": "VD-04",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Commit local scroll/focus repair and add real Tab traversal with focus geometry, ancestor clipping and occlusion checks at minimum/compact/window sizes; retain assertion that unavailable controls keep explanatory stops."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "FAILED_CURRENT_SOURCE_PASS3",
+      "evidence": "Hidden canonical select focus and responsive drawer occlusion reproduced in pass2 geometry oracle; chrome now reveals focused select and makes drawer-covered regions inert. Pass3 fails effect-mutation clipped/occluded and effect-stage occluded at menu-pressed 1280x900 in both keyboard directions.",
+      "missingInput": "Serial/Astra routing after three-pass exhaustion: repair inspector focus/scroll occlusion without weakening geometry, clipping, inert stops or real Tab assertions; publication remains serial-owned."
+    },
+    {
+      "id": "VD-05",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "Report3 focus-style predicates across repeated samples plus52 state checks, not1795 independent requirements. Add inert Tab/activation/description resolution, modal containment/dismissal and visible focus probes; explicitly retain untested native/hardware/provider/assistive-tech goals."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "PARTIAL_EXECUTED; no accessibility certification",
+      "evidence": "Both captures use real bounded Tab/Shift+Tab with DOM identity. Desktop aria-disabled stops require descriptions; Enter/Space must leave overlay and host-request count unchanged. Refusal dialog containment and dismissal assert visible outline and geometry. Web six scenarios, 48 repeated keyboard samples pass; these are repeated predicates, not independent product requirements.",
+      "missingInput": "Resolve VD-04 pass3 failure, independent screenshot/assistive-technology review, native hardware/provider coverage; none promoted to full-production closure."
+    },
+    {
+      "id": "DEEP-08-ADDITIONAL-2",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": {
+        "command": "pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test --reporter=dot",
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+        "timeoutSeconds": 120,
+        "assertions": [
+          "05:36-48 Map\u2192{} durable serialization and hostile capability toString throw;no paid money-loss claim."
+        ],
+        "requiredEvidence": "Exact current source hash; command exit; named tests/assertions; fail-before/pass-after or explicitly refuted original hypothesis; resource cleanup. A suite exit alone cannot close unmatched assertions.",
+        "independentJudge": "GPT-6 Astra; PASS only after every row assertion is tied to an executed oracle on exact reviewed artifact; at most three repair passes.",
+        "passResult": "DONE_VERIFIED only for executed, named matching assertions on exact artifact; acceptance plans or inherited finish claims remain NEEDS_LOCAL_FIX."
+      },
+      "verificationState": "NOT_EXECUTED",
+      "missingInput": null
+    }
+  ],
+  "commands": [
+    {"command":"pnpm --dir desktop/linux exec tsc --noEmit --pretty false","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":2,"result":"requireScenePhysicsCatalog missing schemas export at physics-rapier/src/world.ts:10; cascading type failures; no unknown-to-JsonValue error reproduced","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-typecheck.log"},
+    {"command":"pnpm --dir desktop/linux build","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":1,"result":"esbuild: No matching export in packages/schemas/src/index.ts for requireScenePhysicsCatalog"},
+    {"command":"pnpm exec vitest run tests/e2e/asset-pipeline-golden.test.ts apps/web-shell/test/inspector-app.test.ts apps/web-shell/test/assistant-panel.test.ts packages/cli/test/final-acceptance.test.ts desktop/windows/test/final-release-acceptance.test.ts --reporter=dot","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"141 passed; partial earlier source, not exact final native acceptance"},
+    {"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs repair-before","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":1,"result":"hidden outcome timeout; clean Save no-op is not a refusal fixture","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-before.log"},
+    {"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs repair-pass1","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":1,"result":"real renderer action exposes shell/dialog outcome selector collision","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1.log"},
+    {"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs repair-pass2","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"refusal and traversal capture passed before adding global compact/min geometry assertions; later narrow geometry oracle failed six repeated occluded samples","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass2.json"},
+    {"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs repair-pass3","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":1,"result":"current-source menu-pressed 1280x900: effect-mutation clipped/occluded, effect-stage occluded; three-pass bound reached","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass3.log"},
+    {"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs repair-pass1","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"six light/dark inspector scenarios; 48 real forward/reverse keyboard samples; visible focus, geometry, clipping, occlusion, no renderer errors","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector.json"},
+    {"command":"pnpm exec eslint apps/desktop-shell/src/chrome.ts desktop/linux/src/electron/main.ts","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"owned changed TS sources lint clean"},
+    {"command":"pnpm exec vitest run packages/cli/test apps/desktop-shell/test apps/web-shell/test desktop/linux/test desktop/windows/test desktop/macos/test tests/e2e/asset-pipeline-golden.test.ts --reporter=dot","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"final current lane 49 files / 740 tests passed; not native GUI, signing, distribution, full-root gate or unmatched task-assertion closure","evidence":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-final-focused.log"},
+    {"command":"node --check apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs && node --check apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs && node --check desktop/linux/scripts/smoke.mjs","cwd":"/home/devuser/Documents/Projects/sceneaxi","exit":0,"result":"syntax checks executed during edits"}
+  ],
+  "changedPaths": [
+    "apps/desktop-shell/src/chrome.ts",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs",
+    "desktop/linux/src/electron/main.ts",
+    "desktop/linux/scripts/smoke.mjs",
+    "docs/audits/production-swarm/repair-review-2026-10-02/fix-desktop-cli.md",
+    "docs/audits/production-swarm/repair-review-2026-10-02/fix-desktop-cli.json"
+  ],
+  "changedEvidenceManifest":"apps/desktop-shell/test/visual-postpr-evidence/retry/repair-evidence-manifest.json",
+  "evidenceLimitations":"73 generated PNG signatures/dimensions/hashes verified; includes partial failed runs. Not 73 independent assertions; no visual review or physical-GPU/native current-source PASS claimed.",
+  "sharedRequests":[{"owner":"serial integration","path":"packages/schemas/src/index.ts","request":"Restore canonical requireScenePhysicsCatalog export required by physics-rapier/src/world.ts:10; exact-source Linux native rebuild and typecheck currently blocked; do not widen dependency matrix or cast-cover errors.","classification":"NEEDS_LOCAL_FIX"}],
+  "remainingLocalAcceptance":["VD-04/05 third-pass inspector clipping/occlusion failure","three consecutive exact-source rebuilt packaged GUI runs","actual WebGL context-loss acceptance after stronger smoke guard","complete CLI/binary/release/shell per-row named assertions and independent Astra review","native/browser screenshot and assistive-tech review"],
+  "nativeProofChange":"main.ts real pagehide teardown waits for gl.isContextLost and reports contextLost; smoke.mjs rejects absent/false context loss. Preserves all existing command, import/reload, resource plateau and deadline predicates. Runtime verification blocked by shared export, not classified as signing external.",
+  "cleanup": ["Browser contexts close in per-scenario finally; browser closes in outer finally on success or assertion failure","Desktop temporary fixture directory removed by outer finally","Drawer observer and media listeners disconnect on pagehide","Own logs/captures retained as audit evidence; no shared dirty files removed, stashed, reset, staged or published"],
+  "publishedStatus": "NOT_VERIFIED",
+  "fullProductionStatus": "NOT_VERIFIED"
+}

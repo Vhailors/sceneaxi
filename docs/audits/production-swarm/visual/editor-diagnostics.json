@@ -1,0 +1,57 @@
+[
+  {
+    "route": "/editor",
+    "metrics": {
+      "clippedControlOverlaps": [],
+      "brace": [
+        {
+          "selector": "td.mono.ed-cr-current",
+          "text": "{}",
+          "color": "rgb(122, 100, 72)",
+          "font": "11px",
+          "parents": [
+            {
+              "selector": "tr",
+              "background": "rgba(0, 0, 0, 0)",
+              "text": "M/data{}{\"minimumE2\":{\"schemaVersion\":1,\"selectedInstanceId\":\"object-1\",\"instances\":[{\"instanceId\":\"object-1\",\"artifact\":{\"schemaVersion\":1,\"kind\":\"sceneaxi.sculpt-artifact\",\"artifactId\":\"starter-service-crate-artifact\",\"spec\":{\"schemaVersion\":1,\"kin"
+            },
+            {
+              "selector": "tbody",
+              "background": "rgba(0, 0, 0, 0)",
+              "text": "M/data{}{\"minimumE2\":{\"schemaVersion\":1,\"selectedInstanceId\":\"object-1\",\"instances\":[{\"instanceId\":\"object-1\",\"artifact\":{\"schemaVersion\":1,\"kind\":\"sceneaxi.sculpt-artifact\",\"artifactId\":\"starter-service-crate-artifact\",\"spec\":{\"schemaVersion\":1,\"kin"
+            }
+          ]
+        }
+      ],
+      "noticeBounds": {
+        "x": 380,
+        "y": 650.5625,
+        "width": 680,
+        "height": 311.4375,
+        "top": 650.5625,
+        "right": 1060,
+        "bottom": 962,
+        "left": 380
+      },
+      "minimumBounds": null
+    }
+  },
+  {
+    "route": "/editor?profile=web",
+    "metrics": {
+      "clippedControlOverlaps": [],
+      "brace": [],
+      "noticeBounds": {
+        "x": 380,
+        "y": 650.5625,
+        "width": 680,
+        "height": 311.4375,
+        "top": 650.5625,
+        "right": 1060,
+        "bottom": 962,
+        "left": 380
+      },
+      "minimumBounds": null
+    }
+  }
+]

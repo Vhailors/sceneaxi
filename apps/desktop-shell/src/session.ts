@@ -8,8 +8,11 @@
  * engine import.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { constants, lstatSync, readFileSync } from "node:fs";
+import { open } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { StringDecoder } from "node:string_decoder";
+import { isAbsolute, resolve, sep } from "node:path";
 import {
   canonicalPath,
   contentHash,
@@ -34,6 +37,7 @@ import {
   type ProjectGitDesktopOwner,
 } from "@sceneaxi-internal/project-git-authority";
 import {
+  validateProposal,
   PROJECT_GIT_DIAGNOSTICS,
   type ProjectGitCommitPreparationResult,
   type ProjectGitFailure,
@@ -93,6 +97,12 @@ export type DesktopSession = {
   snapshot(): DesktopSnapshot;
   /** Propose an edit and park it for review (does not write documents). */
   proposeEdit(input: ShellEditInput): DesktopSnapshot;
+  /** Host-prepared E1: validate/fence exact bytes, stage only; accept still owns apply. */
+  stagePreparedProposal(input: Readonly<{
+    proposal: Proposal;
+    unifiedDiff: string;
+    signal?: AbortSignal;
+  }>): Promise<DesktopSnapshot>;
   /** Accept the pending proposal (apply via authoring-core). */
   accept(): DesktopSnapshot;
   /** Discard the pending proposal without writing. */
@@ -343,6 +353,7 @@ export function createDesktopSession(
     redoLastApply: options.operations?.redoLastApply ?? redoLastApply,
   });
 
+  let revision = 0;
   let phase: DesktopPhase = "idle";
   let unifiedDiff: string | null = null;
   let renderedDiff: string | null = null;
@@ -368,6 +379,7 @@ export function createDesktopSession(
     });
 
   const clearProposal = (nextPhase: DesktopPhase): void => {
+    revision += 1;
     phase = nextPhase;
     unifiedDiff = null;
     renderedDiff = null;
@@ -419,6 +431,90 @@ export function createDesktopSession(
       renderedDiff = result.renderedDiff;
       proposal = result.proposal;
       pendingCwd = cwd;
+      return snap();
+    },
+
+    async stagePreparedProposal(input): Promise<DesktopSnapshot> {
+      if (journalRecoveryPending) return refusePending();
+      if (phase === "reviewing" && proposal !== null) {
+        diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
+        return snap();
+      }
+      const startedRevision = revision;
+      const refuse = (code: ApplyDiagnostic["code"], message: string) => {
+        // Never clear another review installed while descriptor reads were awaited.
+        if (revision === startedRevision) diagnostics = Object.freeze([{ code, message }]);
+        return snap();
+      };
+      const signal = input.signal;
+      const exactDiff = input.unifiedDiff;
+      const checked = validateProposal(input.proposal);
+      if (!checked.ok) return refuse("invalid-proposal", checked.message);
+      if (checked.proposal.edits.length !== 1 || checked.proposal.diffs.length !== 1 ||
+        checked.proposal.diffs[0]?.documentPath !== checked.proposal.edits[0]?.documentPath ||
+        checked.proposal.diffs[0]?.unifiedDiff !== exactDiff) {
+        return refuse("invalid-proposal", "Prepared E1 must carry one exact document edit and its unchanged diff.");
+      }
+      // Seal the actual proposal, not a regenerated or compact authoring dialect.
+      const sealed = deepFreeze(input.proposal);
+      const edit = sealed.edits[0];
+      if (edit === undefined) return refuse("invalid-proposal", "Prepared E1 has no edit.");
+      const target = resolve(sessionCwd, edit.documentPath);
+      if (isAbsolute(edit.documentPath) || edit.documentPath.split(/[\\/]+/).includes("..") ||
+        edit.documentPath.includes("\0") || !target.startsWith(`${sessionCwd}${sep}`)) {
+        return refuse("invalid-proposal", "Prepared document must be contained in the session root.");
+      }
+      try {
+        const canonical = canonicalPath(target);
+        if (!canonical.startsWith(`${sessionCwd}${sep}`) || lstatSync(target).isSymbolicLink()) {
+          return refuse("invalid-proposal", "Prepared document may not escape or redirect the session root.");
+        }
+        const file = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+        try {
+          const before = await file.stat();
+          const digest = createHash("sha256");
+          const decoder = new StringDecoder("utf8");
+          const buffer = Buffer.alloc(64 * 1024);
+          const identity = lstatSync(target);
+          if (!before.isFile() || identity.dev !== before.dev || identity.ino !== before.ino || identity.isSymbolicLink()) {
+            return refuse("content-hash-conflict", "Prepared document identity changed.");
+          }
+          let remaining = before.size;
+          while (!signal?.aborted && remaining > 0) {
+            const { bytesRead } = await file.read(buffer, 0, Math.min(buffer.length, remaining), null);
+            if (bytesRead === 0) break;
+            remaining -= bytesRead;
+            digest.update(decoder.write(buffer.subarray(0, bytesRead)));
+          }
+          if (!signal?.aborted && (remaining !== 0 || (await file.read(buffer, 0, 1, null)).bytesRead !== 0)) {
+            return refuse("content-hash-conflict", "Prepared document length changed during admission.");
+          }
+          digest.update(decoder.end());
+          const after = await file.stat();
+          const current = lstatSync(target);
+          if (signal?.aborted || revision !== startedRevision || journalRecoveryPending) {
+            return refuse("invalid-proposal", "Prepared review was cancelled or superseded.");
+          }
+          if (canonicalPath(target) !== canonical || current.isSymbolicLink() ||
+            before.dev !== current.dev || before.ino !== current.ino ||
+            before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs ||
+            after.size !== current.size || after.mtimeMs !== current.mtimeMs || after.ctimeMs !== current.ctimeMs ||
+            `sha256:${digest.digest("hex")}` !== edit.baseContentHash) {
+            return refuse("content-hash-conflict", "Prepared document changed before review.");
+          }
+        } finally { await file.close(); }
+      } catch {
+        return refuse("document-read-failed", "Prepared document cannot be safely verified.");
+      }
+      if (input.signal?.aborted || revision !== startedRevision) {
+        return refuse("invalid-proposal", "Prepared review was cancelled or superseded.");
+      }
+      clearProposal("reviewing");
+      proposal = sealed;
+      unifiedDiff = exactDiff;
+      // Host display projection owns compact framing; retain raw E1 diff unchanged.
+      renderedDiff = exactDiff;
+      pendingCwd = sessionCwd;
       return snap();
     },
 

@@ -1,0 +1,11 @@
+{
+  "removedTimedOutOwnFixtureDirectories": [
+    "/tmp/sceneaxi-worker-project-CQGdSv",
+    "/tmp/sceneaxi-worker-project-nOeLTy",
+    "/tmp/sceneaxi-worker-source-T0IWku",
+    "/tmp/sceneaxi-worker-source-xUIR9f"
+  ],
+  "reason": "These four source/project fixture directories match own 17:05:55/56 and 17:18:23 timeout executions; only explicit paths removed. Completed focused suites perform afterEach/afterAll cleanup and assert every Worker has threadId=-1.",
+  "activeOwnProcessCheck": "pgrep showed only the inspection shell itself, no Vitest/worker processes",
+  "backgroundJobsCreated": false
+}

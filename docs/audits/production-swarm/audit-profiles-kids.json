@@ -1,0 +1,179 @@
+{
+  "graphId": "sceneaxi-production-swarm",
+  "nodeId": "audit-profiles-kids",
+  "role": "code",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "baselineHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "auditStatus": "PARTIAL",
+  "productionStatus": "PARTIAL",
+  "localIntegrationStatus": "FAIL",
+  "statusReason": "Confirmed no-op revision defect PK-001 and missing production-built Kids browser evidence. Audit PASS would mean coverage complete, not production-ready.",
+  "sourceReadOnly": true,
+  "ownedFiles": ["docs/audits/production-swarm/audit-profiles-kids.md", "docs/audits/production-swarm/audit-profiles-kids.json"],
+  "platform": {"os": "Linux", "node": "v24.21.0", "pnpm": "9.15.0"},
+  "decisions": ["DEC-01", "DEC-02", "DEC-06", "DEC-15"],
+  "evidence": [
+    {
+      "id": "PK-E1",
+      "command": "pnpm exec vitest run packages/profile-game/test packages/profile-web/test packages/profile-kids/test tests/e2e/profile-game-scene-golden.test.ts tests/e2e/profile-web-golden-path.test.ts tests/e2e/profile-kids-refuse-golden.test.ts tests/e2e/desktop-web-export-golden.test.ts tests/parity/open-path-policy-parity.test.ts tests/sites/kids-surface.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 120000, "exit": 0,
+      "results": {"passed": 155, "failed": 0},
+      "assertions": ["Game shared conformance", "Game scene and Web kernel pinned golden digests", "profile fail-closed policy/malformed/forged/accessor tests", "Kids local activity/refusal lifecycle", "reducer source/behavior parity", "deterministic contained desktop Web export and race/refusal tests"],
+      "coverageHoles": ["No built Kids site/browser/network observation", "No exported pixel proof", "No external provider/legal/release proof", "PK-001 no-op cases not in existing tests"]
+    },
+    {
+      "id": "PK-E2",
+      "command": "pnpm check:boundaries && pnpm check:sites",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 120000, "exit": 0,
+      "assertions": ["27 packages verified", "4 isolated install roots verified", "Kids empty SceneAxi dependency allowlist/no environment or network APIs"],
+      "coverageHoles": ["Static checker does not prove actual browser traffic"]
+    },
+    {
+      "id": "PK-E3",
+      "command": "pnpm exec vitest run tests/e2e/cli-golden-path.test.ts tests/sites/web-experience-editor.test.ts packages/site-kit/test/web-experience-editor.test.ts packages/authoring-core/test/model-provider-port.test.ts tests/e2e/desktop-provider-host-golden.test.ts tests/desktop/desktop-opencode-live-transport.test.ts tests/boundary/injected-violations.test.ts tests/boundary/injected-site-violations.test.ts packages/schemas/test/profile-conformance.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 120000, "exit": 0,
+      "results": {"passed": 206, "failed": 0},
+      "assertions": ["Web subset/sandbox/URL/access limits", "provider capability/filter/absence and non-overridable Kids deny", "DeepSeek conditional pinned transport/no-fallback refusal", "injected forbidden package/config/network edges fail", "conformance contract eligibility"],
+      "coverageHoles": ["No live provider credentials or call", "No broad per-use-case Web browser proof"]
+    },
+    {
+      "id": "PK-E4", "command": "cmp packages/profile-kids/src/kids-activity.ts sites/kids/src/lib/kids-activity.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 120000, "exit": 0,
+      "assertions": ["Reducer copies byte-identical"], "coverageHoles": []
+    },
+    {
+      "id": "PK-E5", "command": "node packages/cli/bin/sceneaxi.mjs profile open-path --json",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 120000, "exit": 0,
+      "assertions": ["Versioned ok envelope", "Three rows", "Kids empty operations", "All shippingClaim false"],
+      "coverageHoles": ["Policy reporting not a kernel open"]
+    },
+    {
+      "id": "PK-E6",
+      "command": "node --input-type=module -e 'import {spawnSync} from \"node:child_process\";import assert from \"node:assert/strict\";for(const suffix of [\"game\",\"web\",\"kids\"]){const profile=\"@sceneaxi/profile-\"+suffix;const p=spawnSync(process.execPath,[\"packages/cli/bin/sceneaxi.mjs\",\"profile\",\"open-path\",\"--profile\",profile,\"--operation\",\"open\",\"--json\"],{encoding:\"utf8\"});const e=JSON.parse(p.stdout);if(suffix===\"kids\"){assert.equal(e.ok,false);assert.ok(p.stdout.includes(\"OPEN_PATH_KIDS_REFUSED\"));assert.equal(p.status,2);}else{assert.equal(e.ok,true);assert.equal(p.status,0);assert.ok(p.stdout.includes(\"\\\"shippingClaim\\\": false\"));}}'",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 20000, "exit": 0,
+      "observations": [{"profile": "@sceneaxi/profile-game", "exit": 0, "sessionKind": "scene-kernel-session"}, {"profile": "@sceneaxi/profile-web", "exit": 0, "sessionKind": "kernel-session"}, {"profile": "@sceneaxi/profile-kids", "exit": 2, "reason": "OPEN_PATH_KIDS_REFUSED"}],
+      "assertions": ["Real spawned CLI positive/negative envelopes and exact exits", "No shipping claim"],
+      "coverageHoles": ["No shared Kids session by design"]
+    },
+    {
+      "id": "PK-E7",
+      "command": "node --input-type=module -e 'import assert from \"node:assert/strict\";import {createKidsActivityState,applyKidsActivityAction} from \"./sites/kids/src/lib/kids-activity.ts\";const s=createKidsActivityState();const decisions=[{action:\"scene.reset\"},{action:\"world.choose\",worldId:\"meadow\"}].map(request=>({request,decision:applyKidsActivityAction(s,request)}));console.log(JSON.stringify(decisions));for(const {decision} of decisions)assert.equal(decision.ok,false,\"unchanged scene should refuse per docs/kids-first-release.md:50\");'",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi", "timeoutMs": 10000, "exit": 1,
+      "expectedAfterFixExit": 0,
+      "output": "Both scene.reset and world.choose meadow returned ok:true with unchanged worldId meadow, pieceIds [], mode build and revision 1. AssertionError: unchanged scene should refuse per docs/kids-first-release.md:50; true !== false.",
+      "classification": "CONFIRMED_PRODUCT_CONTRACT_FAILURE",
+      "assertions": ["Public site reducer only; no profile-kids import", "Both no-op actions should refuse without state/revision change"],
+      "coverageHoles": ["Real rendered button reproduction delegated to builder"]
+    }
+  ],
+  "testTotals": {"targetedPassed": 361, "targetedFailed": 0, "independentFailingProductOracles": 1},
+  "harnessFailures": [
+    {"attempt": "Compound find invocation", "result": "Tool routing rejected compound predicates", "classification": "HARNESS", "productImpact": "none"},
+    {"attempt": "Import sites/kids/dist/src/lib/kids-activity.js", "exit": 1, "result": "ERR_MODULE_NOT_FOUND", "classification": "HARNESS", "recovery": "Native Node TS import of current site source; genuine failing oracle PK-E7"},
+    {"attempt": "CLI --profile game", "exit": 1, "childExit": 2, "result": "OPEN_PATH_PROFILE_UNKNOWN; assertion false !== true", "classification": "HARNESS_API_MISUSE", "recovery": "Use documented fully qualified names; PK-E6 passed"}
+  ],
+  "requirementsCoverage": [
+    {"id": "PROF-001", "outcome": "BOUNDED_PUBLIC_PATHS_VERIFIED", "evidence": ["PK-E1", "PK-E3", "PK-E6"], "holes": ["No shipping inference", "Export no browser pixels"]},
+    {"id": "PROF-002", "outcome": "PARTIAL_BOUNDED_SCOPE_AND_SUBSET", "evidence": ["PK-E1", "PK-E3"], "holes": ["Per-use-case hero/configurator/storytelling/microsite/data-driven real-time evidence incomplete"], "findingIds": ["PK-004"]},
+    {"id": "PROF-003", "outcome": "STRUCTURAL_FAIL_CLOSED_VERIFIED_BROWSER_PENDING", "evidence": ["PK-E1", "PK-E2", "PK-E3"], "holes": ["Production-built browser traffic/cookie/storage observation"], "findingIds": ["PK-002"]},
+    {"id": "PROF-004", "outcome": "ISOLATED_ACTIVITY_PARITY_VERIFIED_WITH_DEFECT", "evidence": ["PK-E1", "PK-E4", "PK-E7"], "holes": ["Do not interpret shipped requirement wording as public deployment", "No-op revision defect", "Site install/build/browser missing"], "findingIds": ["PK-001", "PK-002", "PK-005"]},
+    {"id": "PROF-005", "outcome": "INJECTED_PORT_AND_REFUSALS_VERIFIED", "evidence": ["PK-E3"], "holes": ["Live eligible provider availability and actual production dispatch unobserved; other owners"]},
+    {"id": "PROF-006", "outcome": "CONDITIONAL_PINNED_REFUSALS_VERIFIED", "evidence": ["PK-E3"], "holes": ["No configured live provider evidence"]},
+    {"id": "SURFACE-008", "outcome": "INTENTIONAL_R0_REFUSAL_VERIFIED", "evidence": ["PK-E1", "PK-E5", "PK-E6"], "holes": []},
+    {"id": "SURFACE-009", "outcome": "R1_REDUCER_VERIFIED_BROWSER_COVERAGE_PARTIAL", "evidence": ["PK-E1", "PK-E4"], "holes": ["Real built route and button/browser proof missing"], "findingIds": ["PK-001", "PK-002"]}
+  ],
+  "backlogRevalidation": [
+    {"id": 8, "originalStatus": "parked", "originalReason": "Captain decision A8", "currentOutcome": "SHARED_R0_INTENTIONAL_ISOLATED_ACTIVITY_LOCAL_EXTERNAL_LAUNCH_GATE", "datedClaimCorrection": "R0 grades shared engine path only; curated isolated activity exists and is reducer-driveable R1, not launched", "evidence": ["PK-E1", "PK-E4", "PK-E6"], "remaining": ["PK-001", "PK-002", "PK-005"]},
+    {"id": 76, "originalStatus": "parked", "originalReason": "Web profile conformance claim", "currentOutcome": "NOT_YET_CLAIMED_INTENTIONAL_WITH_BOUNDED_WEB_GOLDEN_PASS", "datedClaimCorrection": "False shippingClaim is structural protection, not itself a bug. Generic golden does not imply full shared conformance or registry claim", "source": "packages/schemas/src/profile-conformance.ts:82-85 profileConformanceRegistry", "evidence": ["PK-E1", "PK-E3"], "remaining": ["PK-003", "PK-004", "PK-005"]}
+  ],
+  "findings": [
+    {
+      "id": "PK-001", "severity": "medium", "priority": "P1", "kind": "confirmed-local-defect", "owner": "profiles-kids-builder",
+      "title": "No-op reset and same-world selection wrongly advance activity revision",
+      "sources": ["packages/profile-kids/src/kids-activity.ts:246 applyKidsActivityAction", "packages/profile-kids/src/kids-activity.ts:265 applyKidsActivityAction", "sites/kids/src/lib/kids-activity.ts:246 applyKidsActivityAction", "sites/kids/src/lib/kids-activity.ts:265 applyKidsActivityAction", "sites/kids/src/app/_components/kids-studio.tsx:91 KidsStudio", "sites/kids/src/app/_components/kids-studio.tsx:136 KidsStudio", "docs/kids-first-release.md:50 no-op contract"],
+      "reproduction": "PK-E7: initial state reset/current meadow both ok:true revision1 with unchanged content",
+      "refutation": "Existing tests green; reviewed possibility of action-counter semantics, refuted by explicit owning doc revision counts real changes/no-op refusal",
+      "impact": "State/evidence correctness drift; no privacy bypass claimed",
+      "dependencies": [],
+      "fix": "Named safe no-change refusal in both byte-identical copies, no new state/revision on refusal; cover genuine change acceptance and play precedence",
+      "ownedImplementationFiles": ["packages/profile-kids/src/kids-activity.ts", "sites/kids/src/lib/kids-activity.ts", "packages/profile-kids/test/activity.test.ts", "tests/sites/kids-surface.test.ts"],
+      "crossLaneFiles": ["docs/kids-first-release.md"],
+      "acceptance": ["PK-E7 exit0", "Tests same-world with pieces, repeated reset, changed-world/reset acceptance, play-mode precedence, no refusal state", "cmp reducer copies exit0", "Targeted suites and unchanged full gate", "Production browser real buttons retain state on no-op"],
+      "evidence": ["PK-E7"], "status": "OPEN_ROUTED_TO_BUILDER"
+    },
+    {
+      "id": "PK-002", "severity": "high", "priority": "P1", "kind": "local-coverage-gap", "owner": "profiles-kids-builder",
+      "title": "Kids production-built front door/browser isolation unverified",
+      "sources": ["sites/kids/package.json:8-11 scripts", "sites/kids/src/lib/security-policy.ts:39 kidsSecurityHeadersForPhase", "sites/kids/security-headers.json:5 CSP", "sites/kids/src/app/_components/kids-studio.tsx:22 KidsStudio"],
+      "reproduction": "sites/kids/node_modules absent at live observation; root tests cover pure reducers and policy strings only",
+      "refutation": "Next phase/config and forbidden-source injections pass, but cannot refute hydration/served-policy/outbound traffic/cookie failures",
+      "impact": "Production readiness/security evidence missing; not proof of a privacy defect",
+      "dependencies": ["Existing frozen lock install locally available", "Existing browser tooling/helpers"],
+      "fix": "Install/build/typecheck existing isolated root; production loopback browser drive all controls and capture request origins/types, CSP, cookie/storage/error and reduced-motion evidence; do not use dev exception",
+      "ownedImplementationFiles": ["sites/kids/test/", "sites/kids/package.json", "tests/sites/kids-surface.test.ts"],
+      "crossLaneFiles": ["package.json", ".github/workflows/gate.yml"],
+      "acceptanceCommands": ["pnpm --dir sites/kids install --frozen-lockfile", "pnpm --dir sites/kids typecheck", "pnpm --dir sites/kids build", "pnpm --dir sites/kids start --hostname 127.0.0.1 --port <owned-port>"],
+      "acceptance": ["Real production route and controls hydrate/work", "Only own-origin application requests; no LLM/third-party requests", "No cookies or durable state", "Exact shipped connect-src none and denial headers", "Keyboard/reduced-motion and every curated control/limit asserted"],
+      "evidence": ["PK-E1", "PK-E2"], "status": "OPEN_LOCAL_NOT_EXTERNAL"
+    },
+    {
+      "id": "PK-003", "severity": "medium", "priority": "P2", "kind": "intentional-conformance-gate", "owner": "profiles-kids-builder+schemas-integration+structured-rollout-authority",
+      "title": "Web generic golden does not close unclaimed shared conformance",
+      "sources": ["packages/profile-web/src/index.ts:172 mvpGoldenPath", "packages/profile-web/README.md:41 not-yet-claimed", "packages/schemas/src/profile-conformance.ts:82-85 profileConformanceRegistry", "packages/schemas/src/profile-conformance-suite.ts:74-78 runProfileConformanceSuite", "packages/schemas/src/profile-conformance-suite.ts:134 registry-row-matches"],
+      "reproduction": "Current Web exports MVP pin, no claim/conformance; registry explicitly not-yet-claimed; suite rejects unclaimed and mismatched rows",
+      "refutation": "Intentional governance restriction confirmed, not runtime failure; generic Web golden passes bounded core behavior",
+      "impact": "Backlog76 cannot be marked production complete; shippingClaim false must remain",
+      "dependencies": ["Genuine structured profile rollout/conformance disposition before registry promotion"],
+      "fix": "Local negative tests/docs make MVP versus full conformance distinction explicit; never upgrade held registry or fabricate evidence. Authorized future shared conformance surface requires matching real suite/registry/contracts",
+      "ownedImplementationFiles": ["packages/profile-web/test/open-path.test.ts", "packages/profile-web/README.md"],
+      "crossLaneFiles": ["packages/schemas/src/profile-conformance.ts", "packages/schemas/test/profile-conformance.test.ts", "packages/schemas/contracts/profile-conformance.schema.json", "docs/open-path-policy.md"],
+      "acceptanceCommands": ["pnpm exec vitest run packages/profile-web/test packages/profile-game/test/conformance.test.ts packages/schemas/test/profile-conformance.test.ts", "pnpm check:contracts"],
+      "acceptance": ["Negative unclaimed/shipping assertions remain", "Game shared suite passes", "Kids remains unclaimed R0", "Any future claim only after structured authority and actual shared suite evidence"],
+      "evidence": ["PK-E1", "PK-E3"], "status": "LOCAL_NEGATIVE_PROOF_ACTIONABLE_FULL_CLAIM_HELD"
+    },
+    {
+      "id": "PK-004", "severity": "medium", "priority": "P2", "kind": "local-use-case-evidence-capability-gap", "owner": "profiles-kids-builder", "secondaryOwners": ["sites-ui", "site-kit", "engine"],
+      "title": "Broad Web use cases not independently demonstrated",
+      "sources": ["packages/profile-web/src/index.ts:36 WEB_EXPERIENCE_SCOPES", "packages/profile-web/src/index.ts:172 mvpGoldenPath", "tests/e2e/profile-web-golden-path.test.ts:24 generic golden"],
+      "reproduction": "One generic core fixture plus scope-label tests; no complete per-use-case evidence for all PROF-002 experience classes",
+      "refutation": "Existing Web subset/sandbox tests prove HTML/site canvas behavior but not every broad product or live data source",
+      "impact": "Requirement completeness cannot be inferred from scope allowlist",
+      "dependencies": ["Use existing bounded public helpers only", "Coordinate real emitted-control tests with sites-ui"],
+      "fix": "Deterministic bounded hero/configurator/storytelling/microsite fixture workflows with actual authoring/state/replay assertions; keep unavailable real-time data capability explicit, no CMS/SaaS/script eval/unreviewed fetch",
+      "ownedImplementationFiles": ["packages/profile-web/test/experience-scenarios.test.ts", "tests/e2e/fixtures/profile-web/"],
+      "crossLaneFiles": ["tests/sites/web-experience-editor.test.ts", "packages/site-kit/src/web-experience-editor.ts", "packages/schemas/", "package.json"],
+      "acceptanceCommands": ["pnpm exec vitest run packages/profile-web/test tests/e2e/profile-web-golden-path.test.ts tests/sites/web-experience-editor.test.ts", "pnpm gate"],
+      "acceptance": ["Actual fixture state/HTML/canvas outcomes", "Malformed input refusals and pinned replay digest", "Real browser controls if site behavior touched", "Unsupported data-driven real-time behavior remains visibly open"],
+      "evidence": ["PK-E1", "PK-E3"], "status": "OPEN_LOCAL_COVERAGE_CAPABILITY"
+    },
+    {
+      "id": "PK-005", "severity": "high", "priority": "P1", "kind": "genuine-external-launch-gate", "owner": "human-product-safety-legal-deployment+governance",
+      "title": "No public Kids/profile launch authorization or production proof supplied",
+      "sources": ["docs/runnable-surfaces.md:46-47 shared R0 / isolated R1", "docs/production-activation.md:35-60 authorization gate", "packages/profile-game/src/index.ts:53 evidenceHooks declaration"],
+      "reproduction": "Backlog8 Captain A8 and backlog76 remain parked; no fresh external launch observation or structured authorization was exercised",
+      "refutation": "Local activity and green golden tests do not grant deployment, safety/legal or publication authority",
+      "impact": "Full production PASS unavailable despite locally bounded functionality",
+      "dependencies": ["Structured Kids safety/product launch surface/origin decision", "Reviewed legal/privacy/jurisdiction/retention requirements", "Structured profile rollout/conformance disposition", "Separate action-specific named deployment/publication authority", "Actual production evidence after authorized action"],
+      "fix": "Keep shared R0, empty dependents, no LLM/identity/commerce/telemetry and shippingClaim false; record exact gate requests without secrets or fake proof",
+      "ownedImplementationFiles": [],
+      "crossLaneFiles": ["docs/production-activation.md", "docs/kids-first-release.md", "docs/runnable-surfaces.md", "docs/program/SPEC.md", "packages/schemas/", "docs/audits/production-swarm/FINAL.md", "docs/audits/production-swarm/FINAL.json"],
+      "acceptance": ["Genuine supplied structured authority and reviewed legal inputs", "Separately authorized actual production observation", "No R0 surface presented as launched"],
+      "evidence": ["PK-E1", "PK-E6"], "status": "EXTERNAL_BLOCKED_NO_AUTHORITY_EXERCISED"
+    }
+  ],
+  "taskOutcomes": [
+    {"id": "PK-T1", "findingId": "PK-001", "status": "FAIL_REPRODUCED_ROUTED", "local": true},
+    {"id": "PK-T2", "findingId": "PK-002", "status": "NOT_EXECUTED_BY_READ_ONLY_AUDITOR_BUILDER_REQUIRED", "local": true},
+    {"id": "PK-T3", "findingId": "PK-003", "status": "LOCAL_NEGATIVE_PROOF_PENDING_FULL_CONFORMANCE_HELD", "local": true},
+    {"id": "PK-T4", "findingId": "PK-004", "status": "LOCAL_SCENARIO_EVIDENCE_PENDING_CAPABILITY_HOLE_VISIBLE", "local": true},
+    {"id": "PK-T5", "findingId": "PK-005", "status": "GENUINE_EXTERNAL_GATE", "local": false}
+  ],
+  "sharedChangesNeeded": {
+    "schemas": "No required schema edit to fix PK-001/002. PK-003 registry/contracts only under genuine structured rollout authority; no widening/false shipping claim.",
+    "rootManifests": "No audit edits. Any new root test/CI script delegated to delivery-ops/integration; framework dependencies remain inside isolated site root.",
+    "docs": ["docs/kids-first-release.md no-op refusal table", "docs/open-path-policy.md distinction only if coordinated", "docs/runnable-surfaces.md real evidence only", "FINAL.md/FINAL.json task/node coverage and gates"],
+    "crossLane": ["sites-ui Web emitted controls/browser proofs", "authoring-core model-provider hard deny remains", "delivery-ops backlog71 full Evidence Packet/engine-evidence gap not duplicated in profiles", "desktop export pixel/native/provider/release proof belongs to assigned owners"]
+  },
+  "coverageHoles": ["Kids install-root build/typecheck/production loopback HTTP/browser not run by read-only auditor", "Actual third-party request/cookie/storage/assistive-technology observation missing", "Game/Web exported rendered-pixel proof not performed by this node", "Web full conformance claim deliberately unavailable", "Broad Web experience/data-driven real-time capability evidence incomplete", "Declared Game hooks are not full Evidence Packet emission", "No actual external provider/legal/deploy/signing/publication proof"],
+  "verificationPolicy": "Independent integration reruns unchanged gate and real front doors; FAIL returns for at most three passes; no final production PASS with any remaining gap. No skipped/weakened repository checks. Non-executed browser proof recorded explicitly, not marked successful."
+}

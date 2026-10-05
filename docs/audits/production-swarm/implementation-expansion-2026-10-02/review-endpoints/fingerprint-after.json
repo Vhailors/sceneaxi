@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-02T13:41:46.458350+00:00",
+  "files": {
+    "sites/umbrella/src/provider/own-session.ts": "6132cefa4127131d8371858ad25388015eeb6196044957da8fee35cf33439d87",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "931dfdfb8208ecba18fb58b5323b29beadba0b61819155ee362a57dcfd716173",
+    "sites/umbrella/test/own-session.test.ts": "5678030d8fd8de59094dfcc374d8d9fc81a8d5025d21bff2d2362141f3091cc5",
+    "sites/umbrella/src/app/api/checkout/checkout-handler.ts": "4377d08acb85c83db2014634dfe25458e9b2dbe4034c863faf6c23c656475675",
+    "sites/umbrella/test/checkout-reader-bounds.test.ts": "08f11c8b54ad2c7ab12a1bcd2b36bed68c8b61c785abe8f5bdcfb8c2d56f8edf",
+    "packages/site-kit/src/catalog-server-fetch.ts": "d902013c74c02b02bb524f82adb49aa4f09a31586d2289e9f460d602f94274e0",
+    "packages/site-kit/test/catalog-server-fetch.test.ts": "6c329da70feab86dca1fa8ca80e51270ed11c95cb81a93317f9db3cb663417db",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "b8c30fc3c3852db1702d58bf85abb316598e64761e7020fbcf1cd27acd5bd9cd",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "b8c30fc3c3852db1702d58bf85abb316598e64761e7020fbcf1cd27acd5bd9cd",
+    "packages/site-kit/src/deep-link.ts": "3bdde6d2e7d3a8cbb760c982b1abebf8086e7347aba7ea1432cfab242776b6ef",
+    "packages/site-kit/src/ports.ts": "9604969fbec4594dd8bab4b9fd26d65fb02c9666b8fc73b533aac447b317b00d",
+    "packages/site-kit/src/catalog-identity.ts": "265b5febb386e6f6db1e712d3a7a3f89da96cbbe26cfe1ccb86b3b21ba006e2c",
+    "packages/site-kit/package.json": "938e00f032e50b139d5e47c18a4716d6a436e8cebc572697c2e51b669fd16aeb",
+    "sites/umbrella/src/lib/request-authority.ts": "93ea3d529ea4ea74df4c919a4f4396d2dc4df285c6278c1bffd4951bf1ace207",
+    "sites/umbrella/src/lib/identity-plane.ts": "e3091b9fc0817439c43364333698097809df7f251a4ad8e9f9fefbc9b33bcd34",
+    "tests/sites/billing-final-acceptance.test.ts": "e27dc87decb783c28a09625bfb8b5b17e07e1f769db1e0cd9ed08ac7f933b955",
+    "tests/sites/site-response-hardening.test.ts": "d709c286e3624ff5e7350ea50431dae1039be247a29f92e8a7b021df1dca3a25",
+    "tests/sites/credit-pack-purchase-ux.test.ts": "aeb4fffeb4cf6b63e218ab2702cc54d1839907393d90fc7fe250e0f97b3feb86",
+    "tests/e2e/auth-credits-refuse-matrix.test.ts": "d0baae196d02625df49e1dfdffe97817cb50637dd09376b6d036b87a18d7a47a"
+  },
+  "changedSinceBefore": [],
+  "stable": true
+}

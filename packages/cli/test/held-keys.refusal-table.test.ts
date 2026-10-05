@@ -1,3 +1,4 @@
+import type { JsonValue } from "@sceneaxi/schemas";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,29 +21,41 @@ const fixturesDir = join(
   "fixtures",
   "held-keys",
 );
-const loadFixture = (name: string): unknown =>
-  JSON.parse(readFileSync(join(fixturesDir, name), "utf8"));
 
+type HeldKeyFixture = FirstMateBacklogExport | JsonValue;
+
+const loadFixture = (name: string): HeldKeyFixture => {
+  // SAFETY: JSON.parse reads committed JSON fixture bytes and returns their JSON value; domain validation is performed by the gate/generator.
+  return JSON.parse(readFileSync(join(fixturesDir, name), "utf8")) as HeldKeyFixture;
+};
+
+// SAFETY: the committed epoch2 fixture is a FirstMate export; snapshotOf validates its export fields below.
 const epoch2Export = loadFixture(
   "firstmate-export.epoch2.json",
 ) as FirstMateBacklogExport;
+
+// SAFETY: the committed epoch3 all-resolved fixture is a FirstMate export; snapshotOf validates its export fields below.
 const epoch3AllResolvedExport = loadFixture(
   "firstmate-export.epoch3.all-resolved.json",
 ) as FirstMateBacklogExport;
 
 function snapshotOf(exportFixture: FirstMateBacklogExport): HeldKeyRegistrySnapshot {
   const generated = generateRegistrySnapshot(exportFixture);
+
   if (!generated.ok) {
     throw new Error(`fixture snapshot generation failed: ${generated.errors.join("; ")}`);
   }
+
   return generated.value;
 }
 
 const snapshotEpoch2 = snapshotOf(epoch2Export); // beta open
+
 const snapshotEpoch3AllResolved = snapshotOf(epoch3AllResolvedExport);
 
 /** One hour after the fixtures' generatedAt — inside the 24h freshness budget. */
 const FRESH_NOW = Date.parse("2026-07-20T13:00:00.000Z");
+
 /** 25 hours after generatedAt — outside the 24h freshness budget. */
 const STALE_NOW = Date.parse("2026-07-21T13:00:00.000Z");
 
@@ -67,6 +80,7 @@ function expectHeldKeyRefusal(
 ): void {
   expect(r.exitCode).toBe(ExitCode.HELD_KEY);
   expect(r.envelope.ok).toBe(false);
+
   if (r.envelope.ok) return;
   expect(r.envelope.error.code).toBe("HELD_KEY");
   expect(r.envelope.error.heldKeyReason).toBe(reason);
@@ -82,6 +96,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         authority: unavailableEpochAuthority("sentinel unreachable (test double)"),
       }),
     });
+
     expectHeldKeyRefusal(r, "currency-unavailable");
   });
 
@@ -90,6 +105,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
       available: false as const,
       reason: "sentinel unreachable (test double)",
     }));
+
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({
         snapshot: loadFixture("snapshot.schema-invalid.json"),
@@ -109,6 +125,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         authority: staticEpochAuthority(4),
       }),
     });
+
     expectHeldKeyRefusal(r, "authoritative-epoch-mismatch");
   });
 
@@ -116,6 +133,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({ snapshot: undefined }),
     });
+
     expectHeldKeyRefusal(r, "snapshot-missing");
   });
 
@@ -125,6 +143,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         snapshot: loadFixture("snapshot.schema-invalid.json"),
       }),
     });
+
     expectHeldKeyRefusal(r, "snapshot-invalid");
   });
 
@@ -137,6 +156,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         now: () => STALE_NOW,
       }),
     });
+
     expectHeldKeyRefusal(r, "snapshot-stale");
   });
 
@@ -148,6 +168,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         authority: staticEpochAuthority(3),
       }),
     });
+
     expectHeldKeyRefusal(r, "map-snapshot-epoch-mismatch");
   });
 
@@ -158,9 +179,11 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         (c) => c.command !== "demo gated",
       ),
     };
+
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({ commandMap: withoutDemo }),
     });
+
     expectHeldKeyRefusal(r, "verb-undeclared");
   });
 
@@ -168,6 +191,7 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({ commandMap: { not: "a map" } }),
     });
+
     expectHeldKeyRefusal(r, "command-map-invalid");
   });
 
@@ -175,7 +199,9 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({}),
     });
+
     expectHeldKeyRefusal(r, "open-held-key");
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.heldKey).toBe("synthetic-demo-beta");
       expect(r.envelope.error.message).toContain("synthetic-demo-beta");
@@ -189,10 +215,13 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         (h) => h.identity !== "captain-decision-synthetic-demo-beta",
       ),
     };
+
     const r = runCli(["demo", "gated"], {
       heldKeys: runtime({ snapshot: snapshotOf(withoutBeta) }),
     });
+
     expectHeldKeyRefusal(r, "unknown-held-key");
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.heldKey).toBe("synthetic-demo-beta");
     }
@@ -206,8 +235,10 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         authority: staticEpochAuthority(3),
       }),
     });
+
     expect(r.exitCode).toBe(ExitCode.OK);
     expect(r.envelope.ok).toBe(true);
+
     if (r.envelope.ok) {
       expect(r.envelope.result["status"]).toBe("held-keys-cleared");
     }
@@ -220,10 +251,12 @@ describe("ungated verbs and the default runtime", () => {
       available: false as const,
       reason: "offline (test double)",
     }));
+
     const offline = runtime({
       snapshot: undefined,
       authority: { description: "must not be called", probe },
     });
+
     for (const path of [
       ["protocol", "version"],
       ["protocol", "inspect"],
@@ -252,12 +285,32 @@ describe("ungated verbs and the default runtime", () => {
     const json = runCli(["demo", "gated", "--json"]);
     expect(text.exitCode).toBe(json.exitCode);
     expect(text.envelope).toEqual(json.envelope);
-    const parsed = JSON.parse(json.stdout) as unknown;
+    const parsed = JSON.parse(json.stdout);
     expect(parsed).toEqual(json.envelope);
   });
 
   it("--help on a gated verb is introspection, not invocation — no refusal", () => {
     const r = runCli(["demo", "gated", "--help"]);
     expect(r.exitCode).toBe(ExitCode.OK);
+  });
+});
+
+
+describe("finite nonnegative freshness regression", () => {
+  const resolved = { commandMap: mapForEpoch(3), snapshot: snapshotEpoch3AllResolved, authority: staticEpochAuthority(3) };
+  it.each([NaN, Infinity, -Infinity, -1])("refuses invalid clock %s", (now) => {
+    expectHeldKeyRefusal(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, now: () => now }) }), "snapshot-stale");
+  });
+  it.each([NaN, Infinity, -Infinity, -1])("refuses invalid budget %s", (budget) => {
+    expectHeldKeyRefusal(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, freshnessBudgetMs: budget }) }), "snapshot-stale");
+  });
+  it("refuses future snapshots and unavailable clocks", () => {
+    expectHeldKeyRefusal(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, snapshot: { ...snapshotEpoch3AllResolved, generatedAt: "2099-01-01T00:00:00.000Z" } }) }), "snapshot-stale");
+    expectHeldKeyRefusal(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, now: () => { throw new Error("clock"); } }) }), "snapshot-stale");
+  });
+  it("accepts the exact 24-hour boundary but refuses one millisecond beyond", () => {
+    const at = Date.parse(snapshotEpoch3AllResolved.generatedAt) + 24 * 60 * 60 * 1000;
+    expect(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, now: () => at }) }).exitCode).toBe(0);
+    expectHeldKeyRefusal(runCli(["demo", "gated"], { heldKeys: runtime({ ...resolved, now: () => at + 1 }) }), "snapshot-stale");
   });
 });

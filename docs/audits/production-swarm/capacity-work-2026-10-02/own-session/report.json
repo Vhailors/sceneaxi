@@ -1,0 +1,60 @@
+{
+  "taskid": "capacity-own-session-2026-10-02",
+  "scope": "docs/audits/production-swarm/capacity-work-2026-10-02/own-session/",
+  "status": "AUXILIARY_SOURCE_PROOF_COMPLETE_SOCKET_DEFERRED",
+  "product_source_edited": false,
+  "source_subject": "unchanged AST-selected TypeScript handler/adapter declarations transpiled in memory; injected synthetic runtime; static route export wiring",
+  "dist_used": false,
+  "evidence": "evidence.json",
+  "fingerprints": "evidence.json:files[].sha256",
+  "exact_inputs_responses_refusals_headers_assertions": "evidence.json:checks[]",
+  "executed": {
+    "observations": 20,
+    "pass": 15,
+    "boundary_gap_observations": 4,
+    "missing_endpoint": 1,
+    "negative_controls": 2,
+    "python_syntax": "PASS",
+    "command": "python3 docs/audits/production-swarm/capacity-work-2026-10-02/own-session/contract-check.py",
+    "patch_applicability": "PASS after correcting hunk length (git apply --check only; unapplied)"
+  },
+  "reproduced": [
+    "Actual provider handler factory refuses /api/auth/own-session with 404 NOT_FOUND and no-store before provider invocation",
+    "Current server-fetch.ts, catalog-server-fetch.ts and catalog-game identity-plane.ts absent",
+    "Explicit carry verifier input, expired refusal, no implicit credential lookup, source catalog carry, configured-origin helper refusal",
+    "Actual provider wrapper overwrites public fixture cache header with no-store"
+  ],
+  "not_claimed": [
+    "live Next endpoint PASS",
+    "Better Auth origin bypass vulnerability",
+    "upstream IdentityPort cross-user validation vulnerability",
+    "missing adapters cookie/network safety PASS",
+    "product fix landed or duplicate full review"
+  ],
+  "deferred": [
+    {
+      "check": "real HTTP acceptance",
+      "artifact": "socket-acceptance.py",
+      "status": "NOT RUN",
+      "preconditions": "explicit integration handoff; isolated configured-origin deployment; unique caller-owned port; synthetic valid/expired identity fixture credentials"
+    },
+    {
+      "check": "proposal typecheck and source-owned composition",
+      "status": "NOT RUN"
+    },
+    {
+      "check": "real provider, DB, upstream identity validity and full suites",
+      "status": "NOT RUN"
+    }
+  ],
+  "fix_proposal": "own-session-handler.patch",
+  "handoff": "Review handler contract; bind existing authenticated SiteIdentityPort and configured origin resolver; add explicit own-session GET route; integrate missing server-fetch/catalog adapters with explicit carried header and no ambient cookie forwarding; run socket acceptance only after approval",
+  "cleanup": "No services, ports, external temporary fixtures or dependencies created; only auxiliary directory artifacts",
+  "heavy_jobs": 0,
+  "artifact_sha256": {
+    "contract-check.py": "acf5e4398582dc1abeb1bb3b9deb648ed61fd2af481e5c772d34ea4c797eb7cb",
+    "socket-acceptance.py": "a1b0ab6e84fe8b0a2080cca3cbebb9fdc35cda030cffd148271b8dbcdf3a1169",
+    "own-session-handler.patch": "b526c15c5464ada6a085f3de74668c5315cf89da990403f44ecfb0e55f801171",
+    "evidence.json": "193fe21e0f3b8ffd062356970e60115875b134e5f2c530f106036405b789d2af"
+  }
+}

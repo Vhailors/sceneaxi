@@ -1,0 +1,38 @@
+✔ default public consumer is honestly unwired (2627.503583ms)
+✔ actual page consumes approved public adapter and explicit carry, never unknown Host (195.158746ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: undefined (50.879889ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network:  (36.20111ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid/path (41.110065ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid?query=x (41.694649ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid#fragment (34.518459ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://user:pass@umbrella.example.invalid (66.044568ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network:  https://umbrella.example.invalid  (39.706921ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://127.0.0.1 (42.675412ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.local (42.888504ms)
+✔ actual page requires exact server approval: undefined (35.68291ms)
+✔ actual page requires exact server approval: false (34.61555ms)
+✔ actual page requires exact server approval: 1 (30.477921ms)
+✔ actual page requires exact server approval: TRUE (33.289857ms)
+✔ default public consumer is honestly unwired (2492.163533ms)
+✔ actual page consumes approved public adapter and explicit carry, never unknown Host (244.705802ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: undefined (41.233828ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network:  (35.329968ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid/path (34.848344ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid?query=x (35.541488ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid#fragment (34.165116ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://user:pass@umbrella.example.invalid (32.624187ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network:  https://umbrella.example.invalid  (32.869451ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://127.0.0.1 (39.506137ms)
+✔ actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.local (32.361187ms)
+✔ actual page requires exact server approval: undefined (36.669111ms)
+✔ actual page requires exact server approval: false (31.863048ms)
+✔ actual page requires exact server approval: 1 (32.142814ms)
+✔ actual page requires exact server approval: TRUE (54.848485ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3744.025947

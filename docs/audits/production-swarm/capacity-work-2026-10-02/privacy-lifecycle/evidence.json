@@ -1,0 +1,1264 @@
+{
+  "taskId": "privacy-lifecycle",
+  "status": "PASS_SCOPED_FIXTURE",
+  "subject": "current TypeScript source transpiled in memory; real Better Auth password crypto; recording SQL fixture, not database/HTTP socket",
+  "typescript": "5.9.3",
+  "cryptoArtifact": {
+    "path": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella/node_modules/better-auth/dist/crypto/index.mjs",
+    "sha256": "eda1857eadcf2dea50618c61da26e5fb5e79efd7755e665cc3d9f244a322c2a0"
+  },
+  "hashes": {
+    "sites/umbrella/src/provider/account-lifecycle.ts": "2e85dc263ec7ca76787d567c9e3308bee4045ab1ee9b37f8f7f4c1255e9e556e",
+    "packages/auth/src/admin.ts": "5270630b98cc903e49ad05e083b4f637c0f2d1efca9a4bb4da82ac93bf97b958",
+    "packages/schemas/src/provenance.ts": "83a2174e443b54a2c620f165929ccebc0c9a477b48ec7abca350edb1a0070bb8",
+    "packages/auth/src/refusals.ts": "b0cdd1dc332d2da8fcd540f2fa8a2a6198396af5f388a06d77bec7e0d5decdf0",
+    "packages/auth/src/principal-provenance.ts": "d3f0bbbd3d9edc73a3b604c4e36bb2baf4498e5cacbcf636356774d4d798ab42",
+    "packages/site-kit/src/admin-reauth.ts": "b8686837fce72f0e4da98e43d5873a49de881a709d3dd083bd78ed1273c1a5f0",
+    "packages/site-kit/src/refusals.ts": "a7bff5b6803112a06694186357359ce03185498bdc9eac9654b28502496e9cdf",
+    "sites/umbrella/src/app/login/page.tsx": "64cf11455d5d4396b8d10b27512dd4ad48e5bd6a03cd6929109e078020bc760e",
+    "sites/umbrella/src/app/account/page.tsx": "d483044cd504c219c14d6426cf7e4e0aab4e1badce9fdc229fb7c4248527ec5e",
+    "sites/umbrella/src/provider/better-auth-provider.ts": "adee6fe1ceba3687e977aabfee2ef4c23a7238a2bcc4793b2cc11bc50679ab8e",
+    "sites/umbrella/src/app/api/auth/[...all]/route.ts": "d79348ef34a463aa1c1d6eef329b902e032811dcd917f0ab627963747bf8f9cb",
+    "packages/auth/src/index.ts": "23edf8c5a6dd8c9843a1c4737af29801b7a555d16588cab759dd07d54b9c6b00",
+    "sites/umbrella/src/lib/identity-plane.ts": "e3091b9fc0817439c43364333698097809df7f251a4ad8e9f9fefbc9b33bcd34"
+  },
+  "requestCases": 20,
+  "records": [
+    {
+      "name": "unknown action",
+      "input": {
+        "path": "/api/auth/account/unknown",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 404,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "NOT_FOUND"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "unknown member",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer unknown-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 401,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "IDENTITY_SESSION_ABSENT"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "unknown-fixture-token",
+            "c340942a199ddf2fc1c844a5a3f967dab66b3f958ee601e6923c9e415d6b01ce",
+            null
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "missing credential",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 401,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "IDENTITY_SESSION_ABSENT"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "cross-user field",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\",\"userId\":\"fixture-other\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_MALFORMED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "forged admin field",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\",\"role\":\"admin\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_MALFORMED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "missing origin body trap",
+      "input": {
+        "path": "/api/auth/account/disable",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": true
+      },
+      "observed": {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_CROSS_ORIGIN"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "hostile origin body trap",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://hostile.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": true
+      },
+      "observed": {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_CROSS_ORIGIN"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "wrong method",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "GET",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": null,
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 405,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "METHOD_NOT_ALLOWED"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "unconfigured email reset request",
+      "input": {
+        "path": "/api/auth/request-password-reset",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"email\":\"own@example.invalid\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 503,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_RECOVERY_MAIL_TRANSPORT_UNCONFIGURED"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "unconfigured reset token replay",
+      "input": {
+        "path": "/api/auth/reset-password",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"token\":\"replayed-fixture-token\",\"newPassword\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 503,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_RECOVERY_MAIL_TRANSPORT_UNCONFIGURED"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "no legal erasure claim",
+      "input": {
+        "path": "/api/auth/account/delete",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 503,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_DELETION_RETENTION_POLICY_UNCONFIGURED"
+        }
+      },
+      "counts": {
+        "connects": 0,
+        "releases": 0,
+        "stock": 0
+      },
+      "queries": []
+    },
+    {
+      "name": "old provider session",
+      "input": {
+        "path": "/api/auth/account/reauth",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 401,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_REAUTHENTICATION_REQUIRED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "wrong password",
+      "input": {
+        "path": "/api/auth/account/reauth",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"incorrect-fixture\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 401,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_REAUTHENTICATION_REQUIRED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "f1fd592e-8b22-4be5-bb01-4fa255922095",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "password budget",
+      "input": {
+        "path": "/api/auth/account/reauth",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 429,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "retry-after": "300",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_REAUTHENTICATION_RATE_LIMITED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "20e2d4c3-4296-4e32-a6f8-9897dad65b96",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "valid reauthentication",
+      "input": {
+        "path": "/api/auth/account/reauth",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_REAUTHENTICATED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "947e2127-34f6-4a27-b444-9dd0b3f96be3",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate form field",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/x-www-form-urlencoded",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "password=a&password=b",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_MALFORMED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "4097 byte body",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "SITE_REQUEST_MALFORMED"
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "own-user export",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-store",
+          "content-disposition": "attachment; filename=\"sceneaxi-account.json\"",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "schemaVersion": 1,
+          "kind": "sceneaxi.account-export",
+          "retention": {
+            "version": 1,
+            "mode": "access-disable-not-erasure",
+            "identity": "retain-disabled-record-pending-reviewed-policy",
+            "finance": "preserve-append-only-ledger-and-related-records",
+            "sessions": "revoke-all-provider-and-sceneaxi-sessions-on-disable",
+            "backups": "reviewed-retention-policy-required",
+            "deletion": "unavailable-retention-policy-required",
+            "emailRecovery": "unavailable-mail-transport-required",
+            "exportScope": [
+              "identity",
+              "credit-account",
+              "credit-ledger",
+              "checkout-intents"
+            ],
+            "fullPrivacyExport": "reviewed-category-inventory-required"
+          },
+          "identity": {
+            "userId": "fixture-own",
+            "email": "own@example.invalid",
+            "emailVerified": true,
+            "disabled": false,
+            "createdAt": "2026-10-02T00:00:00Z"
+          },
+          "creditAccounts": [
+            {
+              "account_id": "fixture-credit",
+              "user_id": "fixture-own",
+              "created_at": "2026-10-02T00:00:00Z"
+            }
+          ],
+          "creditLedger": [
+            {
+              "entry_id": "fixture-grant",
+              "account_id": "fixture-credit",
+              "sequence": 1,
+              "movement": "credit",
+              "delta": "7",
+              "balance_after": "7",
+              "reason": "fixture",
+              "occurred_at": "2026-10-02T00:00:00Z"
+            }
+          ],
+          "checkoutIntents": []
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "6a501555-c266-4b63-b1c8-4aa5419455f7",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "SELECT account_id, user_id, created_at FROM credit_accounts WHERE user_id = $1 LIMIT $2",
+          "args": [
+            "fixture-own",
+            1001
+          ]
+        },
+        {
+          "sql": "SELECT e.entry_id, e.account_id, e.sequence, e.movement, e.delta::text, e.balance_after::text, e.reason, e.occurred_at FROM credit_ledger_entries e JOIN credit_accounts c ON c.account_id = e.account_id WHERE c.user_id = $1 ORDER BY e.account_id, e.sequence LIMIT $2",
+          "args": [
+            "fixture-own",
+            1001
+          ]
+        },
+        {
+          "sql": "SELECT intent_id, purpose, item_id, credits::text, unit_amount::text, currency, mode, created_at FROM checkout_session_intents WHERE user_id = $1 ORDER BY created_at, intent_id LIMIT $2",
+          "args": [
+            "fixture-own",
+            1001
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "disable own access",
+      "input": {
+        "path": "/api/auth/account/disable",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\",\"confirm\":\"disable-access\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "set-cookie": "sceneaxi.session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "ACCOUNT_ACCESS_DISABLED",
+          "retention": {
+            "version": 1,
+            "mode": "access-disable-not-erasure",
+            "identity": "retain-disabled-record-pending-reviewed-policy",
+            "finance": "preserve-append-only-ledger-and-related-records",
+            "sessions": "revoke-all-provider-and-sceneaxi-sessions-on-disable",
+            "backups": "reviewed-retention-policy-required",
+            "deletion": "unavailable-retention-policy-required",
+            "emailRecovery": "unavailable-mail-transport-required",
+            "exportScope": [
+              "identity",
+              "credit-account",
+              "credit-ledger",
+              "checkout-intents"
+            ],
+            "fullPrivacyExport": "reviewed-category-inventory-required"
+          }
+        }
+      },
+      "counts": {
+        "connects": 1,
+        "releases": 1,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "4aa302a2-59dc-46a5-ab16-c5396206f6f4",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "UPDATE users SET disabled = true WHERE user_id = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "DELETE FROM sessions WHERE user_id = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "DELETE FROM better_auth_sessions WHERE \"userId\" = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        },
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    },
+    {
+      "name": "session replay after disable fixture",
+      "input": {
+        "path": "/api/auth/account/export",
+        "method": "POST",
+        "headers": {
+          "origin": "https://privacy-fixture.invalid",
+          "content-type": "application/json",
+          "authorization": "Bearer valid-fixture-token"
+        },
+        "body": "{\"password\":\"auxiliary-fixture-password\"}",
+        "bodyTrap": false
+      },
+      "observed": {
+        "status": 401,
+        "headers": {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "pragma": "no-cache",
+          "x-content-type-options": "nosniff"
+        },
+        "body": {
+          "code": "IDENTITY_SESSION_ABSENT"
+        }
+      },
+      "counts": {
+        "connects": 2,
+        "releases": 2,
+        "stock": 0
+      },
+      "queries": [
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "SELECT CURRENT_TIMESTAMP - $1::timestamptz <= $2 * interval '1 millisecond' AS recent",
+          "args": [
+            "2026-10-02T00:00:00Z",
+            300000
+          ]
+        },
+        {
+          "sql": "INSERT INTO better_auth_rate_limits (\"id\", \"key\", \"count\", \"lastRequest\") VALUES ($1, $2, 1, floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint) ON CONFLICT (\"key\") DO UPDATE SET \"count\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN 1 ELSE better_auth_rate_limits.\"count\" + 1 END, \"lastRequest\" = CASE WHEN better_auth_rate_limits.\"lastRequest\" < floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint - 300000 THEN floor(extract(epoch FROM CURRENT_TIMESTAMP) * 1000)::bigint ELSE better_auth_rate_limits.\"lastRequest\" END RETURNING \"count\"",
+          "args": [
+            "4aa302a2-59dc-46a5-ab16-c5396206f6f4",
+            "sceneaxi.lifecycle:fixture-own"
+          ]
+        },
+        {
+          "sql": "UPDATE users SET disabled = true WHERE user_id = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "DELETE FROM sessions WHERE user_id = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "DELETE FROM better_auth_sessions WHERE \"userId\" = $1",
+          "args": [
+            "fixture-own"
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        },
+        {
+          "sql": "BEGIN",
+          "args": []
+        },
+        {
+          "sql": "SET LOCAL statement_timeout = '10s'",
+          "args": []
+        },
+        {
+          "sql": "SELECT pg_advisory_xact_lock(hashtext($1))",
+          "args": [
+            "sceneaxi.provider.account-lifecycle.v1"
+          ]
+        },
+        {
+          "sql": "SELECT u.user_id, u.email, u.email_verified, u.disabled, u.created_at, a.\"password\", p.\"createdAt\" AS provider_created_at FROM users u JOIN better_auth_users b ON b.\"id\" = u.user_id AND b.\"email\" = u.email JOIN better_auth_sessions p ON p.\"userId\" = u.user_id JOIN sessions s ON s.session_id = p.\"id\" AND s.user_id = u.user_id JOIN better_auth_accounts a ON a.\"userId\" = u.user_id AND a.\"providerId\" = 'credential' WHERE p.\"token\" = $1 AND s.token_digest = $2 AND ($3::text IS NULL OR s.session_id = $3) AND s.surface = 'site' AND s.expires_at > CURRENT_TIMESTAMP AND p.\"expiresAt\" > CURRENT_TIMESTAMP AND s.issued_at <= CURRENT_TIMESTAMP AND p.\"createdAt\" <= CURRENT_TIMESTAMP AND b.\"emailVerified\" = true AND u.email_verified = true AND u.disabled = false FOR UPDATE OF u, b, p, s, a",
+          "args": [
+            "valid-fixture-token",
+            "4c6ff0ba7f8a35a397ed0a013f0c76705502577fe45e92625cda0189fa84201c",
+            null
+          ]
+        },
+        {
+          "sql": "COMMIT",
+          "args": []
+        }
+      ]
+    }
+  ],
+  "additionalAssertions": [
+    "issued admin accepted",
+    "spread and proxy admin refused",
+    "structural principal refused",
+    "admin verifier success/missing/throw fail closed"
+  ],
+  "negativeControl": {
+    "mutation": "in-memory unknown-field guard removed",
+    "input": {
+      "password": "auxiliary-fixture-password",
+      "userId": "fixture-other"
+    },
+    "expectedStatus": 400,
+    "observedMutantStatus": 200,
+    "detected": true
+  },
+  "resources": {
+    "sockets": 0,
+    "containers": 0,
+    "temporaryFiles": 0,
+    "productionCalls": 0
+  }
+}

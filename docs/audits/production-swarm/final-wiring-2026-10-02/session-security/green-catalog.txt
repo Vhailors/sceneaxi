@@ -1,0 +1,35 @@
+
+ RUN  v4.1.11 /home/devuser/Documents/Projects/sceneaxi
+
+x················································
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/site-kit/test/catalog-server-fetch.test.ts > configured-origin catalog own-session transport > composed boundary refuses credential accessors and Proxy get traps without reads
+AssertionError: expected { ok: false, …(2) } to match object { ok: true }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "ok": true,
++   "ok": false,
+  }
+
+ ❯ packages/site-kit/test/catalog-server-fetch.test.ts:31:58
+     29|     const get = vi.fn(() => { throw new Error("private Proxy read"); }…
+     30|     const proxy = new Proxy({ surface: "site" as const, sessionToken: …
+     31|     expect(await plane.identity.resolvePrincipal(proxy)).toMatchObject…
+       |                                                          ^
+     32|     expect(get).not.toHaveBeenCalled();
+     33|     expect(transport).toHaveBeenCalledTimes(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 48 passed (49)
+   Start at  16:45:16
+   Duration  8.23s (transform 6.58s, setup 0ms, import 1.01s, tests 6.77s, environment 0ms)
+

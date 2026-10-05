@@ -16,6 +16,9 @@ export default defineConfig({
         new URL("./packages/authoring-core/internal/project-git-authority.ts", import.meta.url),
       ),
       // Subpath aliases MUST precede the root @sceneaxi/site-kit alias: matching is prefix-based, so alphabetizing this block breaks every subpath.
+      "@sceneaxi/site-kit/catalog-server-fetch": fileURLToPath(
+        new URL("./packages/site-kit/src/catalog-server-fetch.ts", import.meta.url),
+      ),
       "@sceneaxi/site-kit/catalog-identity": fileURLToPath(
         new URL("./packages/site-kit/src/catalog-identity.ts", import.meta.url),
       ),

@@ -31,17 +31,24 @@ export default function EnginePage() {
   const sdk = offer.ok ? offer.value : null;
   const sdkRefusal = offer.ok ? null : { reason: offer.reason, message: offer.message };
   const desktopApp = desktopOffer.ok ? desktopOffer.value : null;
+
   const desktopRefusal = desktopOffer.ok
     ? null
     : { reason: desktopOffer.reason, message: desktopOffer.message };
+
   const appImage = desktopApp?.artifacts.find((artifact) => artifact.kind === "AppImage") ?? null;
   const debPackage = desktopApp?.artifacts.find((artifact) => artifact.kind === "deb") ?? null;
 
   return (
-    <div className="page">
+    <div className="page page-persuade">
       <div className="page-head">
-        <p className="eyebrow">Download · {RELEASE_MARKER}</p>
-        <h1>Get the engine.</h1>
+        <div className="title-row">
+          <h1>Get the engine.</h1>
+          <span className="chip chip-needs-review">
+            <span className="dot" aria-hidden="true" />
+            {RELEASE_MARKER}
+          </span>
+        </div>
         <p className="lede">
           {sdk === null
             ? "The SDK archive is not in this build, so there is nothing to download here. The packaged Linux desktop application below is a separate artifact and is unaffected."
@@ -125,8 +132,13 @@ export default function EnginePage() {
       ) : desktopApp !== null ? (
         <div className="stack">
           <div className="section-title">
-            <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
-            <h2>{desktopApp.productName} for Linux.</h2>
+            <div className="title-row">
+                <h2>{desktopApp.productName} for Linux.</h2>
+              <span className="chip chip-validated">
+                <span className="dot" aria-hidden="true" />
+                {desktopApp.platform}
+              </span>
+            </div>
             <p className="prose prose-wide">
               The Engine Desktop editor as a packaged Linux application: the accepted
               editor chrome in an Electron window over the real engine stack — kernel
@@ -140,9 +152,9 @@ export default function EnginePage() {
           <article className="panel panel-roomy tone-accent">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="tag tag-accent">Linux available</span>
+              <span className="tag tag-accent">Recorded Linux build</span>
             </div>
-            <h3 className="card-title">Download the verified Linux bundle</h3>
+            <h3 className="card-title">Inspect the recorded Linux workflow artifact</h3>
             <p className="body-copy">
               The repository workflow run contains{" "}
               <code>{desktopApp.ciArtifactName}</code>: both installers plus{" "}
@@ -151,7 +163,7 @@ export default function EnginePage() {
               <strong>Artifacts</strong>.
             </p>
             <a className="button button-block" href={desktopApp.downloadHref}>
-              Open Linux download
+              Open Linux download record
             </a>
             <p className="meta">
               Version {desktopApp.version} · workflow run {desktopApp.workflowRunId} ·
@@ -159,7 +171,7 @@ export default function EnginePage() {
               {desktopApp.artifactRetentionDays} days
             </p>
             <p className="note">
-              Workflow artifacts expire, so this download is gone on or before{" "}
+              This historical record is not proof of a current public release. Artifact access and checksums must be verified before use. Workflow artifacts expire on or before{" "}
               <strong>{desktopApp.artifactExpiresBy}</strong>.{" "}
               {desktopApp.retentionNote}
             </p>
@@ -194,7 +206,7 @@ export default function EnginePage() {
                     <code>{artifact.sha256}</code>
                   </dd>
                 </dl>
-                <p className="eyebrow eyebrow-quiet">Copy and verify this file</p>
+                <p className="command-label">Copy and verify this file</p>
                 <p className="command">
                   <code>{artifact.verifyCommand}</code>
                 </p>
@@ -288,7 +300,6 @@ export default function EnginePage() {
 
       <div className="stack">
         <div className="section-title">
-          <p className="eyebrow">The engine</p>
           <h2>A small, honest core with hard edges around it.</h2>
           <p className="prose prose-wide">
             Packages have declared boundaries and a checker that fails the build when one
@@ -299,14 +310,14 @@ export default function EnginePage() {
 
         {sdk !== null && (
           <>
-            <p className="eyebrow eyebrow-quiet">Packages in this archive</p>
-            <div className="grid grid-3">
+            <h3 className="subhead">Packages in this archive</h3>
+            <ul className="pkg-list" aria-label="Packages in this archive">
               {sdk.packages.map((name) => (
-                <article className="panel panel-line" key={name}>
-                  <p className="pkg">{name}</p>
-                </article>
+                <li className="pkg" key={name}>
+                  {name}
+                </li>
               ))}
-            </div>
+            </ul>
           </>
         )}
       </div>
@@ -316,7 +327,7 @@ export default function EnginePage() {
         <div className="scroll-x pipeline">
           <div className="pipeline-grid">
             {PIPELINE.map((stage) => (
-              <div className={`stack stack-tight tone-${stage.bar}`} key={stage.n}>
+              <div className={`pipeline-step tone-${stage.bar}`} key={stage.n}>
                 <span className="pipeline-rail" aria-hidden="true" />
                 <p className="pipeline-num">{stage.n}</p>
                 <h3>{stage.name}</h3>
@@ -327,28 +338,19 @@ export default function EnginePage() {
         </div>
       </div>
 
-      <div className="grid grid-2">
+      <div className="prose-notes prose-notes-split">
         {ENGINE_NOTES.map((note) => (
-          <article
-            className={note.tone === "plain" ? "note-card" : `note-card note-card-${note.tone}`}
-            key={note.title}
-          >
-            <h3>
-              <span className="dot" aria-hidden="true" />
-              {note.title}
-            </h3>
+          <section className={`prose-note prose-note-${note.tone}`} key={note.title}>
+            <h3>{note.title}</h3>
             <p>{note.body}</p>
-          </article>
+          </section>
         ))}
-        <article className="note-card note-card-info">
-          <h3>
-            <span className="dot" aria-hidden="true" />
-            {LIVE_OPEN_PRESENTATION.coreLabel}
-          </h3>
+        <section className="prose-note prose-note-info">
+          <h3>{LIVE_OPEN_PRESENTATION.coreLabel}</h3>
           <p>{LIVE_OPEN_PRESENTATION.decision}</p>
           <p>{LIVE_OPEN_PRESENTATION.seam}</p>
           <p>{LIVE_OPEN_PRESENTATION.notClaimed}</p>
-        </article>
+        </section>
       </div>
 
       <div className="stack">

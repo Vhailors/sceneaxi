@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "role": "code",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "iterationCount": 3,
+  "productionStatus": "PARTIAL",
+  "localCompletionAcceptance": "NOT_MET",
+  "sourceChangesThisRetry": [
+    {
+      "path": "sites/umbrella/playwright.config.ts",
+      "symbol": "webServer.env",
+      "change": "Pin nonsecret test deployment origin; preserve origin protections and unchanged identity browser assertions."
+    },
+    {
+      "path": "desktop/linux/src/electron/main.ts",
+      "symbol": "browserUiOpen",
+      "change": "Await admitted asset option plus enabled idle native controls before selecting; preserve every frame/digest/byte/security assertion."
+    },
+    {
+      "path": "desktop/linux/README.md",
+      "change": "Correct read-only Ask/staged Build/provider-specific availability and bounded unsigned/unpublished evidence."
+    },
+    {
+      "path": "docs/desktop-linux.md",
+      "change": "Reconcile core containment, local diagnostics consent and retained local integration gates."
+    },
+    {
+      "path": "docs/desktop-local-bridge.md",
+      "change": "Document socket/assistant/diagnostics sensitivity and explicit local dump consent."
+    },
+    {
+      "path": "docs/audits/production-swarm/MEGALIST.md",
+      "change": "Distinguish historical counts from current bounded integration evidence."
+    },
+    {
+      "path": "docs/audits/production-swarm/MEGALIST.json",
+      "change": "Record three-round evidence without automatically closing historical mappings."
+    }
+  ],
+  "verifiedBoundedOutcomes": [
+    {
+      "id": "JUDGE-GATE-01",
+      "status": "BOUNDED_ACCEPTANCE_VERIFIED",
+      "evidence": "integration-pass-3-gate.log",
+      "meaning": "Unchanged syntax/boundaries/contracts/traceability/sites/desktop/publish-ready/build/test/lint gate passes; 282 files / 4297 tests. Not all production semantic requirements."
+    },
+    {
+      "id": "JUDGE-WIN-02",
+      "status": "BOUNDED_ACCEPTANCE_VERIFIED",
+      "evidence": "integration-pass-2-focused.log",
+      "meaning": "9 Windows packaging tests and entire gate pass; publication/update safety assertions retained. Supported-host/signing/release proof remains separate."
+    },
+    {
+      "id": "JUDGE-CMD-03",
+      "status": "BOUNDED_ACCEPTANCE_VERIFIED",
+      "evidence": "integration-pass-2-focused.log",
+      "meaning": "110 typed desktop command tests pass and full golden suite passes. Does not certify every native GUI command."
+    },
+    {
+      "id": "JUDGE-NATIVE-04",
+      "status": "PARTIAL_BOUNDED_NATIVE_ACCEPTANCE",
+      "evidence": "integration-pass-3-linux-runtime-final.log; integration-pass-3-linux-packaged-{1,2,3}.log",
+      "meaning": "Current runtime and three fresh packaged runs plus retained 1280x900 PNGs pass; remaining real IPC/privacy/new-command coverage is not closed."
+    },
+    {
+      "id": "INT-IDENTITY-ORIGIN",
+      "status": "FIXED_WITH_RED_GREEN_ORACLE",
+      "before": "integration-pass-2-browser.log: 6 pass/1 fail; same-origin expected IDENTITY_PLANE_NOT_WIRED, received SITE_REQUEST_CROSS_ORIGIN",
+      "after": "integration-pass-3-browser.log: all 7 browser tests pass",
+      "impact": "Browser verifier used an unpinned deployment origin, preventing meaningful same-origin identity absence acceptance."
+    },
+    {
+      "id": "INT-NATIVE-READINESS",
+      "status": "FIXED_WITH_RED_GREEN_ORACLE",
+      "before": "integration-pass-2-linux-runtime-final.log: selected=false/opened=false/frame=null",
+      "after": "integration-pass-3-linux-runtime-final.log plus 3 packaged passes",
+      "impact": "Smoke could select before the asynchronous admitted file projection arrived; native front-door stability was unproven."
+    }
+  ],
+  "remainingLocalGates": [
+    {
+      "id": "LOCAL-ENGINE-HOSTS",
+      "owner": "integration",
+      "request": "Complete and independently prove kernel gameplay primary dispatch/advance/save, contained gesture-only audio intake/play/stop/visibility, full posed scene physics/joint persistence and renderer solver poses; keep Kids and source-clone protections."
+    },
+    {
+      "id": "LOCAL-TEXTURES-ANIMATION",
+      "owner": "integration",
+      "request": "Complete contained texture admission/material binding across schemas/importers/site-kit/native/site front doors; actual imported checker/STEP/LINEAR pixels. Skin/CUBICSPLINE and expanded renderer/network remain counted unsupported capabilities, not fake success."
+    },
+    {
+      "id": "LOCAL-BILLING-REALPG",
+      "owner": "integration",
+      "request": "Independently exercise forward migration 0008 chain/reservation/quota semantics and same/different-key process races on disposable real PostgreSQL; repeat migration-runner concurrency/checksum/dry-run and restore assertions. PGlite seven tests do not supply all real-PG proof."
+    },
+    {
+      "id": "LOCAL-MEMBER-COMMERCE",
+      "owner": "integration",
+      "request": "Finish source-backed authenticated own-user purchase history/cursors/return correlation and HTTP checkout malformed/truncated/overflow/rate-budget success/refusal paths; verify intent-before-provider and uncertain reservation replay without re-execution."
+    },
+    {
+      "id": "LOCAL-NATIVE-COVERAGE",
+      "owner": "integration",
+      "request": "Remaining native Recent/import/reload/cancel/timeout/new typed GUI commands, actual hostile non-main/document IPC, default/BYOK dump absence and explicit-consent retention. Preserve exact byte/frame/security oracles."
+    },
+    {
+      "id": "LOCAL-EXHAUSTIVE-REVIEW",
+      "owner": "integration",
+      "request": "Review every builder diff and canonical acceptance criterion independently; replace inherited report claims with final-source semantic evidence. Identity builder report is missing despite 13 newly rerun lifecycle/project-persistence tests passing."
+    },
+    {
+      "id": "LOCAL-CAPACITY-CONSUMER",
+      "owner": "integration",
+      "request": "Emitted SDK declaration consumer oracle, aggregate maximum workloads, sustained CPU/memory plateau and long-lived authored route switching/restoration proof."
+    },
+    {
+      "id": "LOCAL-FULL-A11Y-PATHS",
+      "owner": "integration",
+      "request": "Complete all changed main paths and exhaustive accessibility coverage. Current production responsive observations cover 16 page/viewport cases, main landmarks, focus, no horizontal overflow and no page errors, not all WCAG or entitled/provider success paths."
+    }
+  ],
+  "externalGateRequests": [
+    {
+      "id": "EXT-PROVIDERS",
+      "request": "Genuine approved auth/email/model/keyring/Stripe test configuration via secret storage and redacted real session/webhook/refund/metering proof. No account creation, money movement or LIVE activation authority supplied."
+    },
+    {
+      "id": "EXT-DB-OPS",
+      "request": "Authorized nonproduction provider database and operations owners for provider-specific restore/reconciliation evidence. Production migration/restore needs separate action-specific authority."
+    },
+    {
+      "id": "EXT-RELEASE-HOSTS",
+      "request": "Supported macOS/Windows hosts, legitimate signing/notarization identities and platform runtime/update proof; explicit approved publication action separately required."
+    },
+    {
+      "id": "EXT-LEGAL-RIGHTS",
+      "request": "Genuine licence/trademark/privacy/Kids clearance and reviewed asset rights/provenance/moderation/delivery evidence."
+    },
+    {
+      "id": "EXT-DELIVERY-OPS",
+      "request": "Named deployment/DNS/TLS/storage/monitoring/backup/incident ownership and operational evidence; separately authorized deploy/publish/public-post actions, no new spend."
+    },
+    {
+      "id": "EXT-DEVICES",
+      "request": "Supported physical GPU/controller/audio-output/platform hosts for hardware and audibility claims; SwiftShader and gesture/context state do not supply those proofs."
+    }
+  ],
+  "coverageLimitations": [
+    "No assertion that all requested local implementation or all changed behavior is complete.",
+    "Historical MEGALIST/backlog statuses and builder successes are not automatically final certification.",
+    "Existing checkout work was preserved and not attributed to this retry.",
+    "Full review of every prior diff/report/source cannot be attested; retry forbade rereading listed files and earlier tool contents were absent.",
+    "Pass-2 production browser evidence precedes only the later native smoke readiness edit; final site production builds pass again. Provider and entitled success paths remain absent.",
+    "PNG validation is signature/IHDR plus associated live assertions, not screenshot-content proof alone. Earlier dist/test rebuilds removed temporary runtime PNGs; final PNGs copied to durable audit paths.",
+    "No independent judge rerun after round 3 is claimed; previous judge artifacts remain untouched."
+  ],
+  "counts": {
+    "perNodeOutcomes": 24,
+    "builderReportsPresent": 11,
+    "sourceTaskRows": 307,
+    "remainingRowsNotDeduplicated": 148,
+    "backlogMappings": 90,
+    "requirementsMappings": 109,
+    "dispositions": {
+      "OPEN_LOCAL_FINAL_ACCEPTANCE": 113,
+      "INTENTIONAL_FULL_PRODUCTION_GAP": 13,
+      "HISTORICAL_BOUNDED_NONCERTIFYING": 159,
+      "EXTERNAL_INPUT_HELD": 22
+    },
+    "interpretation": "Rows include mapped diagnoses; no claim of unique final gap counts or exhaustive independent closure."
+  },
+  "verificationReceiptPath": "docs/audits/production-swarm/integration-verification-receipts.json",
+  "finalAccountingPath": "docs/audits/production-swarm/FINAL.json",
+  "controls": {
+    "noCommitsPushDeployPublish": true,
+    "noProductionDataChanges": true,
+    "noSecretValuesPrinted": true,
+    "noNewSpendOrAccounts": true,
+    "matrixAndPinnedTypeScriptPreserved": true,
+    "heldKidsLiveProtectionsPreserved": true,
+    "noCheckSkipsOrWeakenedAssertions": true
+  }
+}

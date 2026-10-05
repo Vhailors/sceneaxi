@@ -94,3 +94,29 @@ export function evaluateProjectBuild(input: Readonly<{
     "A signed public user-project artifact is not authorized from this command without a later release record.",
   );
 }
+
+/** Separate local-only purpose; never changes the signed release evaluator. */
+export function evaluateLocalProjectBuild(input: Readonly<{
+  purpose: unknown;
+  target: unknown;
+  profile: unknown;
+  host: unknown;
+}>): Failure | Readonly<{
+  ok: true;
+  purpose: "local-unsigned";
+  target: "linux";
+  signed: false;
+  releaseReady: false;
+}> {
+  if (input.profile === "kids" || input.profile === "@sceneaxi/profile-kids") {
+    return fail(PROJECT_BUILD_REFUSALS.kidsDenied, "Local project build is denied for Kids.");
+  }
+  if (input.purpose !== "local-unsigned" || input.target !== "linux" ||
+      (input.profile !== "game" && input.profile !== "web")) {
+    return fail(PROJECT_BUILD_REFUSALS.inputUnsupported, "Local unsigned builds require an explicit purpose, Linux target and Game or Web profile.");
+  }
+  if (input.host !== "linux") {
+    return fail(PROJECT_BUILD_REFUSALS.hostUnsupported, "Local unsigned builds currently require a Linux host.");
+  }
+  return Object.freeze({ ok: true, purpose: "local-unsigned", target: "linux", signed: false, releaseReady: false });
+}

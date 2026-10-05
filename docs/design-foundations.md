@@ -211,6 +211,103 @@ comparison. `pnpm gate` needs no browser; these are observations, not gate infer
 | 390 × 844 | `scrollWidth - innerWidth = 0`; row reflows to `"badge property actions" / "before before before" / "after after after"`; the arrow is hidden; the leaf is not clipped (`scrollWidth <= clientWidth`) |
 | 1560 × 1050 | archive sheet rendered for comparison: same neutrals, same swatch order, same accent — the emitted `:root` matches the sheet's printed hexes token for token |
 
+## Redesign 2026-10
+
+The approved redesign direction (`docs/redesign/DIRECTION.md`, v5, rulings in
+`docs/redesign/RULINGS.md`) keeps the Foundations world: same palette, families,
+spacing scale and radii. It changes the values below and adds a motion system.
+Each change is a recorded deviation, never a silent edit, and the code names the
+deviation beside the value.
+
+### Changed values (sites)
+
+| Id | Old | New | Why |
+|---|---|---|---|
+| DV-F1 | `micro` 8.5px mono | `micro` 11px; 11px is the floor for all site text (`FOUNDATION_TEXT_FLOOR_PX`) | 8.5px is unreadable at any contrast |
+| DV-F2 | `lead` 16px, `body` 14px | lead 18px, body 16px (umbrella editor chrome keeps 14px as a literal) | Persuade/Read surfaces at desk distance |
+| DV-F3 | float shadow `0 24px 60px -16px rgba(0,0,0,.9)` | `0 10px 14px -6px` at the same ink; 1px `#2C323B` edge kept | 1px border + ≥16px blur is the banned ghost elevation |
+| DV-F7 | no motion tokens | `FOUNDATION_MOTION`, emitted as `--motion-*` | the sheet states no motion, so it is a decision |
+| DV-F8 | transitions only, 120–320ms | `--motion-duration-loop` 1200ms and `--motion-delay-loading` 300ms, for indeterminate progress/pending indicators only | ruling R-1; transform/opacity only, static under reduced motion |
+| DV-F9 | `ui` 12px, `ui-sm` 11px, `mono` 10–12px | ui 13px, ui-sm 12px, mono 12–13px | 11–12px labels sit at the legibility floor |
+| DV-F10 | `display-xl` 66px, `display-l` 42px, fixed | tokens keep 66/42; sites write `clamp(2.5rem, 1.6rem + 3.6vw, 4.125rem)` and `clamp(1.875rem, 1.4rem + 1.9vw, 2.625rem)` as literals and never read the display tokens for a size | a fixed 66px H1 overflows at 390px |
+| DV-F11 | `micro` tracking 0.15em | 0.08em, emitted as `--type-micro-tracking`; line heights per DIRECTION.md §3, CSS-only | 0.15em at 11px spreads a label past its column |
+
+DV-F4 (a lighter storefront `--accent-hi`) was withdrawn: storefront `--accent-hi`
+still repeats the accent, and storefront hover is the `currentColor` state layer.
+DV-F5, DV-F6 and DV-F12 are site-stylesheet changes recorded in DIRECTION.md §8;
+no token here changes for them. Colours, spacing and radii are unchanged, and every
+`FOUNDATION_CONTRAST_ROLES` pair still passes `meetsContrast`.
+
+### Motion system
+
+Thesis: an instrument settling. Fast start, long exponential deceleration, no
+overshoot. `foundationsVariablesCss()` emits every row into `:root`:
+
+| Custom property | Value | Use |
+|---|---|---|
+| `--motion-duration-press` | 120ms | press-in, focus halo |
+| `--motion-duration-micro` | 160ms | hover state layers, press release, arrows, underline |
+| `--motion-duration-state` | 200ms | chip/tone change, status line, number change |
+| `--motion-duration-panel` | 280ms | panel, drawer, dialog, disclosure open; list item enter |
+| `--motion-duration-panel-exit` | 200ms | every close/exit |
+| `--motion-duration-route` | 320ms | route entrance, hero aperture, focal resolution |
+| `--motion-duration-loop` | 1200ms | one cycle of an indeterminate indicator only (DV-F8) |
+| `--motion-delay-loading` | 300ms | wait before a loading indicator paints (DV-F8) |
+| `--motion-ease-out-quart` | `cubic-bezier(0.25, 1, 0.5, 1)` | micro feedback, exits, loops |
+| `--motion-ease-out-quint` | `cubic-bezier(0.22, 1, 0.36, 1)` | state and number changes |
+| `--motion-ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | panels, routes, focal moments |
+| `--motion-stagger-step` | 40ms | per-item delay in a list |
+| `--motion-stagger-max` | 200ms | delay cap |
+| `--motion-distance-sm` / `-md` / `-lg` | 4px / 8px / 16px | nudges and list items / route content and dialogs / drawers and hero copy |
+| `--motion-scale-press` | 0.97 | pressed controls (sites, web shell) |
+| `--motion-scale-enter` | 0.98 | Kids pieces only |
+
+`foundationsBaseCss()` adds two shared parts:
+
+- `@media (prefers-reduced-motion: reduce)` sets the three distances to `0px`, both
+  scales to `1` and the stagger step to `0ms`. Rules written against the tokens
+  therefore lose movement automatically while opacity, colour and state still
+  change. Sites whose tests pin a blanket `.001ms` kill keep their own block.
+- One-shot keyframes a site may reference: `sx-fade`, `sx-rise-sm`, `sx-rise-md`,
+  `sx-rise-lg` (opacity + translate by the distance token), `sx-draw` (a
+  `clip-path` left-to-right draw) and `sx-progress` (the indeterminate bar's
+  translate). None sets a resting style, so content is never hidden before they
+  run.
+
+Rules: animate only transform, opacity, clip-path and filter; colour, background
+and border changes are instant; ease-out quart/quint/expo only, no bounce or
+elastic; exits faster than entrances; nothing toggled by `hidden` gets an exit.
+The desktop copy of this table is `MOTION` in `apps/desktop-shell/src/visual-tokens.ts`
+(without the two scale tokens).
+
+### Component changes
+
+- **Status chips** (`.sx-status`): mono 11px at 0.08em (the machine-value Label
+  role), padding and gap on the 4px scale.
+- **Change Review** (`changeReviewCss()`): spacing on the 4px scale, no text below
+  11px (property, values and digests 12px mono with tabular figures), 30px buttons
+  (under 720px: 44px icon targets and a 44px minimum bulk-button height). Every button has rest, hover (`currentColor`
+  state layer, 8%, only under `@media (hover: hover)` so a tap never leaves it
+  stuck), focus-visible (2px `--accent-hi` ring, 2px offset), active (press scale,
+  12% layer), disabled (dashed line, `--fg-2` label, never opacity; it wins over
+  the decided-row colours) and loading (`aria-busy="true"`: label kept, 2px
+  indeterminate bar after
+  `--motion-delay-loading`). The ✕/✓ marks stay text glyphs with their existing
+  `aria-label` (ruling R-4). The unchanged badge moves from `--fg-4` to `--fg-2`
+  because it is text.
+- **Resolution motion** (the signature moment). Two CSS-only hooks a site may set
+  after it records a decision: `data-sx-decision="accepted" | "rejected"` on a
+  `.sx-cr-row` and `data-sx-outcome="apply" | "discard"` on `.sx-change-review`.
+  Pending rows show the old value with a faint strike; accepting draws a solid
+  strike left to right (`clip-path`, state duration, expo) and wipes the new value
+  in; rejecting strikes the proposed value in `--fg-2`. On `apply` the header dot
+  turns mint and the after digest wipes in. Under reduced motion all of it appears
+  at once. The package still sets no state and binds no event.
+- **State panel, commerce notice, access states.** No change. These modules emit
+  models and neutral element trees; each site's own stylesheet styles `.state`,
+  so the redesigned state panel (tone hairline frame, tone chip, tone underline
+  draw) lands in the site lanes using the tokens and keyframes above.
+
 ## Extending this
 
 - A new token means editing the table **and** its assertion in

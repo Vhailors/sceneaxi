@@ -1,0 +1,65 @@
+{
+  "task": "review-ux",
+  "verdict": "NOTREADY",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "sourceReadOnly": true,
+  "fingerprints": ["fingerprint-before.json", "additional-fingerprint-before.json", "fingerprint-after.json"],
+  "fingerprintScope": "Listed source, tests and handback receipts only; not all runtime dependencies or a frozen integrated repository",
+  "nodes": [
+    {
+      "id": "bg-113", "task": "desktop-keyboard", "sourceHandback": true,
+      "readiness": "BOUNDED_PASS_BROWSER_NOTREADY", "sourceStableDuringReview": true,
+      "handbackHashesMatch": true,
+      "source": "apps/desktop-shell/src/chrome.ts:1253-1261",
+      "sha256": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+      "implemented": ["intrinsic inspector sections", "separate grid catalogue controls", "full-width block textarea", "wrapping reports"],
+      "notRun": ["real Tab and Shift+Tab geometry at 900x600,1100x800,1280x900", "forced-colors focus pixels", "actual inert activation and visible refusal dismissal"],
+      "fixOrAcceptance": "Serial owner rebuilds frozen candidate then runs node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs expansion-desktop-keyboard --keyboard-only"
+    },
+    {
+      "id": "bg-114", "task": "web-inspector-ux", "sourceHandback": true,
+      "readiness": "BOUNDED_PASS_BROWSER_NOTREADY", "sourceStableDuringReview": true,
+      "handbackHashesMatch": true,
+      "source": "apps/web-shell/src/inspector-app.ts:838-997",
+      "sha256": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+      "implemented": ["described native-disabled review controls", "named keyboard-focusable diff", "busy/rejected/pending/stale/unknown explanations", "invalid JSON semantics", "focus return without stealing moved field focus"],
+      "notRun": ["actual keyboard/native-validation/assistive technology", "390/1440 light/dark/forced-colors geometry", "resolved contrast >=4.5:1", "actual long evidence wrapping/no overlap"],
+      "fixOrAcceptance": "Serial browser run on matching source/HTML/bundle hashes; Happy DOM and CSS arithmetic cannot certify these predicates"
+    },
+    {
+      "id": "bg-118", "task": "catalog-ui-polish", "sourceHandback": false,
+      "readiness": "NOTREADY_IN_PROGRESS", "sourceStableDuringReview": false,
+      "receipt": "../catalog-ui-polish/report.md:1-9",
+      "changedDuringReview": ["sites/catalog-game/src/app/globals.css", "sites/catalog-game/test/catalog-ux-regression.test.ts"],
+      "fixOrAcceptance": "Await actual final handback in controller, then independently test exact stable implementation and unchanged negatives; this reviewer did not wait/poll or certify active source"
+    },
+    {
+      "id": "bg-119", "task": "web-catalog-ui", "sourceHandback": false,
+      "readiness": "NOTREADY_IN_PROGRESS", "sourceStableDuringReview": false,
+      "receipt": "../web-catalog-ui/report.md:1-7",
+      "changedDuringReview": ["sites/catalog-web/src/app/page.tsx", "sites/catalog-web/src/app/globals.css", "sites/catalog-web/src/app/_components/listing-card.tsx", "sites/catalog-web/test/catalog-ux-regression.test.ts"],
+      "fixOrAcceptance": "Final handback and exact stable render/negative test proof required before browser acceptance; no active-source certification"
+    }
+  ],
+  "predicates": [
+    {"name": "desktop-literal-aria-disabled-negative-oracle", "result": "PASS", "path": "apps/desktop-shell/test/chrome.test.ts:510-524", "assertionsEqualHEAD": true, "byteEqualHEAD": false, "difference": "Two added blank lines only in exact oracle block", "stableDuringReview": true, "evidence": "literal-aria-disabled-oracle.json", "limit": "Whole test file has historical edits; not claiming pristine HEAD bytes"},
+    {"name": "strict-CSP-without-inline-allowances", "result": "FAIL", "regressionIntroducedByUXWorker": false, "path": "apps/web-shell/src/dev-server.ts:299-300", "actual": "style-src 'unsafe-inline'; script-src 'unsafe-inline'", "fix": "Shared host owner adds matched response nonces/hashes or same-origin external assets without weakening connect/base/form/frame restrictions; actual browser enforcement required", "limit": "Existing intentional local CSP is preserved; it is not nonce/hash-only strict CSP"},
+    {"name": "clipping-occlusion-current-geometry", "result": "NOT_RUN", "path": "apps/desktop-shell/src/chrome.ts:1253-1261", "limit": "Static render rules and hostile geometry oracle do not measure actual DOM layout"},
+    {"name": "web-user-visible-errors-empty-diff-focus-and-no-write-retry", "result": "BOUNDED_PASS", "path": "apps/web-shell/src/inspector-app.ts:838-997", "limit": "Real-source Happy DOM plus transport negatives; not actual browser/native keyboard or screen reader"},
+    {"name": "contrast-forced-colors-wrapping", "result": "BOUNDED_PASS_BROWSER_NOT_RUN", "path": "apps/web-shell/src/inspector-app.ts:803-831", "limit": "CSS assertions and declared-color arithmetic, not resolved Canvas contrast or overlap"},
+    {"name": "catalog-empty-error-query-refusal-focus-wrapping", "result": "NOTREADY", "limit": "Both corresponding builders still writing, no source handback"}
+  ],
+  "executed": [
+    {"command": "pnpm exec vitest run apps/desktop-shell/test/keyboard-geometry.test.ts apps/desktop-shell/test/visual-refinement.test.ts apps/desktop-shell/test/chrome.test.ts apps/web-shell/test/inspector-accessibility.test.ts apps/web-shell/test/inspector-app.test.ts apps/web-shell/test/inspector-refusal-ux.test.ts apps/web-shell/test/visual-refinement.test.ts --reporter=dot", "exit": 0, "files": 5, "passed": 123, "failed": 0, "log": "focused-tests.log", "readableLog": "focused-tests.txt", "correction": "Last two named paths do not exist; Vitest selected only five existing files; correct negative suites run separately"},
+    {"command": "pnpm exec vitest run apps/web-shell/test/refuse-matrix.test.ts apps/web-shell/test/visual-postpr.test.ts tests/e2e/desktop-control-inventory-golden.test.ts --reporter=dot", "exit": 0, "files": 3, "passed": 30, "failed": 0, "log": "negative-tests.log", "readableLog": "negative-tests.txt"}
+  ],
+  "totalDistinctTestFiles": 8,
+  "totalPassedTests": 153,
+  "toolFallback": "Dedicated project test tool returned No test command detected; focused pnpm commands ran with explicit real-root cwd",
+  "preservedEvidence": ["existing-oracles.diff", "additional-existing-oracles.diff", "literal-aria-disabled-oracle.json"],
+  "deferred": ["fullbuild", "fullgate", "sitebuild", "realbrowser", "native", "assistive-technology", "providers"],
+  "historicalFailedVisualPass": "UNCHANGED_FAIL",
+  "cleanup": "Focused commands terminated; no persistent service intentionally retained; fixture cleanup suite-owned, not independently certified",
+  "writes": "Only review-ux reports and probe evidence; no product edits, masks, warning suppression, installs, commits or pushes"
+}

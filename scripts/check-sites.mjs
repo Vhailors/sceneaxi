@@ -481,7 +481,8 @@ for (const dir of siteDirs) {
 for (const file of walk(sitesDir)) {
   const rel = relative(root, file);
   const text = readFileSync(file, "utf8");
-  if (rel.startsWith(`${KIDS_SITE_DIR}/`)) {
+  if (rel.startsWith(`${KIDS_SITE_DIR}/`) &&
+      !(rel.startsWith(`${KIDS_SITE_DIR}/test/visual-evidence/`) && /\.(?:png|log)$/.test(rel))) {
     // The whole install root, not just `src/`: an outbound path is added in the site's
     // own configuration at least as easily as in a component.
     for (const forbidden of KIDS_SITE_FORBIDDEN_APIS) {

@@ -1,0 +1,671 @@
+{
+  "taskId": "capacity-work-2026-10-02/physics-v1",
+  "subject": "TypeScript product source transpiled in memory; no dist, no WASM initialization",
+  "fingerprints": {
+    "packages/schemas/src/desktop-scene-physics.ts": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+    "packages/schemas/src/physics-world-host.ts": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/engine-kernel/src/scene-session.ts": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "packages/physics-rapier/src/index.ts": "809a31a03d7854a1d88e8f8115fb9f5463954251c2d3df3f106bf0a35b306358",
+    "packages/physics-rapier/src/world.ts": "c651e5566b2133201a42b5ca0e712fcf604b7ccd7587f350175a92b82fc87eb3"
+  },
+  "checks": [
+    {
+      "name": "legacy public consumer compiles",
+      "status": "PASS",
+      "detail": {
+        "consumerErrors": 0,
+        "dependencyDiagnostics": 0
+      }
+    },
+    {
+      "name": "compile negative control rejects incompatible legacy size",
+      "status": "PASS",
+      "detail": [
+        {
+          "file": "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/capacity-work-2026-10-02/physics-v1/legacy-consumer.virtual.ts",
+          "line": 5,
+          "code": 2322,
+          "message": "Type 'string' is not assignable to type 'number'."
+        }
+      ]
+    },
+    {
+      "name": "public modules load from source",
+      "status": "PASS",
+      "detail": {
+        "schemaExports": [
+          "SCENE_PHYSICS_BODY_KINDS",
+          "SCENE_PHYSICS_CATALOG_KEY",
+          "SCENE_PHYSICS_CATALOG_KIND",
+          "SCENE_PHYSICS_CONSTRAINT_KINDS",
+          "SCENE_PHYSICS_ENGINES",
+          "SCENE_PHYSICS_REFUSALS",
+          "SCENE_PHYSICS_SCHEMA_VERSION",
+          "SCENE_PHYSICS_COLLIDER_KINDS",
+          "applyScenePhysicsMutation",
+          "emptyScenePhysicsCatalog",
+          "evaluateScenePhysics",
+          "inspectScenePhysics",
+          "parseScenePhysicsCatalog",
+          "requireScenePhysicsCatalog",
+          "SCENE_PHYSICS_SHAPE_KINDS",
+          "PHYSICS_HOST_PROBE_STEPS",
+          "PHYSICS_WORLD_HOST_KINDS",
+          "PHYSICS_WORLD_HOST_REFUSALS",
+          "createToyPhysicsWorldHost"
+        ],
+        "sessionExports": [
+          "SCENE_KERNEL_SAVE_KIND",
+          "deriveSceneInstanceSeed",
+          "openSceneKernelSession",
+          "replaySceneKernelSession"
+        ],
+        "rapierExports": [
+          "seam",
+          "createRapierPhysicsWorldHost"
+        ]
+      }
+    },
+    {
+      "name": "legacy shapes normalize to colliders",
+      "status": "PASS",
+      "detail": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.scene-physics-catalog",
+        "world": {
+          "gravityY": -9.81,
+          "stepMs": 16,
+          "seed": 1,
+          "engine": "toy"
+        },
+        "bodies": [
+          {
+            "bodyId": "body-1",
+            "instanceId": "instance-1",
+            "kind": "dynamic",
+            "mass": 1
+          }
+        ],
+        "colliders": [
+          {
+            "colliderId": "shape-1",
+            "bodyId": "body-1",
+            "kind": "box",
+            "size": 1
+          }
+        ],
+        "shapes": [
+          {
+            "shapeId": "shape-1",
+            "bodyId": "body-1",
+            "kind": "box",
+            "size": 1
+          }
+        ],
+        "materials": [],
+        "constraints": []
+      }
+    },
+    {
+      "name": "modern colliders accepted without mutating input",
+      "status": "PASS",
+      "detail": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.scene-physics-catalog",
+        "world": {
+          "gravityY": -9.81,
+          "stepMs": 16,
+          "seed": 1,
+          "engine": "toy"
+        },
+        "bodies": [
+          {
+            "bodyId": "body-1",
+            "instanceId": "instance-1",
+            "kind": "dynamic",
+            "mass": 1
+          }
+        ],
+        "colliders": [
+          {
+            "colliderId": "collider-1",
+            "bodyId": "body-1",
+            "kind": "box",
+            "size": 1
+          }
+        ],
+        "shapes": [
+          {
+            "shapeId": "collider-1",
+            "bodyId": "body-1",
+            "kind": "box",
+            "size": 1
+          }
+        ],
+        "materials": [],
+        "constraints": []
+      }
+    },
+    {
+      "name": "legacy shape-upsert public mutation",
+      "status": "PASS",
+      "detail": {
+        "ok": true,
+        "catalog": {
+          "schemaVersion": 1,
+          "kind": "sceneaxi.scene-physics-catalog",
+          "world": {
+            "gravityY": -9.81,
+            "stepMs": 16,
+            "seed": 1,
+            "engine": "toy"
+          },
+          "bodies": [
+            {
+              "bodyId": "body-1",
+              "instanceId": "instance-1",
+              "kind": "dynamic",
+              "mass": 1
+            }
+          ],
+          "colliders": [
+            {
+              "colliderId": "shape-1",
+              "bodyId": "body-1",
+              "kind": "box",
+              "size": 1
+            },
+            {
+              "colliderId": "shape-2",
+              "bodyId": "body-1",
+              "kind": "box",
+              "size": 2
+            }
+          ],
+          "shapes": [
+            {
+              "shapeId": "shape-1",
+              "bodyId": "body-1",
+              "kind": "box",
+              "size": 1
+            },
+            {
+              "shapeId": "shape-2",
+              "bodyId": "body-1",
+              "kind": "box",
+              "size": 2
+            }
+          ],
+          "materials": [],
+          "constraints": []
+        }
+      }
+    },
+    {
+      "name": "null world refusal without caller mutation",
+      "status": "PASS",
+      "detail": {
+        "input": {
+          "schemaVersion": 1,
+          "kind": "sceneaxi.scene-physics-catalog",
+          "world": null,
+          "bodies": [],
+          "colliders": [],
+          "shapes": [],
+          "materials": [],
+          "constraints": []
+        },
+        "outcomes": {
+          "require": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "parse": {
+            "result": null
+          },
+          "toy": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "evaluate": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          },
+          "mutation": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          }
+        },
+        "reads": 0,
+        "writes": 0
+      }
+    },
+    {
+      "name": "proxy world refusal without caller mutation",
+      "status": "PASS",
+      "detail": {
+        "input": {
+          "schemaVersion": 1,
+          "kind": "sceneaxi.scene-physics-catalog",
+          "world": {
+            "poisonKind": "proxy"
+          },
+          "bodies": [],
+          "colliders": [],
+          "shapes": [],
+          "materials": [],
+          "constraints": []
+        },
+        "outcomes": {
+          "require": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "parse": {
+            "result": null
+          },
+          "toy": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "evaluate": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          },
+          "mutation": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          }
+        },
+        "reads": 0,
+        "writes": 0
+      }
+    },
+    {
+      "name": "accessor world refusal without caller mutation",
+      "status": "PASS",
+      "detail": {
+        "input": {
+          "schemaVersion": 1,
+          "kind": "sceneaxi.scene-physics-catalog",
+          "world": {
+            "poisonKind": "accessor"
+          },
+          "bodies": [],
+          "colliders": [],
+          "shapes": [],
+          "materials": [],
+          "constraints": []
+        },
+        "outcomes": {
+          "require": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "parse": {
+            "result": null
+          },
+          "toy": {
+            "error": "Error: PHYSICS_CATALOG_INVALID"
+          },
+          "evaluate": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          },
+          "mutation": {
+            "result": {
+              "ok": false,
+              "reason": "PHYSICS_CATALOG_INVALID",
+              "message": "Invalid physics catalog."
+            }
+          }
+        },
+        "reads": 0,
+        "writes": 0
+      }
+    },
+    {
+      "name": "runtime negative control trips same public refusal checker",
+      "status": "PASS",
+      "detail": {
+        "injectedResult": {
+          "ok": true
+        },
+        "detected": true
+      }
+    },
+    {
+      "name": "toy public host rejects null world before stepping",
+      "status": "PASS",
+      "detail": {
+        "error": "Error: PHYSICS_CATALOG_INVALID"
+      }
+    },
+    {
+      "name": "scene-session public entry refuses null scene",
+      "status": "PASS",
+      "detail": {
+        "error": "KernelSessionError: ComposedScene must be a JSON object."
+      }
+    },
+    {
+      "name": "legacy toy host produces runtime snapshot without caller mutation",
+      "status": "PASS",
+      "detail": {
+        "snapshot": [
+          {
+            "bodyId": "body-1",
+            "y": 1.00748864,
+            "vy": -0.15696000000000002
+          }
+        ],
+        "serialized": "[[\"body-1\",1.00748864,-0.15696000000000002]]"
+      }
+    },
+    {
+      "name": "subject fingerprints stable throughout probe",
+      "status": "PASS",
+      "detail": {
+        "packages/schemas/src/desktop-scene-physics.ts": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+        "packages/schemas/src/physics-world-host.ts": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+        "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+        "packages/engine-kernel/src/scene-session.ts": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+        "packages/physics-rapier/src/index.ts": "809a31a03d7854a1d88e8f8115fb9f5463954251c2d3df3f106bf0a35b306358",
+        "packages/physics-rapier/src/world.ts": "c651e5566b2133201a42b5ca0e712fcf604b7ccd7587f350175a92b82fc87eb3"
+      }
+    }
+  ],
+  "deferred": [
+    "Real Rapier WASM/native/GUI integration NOT RUN"
+  ],
+  "resourcesCleaned": "No fixtures, services, ports, or product outputs created",
+  "consumerInput": "import { ScenePhysicsCatalog, ScenePhysicsShape, SCENE_PHYSICS_SHAPE_KINDS, emptyScenePhysicsCatalog, requireScenePhysicsCatalog, applyScenePhysicsMutation, inspectScenePhysics } from '/home/devuser/Documents/Projects/sceneaxi/packages/schemas/src/index.ts';\nimport {createToyPhysicsWorldHost, PhysicsWorldHost} from '/home/devuser/Documents/Projects/sceneaxi/packages/schemas/src/physics-world-host.ts';\nimport {openSceneKernelSession} from '/home/devuser/Documents/Projects/sceneaxi/packages/engine-kernel/src/scene-session.ts';\nimport {createRapierPhysicsWorldHost, RapierPhysicsWorldHost} from '/home/devuser/Documents/Projects/sceneaxi/packages/physics-rapier/src/index.ts';\nconst shape: ScenePhysicsShape = {shapeId:'shape-1',bodyId:'body-1',kind:SCENE_PHYSICS_SHAPE_KINDS[0],size:1};\nconst legacy: ScenePhysicsCatalog = {schemaVersion:1,kind:'sceneaxi.scene-physics-catalog',world:{gravityY:-9.81,stepMs:16,seed:1},bodies:[{bodyId:'body-1',instanceId:'instance-1',kind:'dynamic',mass:1}],shapes:[shape],materials:[],constraints:[]};\nconst legacyShapeIds = legacy.shapes.map(shape => shape.shapeId);\nconst mutation = applyScenePhysicsMutation({catalog:legacy,mutation:{kind:'shape-upsert',shapeId:'shape-2',bodyId:'body-1',shapeKind:shape.kind,size:2},instanceIds:['instance-1']});\nconst host:PhysicsWorldHost=createToyPhysicsWorldHost();\nconst inspected=inspectScenePhysics(legacy);\nconst parsed=requireScenePhysicsCatalog(legacy);\nconst factory: typeof createRapierPhysicsWorldHost=createRapierPhysicsWorldHost;\nconst opener: typeof openSceneKernelSession=openSceneKernelSession;\n",
+  "compileDiagnostics": [],
+  "legacyInput": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.scene-physics-catalog",
+    "world": {
+      "gravityY": -9.81,
+      "stepMs": 16,
+      "seed": 1,
+      "engine": "toy"
+    },
+    "bodies": [
+      {
+        "bodyId": "body-1",
+        "instanceId": "instance-1",
+        "kind": "dynamic",
+        "mass": 1
+      }
+    ],
+    "shapes": [
+      {
+        "shapeId": "shape-1",
+        "bodyId": "body-1",
+        "kind": "box",
+        "size": 1
+      }
+    ],
+    "materials": [],
+    "constraints": []
+  },
+  "normalizationResult": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.scene-physics-catalog",
+    "world": {
+      "gravityY": -9.81,
+      "stepMs": 16,
+      "seed": 1,
+      "engine": "toy"
+    },
+    "bodies": [
+      {
+        "bodyId": "body-1",
+        "instanceId": "instance-1",
+        "kind": "dynamic",
+        "mass": 1
+      }
+    ],
+    "colliders": [
+      {
+        "colliderId": "shape-1",
+        "bodyId": "body-1",
+        "kind": "box",
+        "size": 1
+      }
+    ],
+    "shapes": [
+      {
+        "shapeId": "shape-1",
+        "bodyId": "body-1",
+        "kind": "box",
+        "size": 1
+      }
+    ],
+    "materials": [],
+    "constraints": []
+  },
+  "sourceLocations": [
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsRefusal",
+      "line": 36
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsBody",
+      "line": 39
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsCollider",
+      "line": 46
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsShape",
+      "line": 53
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsMaterial",
+      "line": 60
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsConstraint",
+      "line": 66
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsEngine",
+      "line": 74
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsWorld",
+      "line": 76
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsColliderCatalog",
+      "line": 83
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsNormalizedCatalog",
+      "line": 94
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsLegacyCatalog",
+      "line": 96
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsCatalog",
+      "line": 107
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsCatalogInput",
+      "line": 108
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsSnapshot",
+      "line": 110
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsEvaluation",
+      "line": 116
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "emptyScenePhysicsCatalog",
+      "line": 130
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "requireScenePhysicsCatalog",
+      "line": 144
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "parseScenePhysicsCatalog",
+      "line": 231
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "ScenePhysicsMutation",
+      "line": 236
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "applyScenePhysicsMutation",
+      "line": 255
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "evaluateScenePhysics",
+      "line": 407
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "symbol": "inspectScenePhysics",
+      "line": 516
+    },
+    {
+      "path": "packages/schemas/src/physics-world-host.ts",
+      "symbol": "PhysicsWorldHostKind",
+      "line": 8
+    },
+    {
+      "path": "packages/schemas/src/physics-world-host.ts",
+      "symbol": "PhysicsWorldHandle",
+      "line": 14
+    },
+    {
+      "path": "packages/schemas/src/physics-world-host.ts",
+      "symbol": "PhysicsWorldHost",
+      "line": 20
+    },
+    {
+      "path": "packages/schemas/src/physics-world-host.ts",
+      "symbol": "createToyPhysicsWorldHost",
+      "line": 25
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "SceneKernelOptions",
+      "line": 30
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "SceneKernelSnapshot",
+      "line": 39
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "SceneKernelSaveArtifact",
+      "line": 49
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "SceneKernelSession",
+      "line": 58
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "openSceneKernelSession",
+      "line": 208
+    },
+    {
+      "path": "packages/engine-kernel/src/scene-session.ts",
+      "symbol": "replaySceneKernelSession",
+      "line": 229
+    },
+    {
+      "path": "packages/physics-rapier/src/index.ts",
+      "symbol": "RapierPhysicsWorldHost",
+      "line": 47
+    },
+    {
+      "path": "packages/physics-rapier/src/index.ts",
+      "symbol": "createRapierPhysicsWorldHost",
+      "line": 51
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierBodyPose",
+      "line": 18
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierJointFrame",
+      "line": 20
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierWorldOptions",
+      "line": 22
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierBodySnapshot",
+      "line": 24
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierWorldSave",
+      "line": 26
+    },
+    {
+      "path": "packages/physics-rapier/src/world.ts",
+      "symbol": "RapierWorldHandle",
+      "line": 28
+    }
+  ],
+  "finalFingerprints": {
+    "packages/schemas/src/desktop-scene-physics.ts": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+    "packages/schemas/src/physics-world-host.ts": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/engine-kernel/src/scene-session.ts": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "packages/physics-rapier/src/index.ts": "809a31a03d7854a1d88e8f8115fb9f5463954251c2d3df3f106bf0a35b306358",
+    "packages/physics-rapier/src/world.ts": "c651e5566b2133201a42b5ca0e712fcf604b7ccd7587f350175a92b82fc87eb3"
+  },
+  "status": "PASS_BOUNDED_SOURCE_PROBE",
+  "harnessSha256": "97b5bdec762b3207e1ff81655b0b898410621a2dfa10f30b8d1f60fa309232d9"
+}

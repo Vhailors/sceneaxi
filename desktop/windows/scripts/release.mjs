@@ -1,85 +1,40 @@
 #!/usr/bin/env node
-/**
- * Publish to an operator-created draft release only. This script never creates a
- * release or invents a tag, and it refuses before building when authority is absent.
- */
+/** Upload already verified local bytes to an operator-created draft only. No build/publish occurs here. */
 import { spawnSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { packageWindowsRelease } from "./package-release.mjs";
-import { requireWindowsReleaseEnvironment } from "./release-preflight.mjs";
+import { uploadVerifiedWindowsDraft } from "./package-release.mjs";
+import { requireWindowsReleaseEnvironment, windowsCheckoutProvenance } from "./release-preflight.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-// electron-builder's GitHub publisher reads the token from the environment, so the
-// operator-supplied release token has to reach it exactly like it reaches `gh.exe`.
+
 const githubEnv = () => ({ ...process.env, GH_TOKEN: process.env.GITHUB_RELEASE_TOKEN });
 
 const run = (command, args, options = {}) => {
-  const result = spawnSync(command, args, { cwd: appRoot, encoding: "utf8", ...options });
-  if (result.error || result.status !== 0) {
-    const detail = result.error?.message ?? result.stderr?.trim();
-    throw new Error(
-      detail
-        ? `command failed: ${command} ${args.join(" ")}\n${detail}`
-        : `command failed: ${command} ${args.join(" ")}`,
-    );
-  }
+  const result = spawnSync(command, args, { cwd: appRoot, encoding: "utf8", timeout: 120000, ...options });
+
+  if (result.error || result.status !== 0) throw new Error(`WINDOWS_RELEASE_COMMAND_FAILED:${command}`);
+
   return result.stdout;
 };
 
 try {
   requireWindowsReleaseEnvironment({ publishing: true });
   const tag = process.env.SCENEAXI_WINDOWS_RELEASE_TAG.trim();
-  const manifest = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
-  if (tag !== `v${manifest.version}`) {
-    throw new Error(
-      `desktop-windows release refused — SCENEAXI_WINDOWS_RELEASE_TAG must equal v${manifest.version}`,
-    );
-  }
-  const release = JSON.parse(
-    run(
-      "gh.exe",
-      [
-        "release",
-        "view",
-        tag,
-        "--repo",
-        "Vhailors/sceneaxi",
-        "--json",
-        "isDraft,tagName",
-      ],
-      { env: githubEnv() },
-    ),
-  );
-  if (release.tagName !== tag || release.isDraft !== true) {
-    throw new Error(
-      "desktop-windows release refused — the matching GitHub release must already exist as a draft",
-    );
-  }
+  const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
 
-  rmSync(join(appRoot, "release"), { recursive: true, force: true });
-  const artifact = packageWindowsRelease({
-    appRoot,
-    publish: "onTagOrDraft",
-    env: githubEnv(),
+  if (tag !== `v${version}`) throw new Error(`desktop-windows release refused — SCENEAXI_WINDOWS_RELEASE_TAG must equal v${version}`);
+  // All integrity, real signature and native pixel acceptance precede remote lookup/upload.
+  uploadVerifiedWindowsDraft({
+    appRoot, tag, sourceCommit: windowsCheckoutProvenance(),
+    verifyNative: () => run(process.execPath, [join(appRoot, "scripts/smoke.mjs"), "--packaged"], { stdio: "inherit" }),
+    readDraft: () => JSON.parse(run("gh.exe", ["release", "view", tag, "--repo", "Vhailors/sceneaxi", "--json", "isDraft,tagName,targetCommitish"], { env: githubEnv() })),
+    // No --clobber, release creation, tag creation or publish.
+    upload: (files) => run("gh.exe", ["release", "upload", tag, ...files, "--repo", "Vhailors/sceneaxi"], { env: githubEnv(), stdio: "inherit" }),
   });
-  run(
-    "gh.exe",
-    [
-      "release",
-      "upload",
-      tag,
-      artifact.checksumFile,
-      "--repo",
-      "Vhailors/sceneaxi",
-    ],
-    { env: githubEnv(), stdio: "inherit" },
-  );
-  console.log(
-    `desktop-windows release upload OK — draft ${tag}; operator must publish it explicitly`,
-  );
+  console.log(`desktop-windows release upload OK — draft ${tag}; operator must publish it explicitly`);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(error instanceof Error ? error.message : "WINDOWS_RELEASE_FAILED");
   process.exit(1);
 }

@@ -17,7 +17,7 @@
  * `docs/auth-credits.md` (refusal ordering); the boundary is ADR 0021's 2026-08-01
  * clarification.
  */
-import { refuse, type SiteFormOriginSignals, type SiteResult } from "@sceneaxi/site-kit";
+import { type SiteFormOriginSignals, type SiteResult } from "@sceneaxi/site-kit";
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
@@ -25,6 +25,7 @@ import {
   classifyUmbrellaPlane,
   createUmbrellaIdentityPlane,
   umbrellaPlaneHandles,
+  verifyUmbrellaDeploymentFormOrigin,
   type UmbrellaIdentityPlane,
 } from "./identity-plane.js";
 import {
@@ -66,13 +67,13 @@ let requestAuthority: UmbrellaRequestAuthority | undefined;
 
 export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
   if (requestAuthority !== undefined) return requestAuthority;
-  const deployment = umbrellaPlaneHandles();
 
   requestAuthority = Object.freeze({
     verifyFormOrigin(signals) {
-      return deployment.verifyFormOrigin?.(signals) ?? refuse("SITE_REQUEST_CROSS_ORIGIN");
+      return verifyUmbrellaDeploymentFormOrigin(signals);
     },
     health() {
+      const deployment = umbrellaPlaneHandles();
       const configuration = deployment.configuration;
       return Object.freeze({
         planes: Object.freeze({
@@ -83,6 +84,7 @@ export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
       });
     },
     plane(request = {}) {
+      const deployment = umbrellaPlaneHandles();
       return createUmbrellaIdentityPlane(
         {},
         {
@@ -94,6 +96,7 @@ export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
       );
     },
     async applyCreditWebhook(request) {
+      const deployment = umbrellaPlaneHandles();
       if (deployment.creditWebhook === undefined) {
         return Object.freeze({
           ok: false as const,

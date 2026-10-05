@@ -79,6 +79,7 @@ import {
   type EntitlementCapability,
   type EntitlementDecision,
   type IdentitySurface,
+  type JsonValue,
 } from "@sceneaxi/schemas";
 import { evaluateEntitlement } from "./entitlements.js";
 import {
@@ -91,13 +92,22 @@ import {
   meteringIdempotencyKey,
   sameLedgerState,
 } from "./metering.js";
-import type { CreditStore } from "./store.js";
+import type { CreditStore, HostedCallOperation } from "./store.js";
+import { snapshotHostedResponse } from "./hosted-response.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
   billingRefuse,
   type BillingOutcome,
 } from "./refusals.js";
+
+function isText<Value>(value: Value): value is Value & string { return typeof value === "string"; }
+
+function isNumber<Value>(value: Value): value is Value & number { return typeof value === "number"; }
+
+function isProviderCall<Response, Value>(value: Value): value is Value & (() => Awaitable<Response>) { return typeof value === "function"; }
+
+type IdentityBoundaryValue = JsonValue | RunMeteredModelCallRequest<never>["principal"];
 
 /** How a model call is paid for. A closed enumeration; there is no default. */
 export const HOSTED_AI_ROUTES = Object.freeze(["hosted", "byo"] as const);
@@ -130,7 +140,36 @@ export const HOSTED_AI_ROUTE_CAPABILITIES = Object.freeze({
  * "is an API key present". Possessing an OpenRouter key is not a decision to
  * spend a user's credits, so configuration alone can never turn hosted AI on.
  */
-export type HostedAiConfig = Readonly<{ enabled: boolean }>;
+export type HostedAiPrice = Readonly<{ model: string; operation: string; capability: EntitlementCapability; credits: number }>;
+
+export type HostedAiPricingPolicy = Readonly<{ quote(model: string, operation: string, capability: EntitlementCapability): HostedAiPrice | undefined }>;
+
+const pricingPolicies = new WeakSet<object>();
+
+/** Server-owned commercial input; no shipped economic table and no implicit quote. */
+export function createHostedAiPricingPolicy(prices: ReadonlyArray<HostedAiPrice>): HostedAiPricingPolicy {
+  const catalog = new Map<string, HostedAiPrice>();
+
+  for (const price of prices) {
+    if (!isText(price.model) || !/^[A-Za-z0-9._:/-]{1,128}$/.test(price.model) || !isText(price.operation) || !/^[A-Za-z0-9._-]{1,128}$/.test(price.operation) || !HOSTED_AI_ROUTE_CAPABILITIES.hosted.some((capability) => capability === price.capability) || !Number.isSafeInteger(price.credits) || price.credits < 1) throw new Error("invalid hosted pricing input");
+    const key = `${price.model}|${price.operation}|${price.capability}`;
+
+    if (catalog.has(key)) throw new Error("duplicate hosted price");
+    catalog.set(key, Object.freeze({ ...price }));
+  }
+
+  const policy: HostedAiPricingPolicy = Object.freeze({ quote: (model, operation, capability) => catalog.get(`${model}|${operation}|${capability}`) });
+  pricingPolicies.add(policy);
+
+  return policy;
+}
+
+/** Provider accepted work but its outcome is unknown. Never automatically re-execute. */
+export class HostedAiProviderUncertainError extends Error {
+  constructor() { super("hosted provider outcome is uncertain"); this.name = "HostedAiProviderUncertainError"; }
+}
+
+export type HostedAiConfig = Readonly<{ enabled: boolean; pricing?: HostedAiPricingPolicy }>;
 
 /** The shipped default: hosted AI is off. */
 export const HOSTED_AI_DEFAULT_CONFIG: HostedAiConfig = Object.freeze({
@@ -140,8 +179,10 @@ export const HOSTED_AI_DEFAULT_CONFIG: HostedAiConfig = Object.freeze({
 /**
  * The injected provider call.
  *
- * Returns whatever the caller's provider layer returns; billing never inspects
- * it. A throw is a provider failure and refuses without a debit.
+ * Free calls retain the caller's provider value. Paid calls require accessor-free,
+ * bounded JSON value semantics before persistence/debit; unsupported results
+ * refuse without a debit and retain the reservation (no automatic provider retry).
+ * A throw is a provider failure and refuses without a debit.
  *
  * That is the whole contract, and it puts one obligation on the caller: **a
  * returned value is a completed call and will be charged for.** Provider layers
@@ -189,6 +230,9 @@ export type RunMeteredModelCallRequest<Response> = Readonly<{
   store?: CreditStore | undefined;
   /** The exact integer credit cost of this call. Hosted route only. */
   creditAmount?: number | undefined;
+  /** Exact configured model/operation quote; request amount is checked, never authoritative. */
+  model?: string;
+  operation?: string;
   /** Attribution for the ledger entry. Hosted route only. */
   reason?: string | undefined;
   /** Caller replay key; scoped to the account by `meterCredits`. */
@@ -204,8 +248,8 @@ export type MeteredModelCallCompleted<Response> = Readonly<{
   capability: EntitlementCapability;
   /** The entitlement conclusion this call was authorized under. */
   decision: EntitlementDecision;
-  /** What the provider returned; untouched by billing. */
-  response: Response;
+  /** Free calls retain the provider type. Paid/recovered answers are validated JSON values. */
+  response: Response | JsonValue;
   /**
    * False when nothing was charged — the free BYO route, or an admin's unlimited
    * allowance. Reported explicitly rather than as a zero-credit ledger row.
@@ -259,15 +303,16 @@ export type RunMeteredModelCallOutcome<Response> =
   | MeteredModelCallCompleted<Response>
   | MeteredModelCallReplayed;
 
-function isHostedAiRoute(value: unknown): value is HostedAiRoute {
+function isHostedAiRoute<Value>(value: Value): value is Value & HostedAiRoute {
   return HOSTED_AI_ROUTES.some((route) => route === value);
 }
 
 /** Kids detection, matching `evaluateEntitlement`'s own read of a request. */
-function isKidsRequest(principal: unknown, surface: unknown): boolean {
+function isKidsRequest(principal: IdentityBoundaryValue, surface: IdentityBoundaryValue): boolean {
   if (surface === "kids") return true;
   const principalRecord = snapshotPlainRecord(principal);
   const session = snapshotPlainRecord(principalRecord?.["session"]);
+
   return session?.["surface"] === "kids";
 }
 
@@ -281,10 +326,13 @@ function isKidsRequest(principal: unknown, surface: unknown): boolean {
  * cannot accept a store that would then crash mid-debit. A throwing accessor
  * still fails closed.
  */
-function isCreditStore(value: unknown): value is CreditStore {
+function isCreditStore<Value>(value: Value): value is Value & CreditStore {
   if (value === null || typeof value !== "object") return false;
+
   try {
-    const candidate = value as Record<string, unknown>;
+    // SAFETY: value was checked as a non-null object; only the three method slots below are inspected before accepting the store.
+    const candidate = value as { findAccountById?: object; listEntries?: object; appendOrReplayEntry?: object };
+
     return (
       typeof candidate["findAccountById"] === "function" &&
       typeof candidate["listEntries"] === "function" &&
@@ -363,18 +411,23 @@ async function resolveHostedLedger(
     now,
     surface,
   } = request;
+
   if (!isCreditStore(store)) return billingOk(undefined);
   const supplied = validateLedgerState(state);
+
   if (!supplied.ok) return billingOk(undefined);
 
   if (principal === undefined || principal === null || admin === undefined) {
     return billingOk(undefined);
   }
+
   const guarded = requireAuthenticated(
     principal,
     surface === undefined ? { now, admin } : { now, surface, admin },
   );
+
   if (!guarded.ok) return billingOk(undefined);
+
   if (supplied.value.account.userId !== guarded.value.user.userId) {
     return billingOk(undefined);
   }
@@ -382,14 +435,17 @@ async function resolveHostedLedger(
   const accountId = supplied.value.account.accountId;
   let account: CreditAccount | undefined;
   let entries: ReadonlyArray<CreditLedgerEntry>;
+
   try {
     account = await store.findAccountById(accountId);
+
     if (account === undefined || account === null) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerStateInvalid,
         "The credit account does not exist in persistence; the model call refuses before the provider.",
       );
     }
+
     // Ownership is re-asked of the account persistence holds, not of the one the
     // caller wrote down: the two agree for every real caller, and where they do
     // not it is the caller that named an account id it does not own. Refusing
@@ -401,6 +457,7 @@ async function resolveHostedLedger(
         "The credit account belongs to a different user; the model call refuses before the provider.",
       );
     }
+
     entries = await store.listEntries(accountId);
   } catch {
     return billingRefuse(
@@ -410,6 +467,7 @@ async function resolveHostedLedger(
   }
 
   const persisted = loadLedgerState(account, entries);
+
   if (!persisted.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -425,27 +483,29 @@ async function resolveHostedLedger(
   }
 
   if (
-    typeof idempotencyKey !== "string" ||
+    !isText(idempotencyKey) ||
     idempotencyKey.length === 0 ||
-    typeof reason !== "string" ||
+    !isText(reason) ||
     reason.trim().length === 0 ||
-    !Number.isSafeInteger(creditAmount) ||
-    (creditAmount as number) < 1
+    !isNumber(creditAmount) || !Number.isSafeInteger(creditAmount) ||
+    creditAmount < 1
   ) {
     return billingOk(Object.freeze({ persisted: persisted.value }));
   }
 
   const scopedKey = meteringIdempotencyKey(accountId, idempotencyKey);
+
   const entry = persisted.value.entries.find(
     (candidate) => candidate.idempotencyKey === scopedKey,
   );
+
   if (entry === undefined) {
     return billingOk(Object.freeze({ persisted: persisted.value }));
   }
 
   if (
     entry.movement !== "debit" ||
-    entry.delta !== -(creditAmount as number) ||
+    entry.delta !== -creditAmount ||
     entry.reason !== reason
   ) {
     return billingRefuse(
@@ -502,13 +562,17 @@ export async function runMeteredModelCall<Response>(
   request: RunMeteredModelCallRequest<Response>,
 ): Promise<BillingOutcome<RunMeteredModelCallOutcome<Response>>> {
   const record = snapshotPlainRecord(request);
+
   if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A metered model call request must be a plain object.",
     );
   }
+
+  // SAFETY: snapshotPlainRecord copied data properties from the typed request without invoking accessors; fields are independently screened in refusal order below before use.
   const screened = record as RunMeteredModelCallRequest<Response>;
+
   const {
     route,
     capability,
@@ -548,17 +612,21 @@ export async function runMeteredModelCall<Response>(
       `A model call must name a route: ${HOSTED_AI_ROUTES.join(" or ")}.`,
     );
   }
+
   const routeCapabilities: ReadonlyArray<EntitlementCapability> =
     HOSTED_AI_ROUTE_CAPABILITIES[route];
+
   if (!routeCapabilities.some((allowed) => allowed === capability)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.capabilityUnknown,
-      `"${String(capability)}" is not a "${route}" route capability; that route bills ${routeCapabilities.join(" or ")}.`,
+      `The capability is not allowed on the "${route}" route; that route bills ${routeCapabilities.join(" or ")}.`,
     );
   }
+
+  // SAFETY: capability matched an entry of the selected route's EntitlementCapability allow-list above.
   const routeCapability = capability as EntitlementCapability;
 
-  if (typeof call !== "function") {
+  if (!isProviderCall<Response, typeof call>(call)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A metered model call requires an injected provider call.",
@@ -593,6 +661,7 @@ export async function runMeteredModelCall<Response>(
           surface,
         })
       : billingOk(undefined);
+
   if (!resolution.ok) return resolution;
   const ledger = resolution.value;
   const replayed = ledger === undefined ? undefined : ledger.replayed;
@@ -606,15 +675,20 @@ export async function runMeteredModelCall<Response>(
       : ledger === undefined
         ? state
         : ledger.persisted;
-  const decision = evaluateEntitlement({
-    capability: routeCapability,
-    now,
-    ...(admin === undefined ? {} : { admin }),
-    ...(principal === undefined ? {} : { principal }),
-    ...(entitlementState === undefined ? {} : { state: entitlementState }),
-    ...(creditAmount === undefined ? {} : { creditAmount }),
-    ...(surface === undefined ? {} : { surface }),
-  });
+
+  const entitlementRequest: EntitlementRequest = { capability: routeCapability, now };
+
+  if (admin !== undefined) entitlementRequest.admin = admin;
+
+  if (principal !== undefined) entitlementRequest.principal = principal;
+
+  if (entitlementState !== undefined) entitlementRequest.state = entitlementState;
+
+  if (creditAmount !== undefined) entitlementRequest.creditAmount = creditAmount;
+
+  if (surface !== undefined) entitlementRequest.surface = surface;
+  const decision = evaluateEntitlement(entitlementRequest);
+
   if (!decision.ok) return decision;
 
   if (route === "hosted" && ledger === undefined) {
@@ -636,6 +710,7 @@ export async function runMeteredModelCall<Response>(
   // a property of the code: past this block a debit either carries the persisted
   // ledger it was authorized against, or it does not exist.
   let debit: MeteringPlan | undefined;
+
   if (charge !== undefined) {
     if (!isCreditStore(store)) {
       return billingRefuse(
@@ -643,18 +718,21 @@ export async function runMeteredModelCall<Response>(
         "A credit-priced model call requires a credit store to persist the debit.",
       );
     }
-    if (typeof reason !== "string" || reason.trim().length === 0) {
+
+    if (!isText(reason) || reason.trim().length === 0) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.requestInvalid,
         "A credit-priced model call requires a non-empty reason so every debit is attributable.",
       );
     }
-    if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {
+
+    if (!isText(idempotencyKey) || idempotencyKey.length === 0) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.requestInvalid,
         "A credit-priced model call requires a non-empty idempotency key.",
       );
     }
+
     // Last, so every caller defect above still answers in its own vocabulary.
     // No credit-priced request can reach here with the ledger unresolved — the
     // shapes `resolveHostedLedger` declines to read the store for are exactly
@@ -667,6 +745,7 @@ export async function runMeteredModelCall<Response>(
         "A credit-priced model call must be judged against the persisted ledger, which was not resolved for this request.",
       );
     }
+
     debit = Object.freeze({
       persisted: ledger.persisted,
       store,
@@ -676,10 +755,52 @@ export async function runMeteredModelCall<Response>(
     });
   }
 
+  let operation: HostedCallOperation | undefined;
+  let restoredResponse: unknown;
+  let recovering = false;
+
+  if (debit !== undefined) {
+    const policy = hostedAi?.pricing;
+    const model = screened.model;
+    const operationName = screened.operation;
+
+    if (policy === undefined || !pricingPolicies.has(policy) || !isText(model) || !isText(operationName)) {
+      return billingRefuse(BILLING_REFUSE_REASONS.amountInvalid, "A paid hosted call requires a server-owned model/operation price policy.");
+    }
+
+    const quote = policy.quote(model, operationName, routeCapability);
+
+    if (quote === undefined || quote.credits !== debit.amount) return billingRefuse(BILLING_REFUSE_REASONS.amountInvalid, "The model/operation quote is unknown or mismatched.");
+    const operations = debit.store.hostedCalls;
+
+    if (operations === undefined) return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "Paid hosted calls require reservation and result persistence.");
+    operation = Object.freeze({ accountId: debit.persisted.account.accountId, idempotencyKey: meteringIdempotencyKey(debit.persisted.account.accountId, debit.idempotencyKey), amount: debit.amount, reason: debit.reason, model, operation: operationName, now });
+
+    try {
+      const reservation = await operations.reserve(operation);
+
+      if (reservation.status === "insufficient") return billingRefuse(BILLING_REFUSE_REASONS.balanceInsufficient, "Available credits are reserved for another operation.");
+
+      if (reservation.status === "conflict") return billingRefuse(BILLING_REFUSE_REASONS.idempotencyConflict, "The hosted operation key has different inputs.");
+
+      if (reservation.status === "response-ready") { restoredResponse = reservation.response; recovering = true; }
+      else if (replayed !== undefined && reservation.status === "completed") { /* The existing debit is authoritative. */ }
+      else if (reservation.status !== "acquired") return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The hosted operation is pending or uncertain. Do not re-execute it.");
+    } catch {
+      return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "Hosted reservation persistence could not be confirmed. Keep the same key.");
+    }
+  }
+
+
   // The key already bought this call. Hand back the debit that exists — no
   // second provider execution, no second charge, and no invented answer. The
   // ledger reported is the current persisted one supplied by the caller.
   if (replayed !== undefined && debit !== undefined) {
+    if (operation !== undefined && debit.store.hostedCalls !== undefined) {
+      try { await debit.store.hostedCalls.finish(operation); }
+      catch { return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The existing debit could not finalize its operation. Keep the same key."); }
+    }
+
     return billingOk(
       Object.freeze({
         replayed: true,
@@ -694,14 +815,36 @@ export async function runMeteredModelCall<Response>(
     );
   }
 
-  let response: Response;
+
+  let response: Response | JsonValue;
+
   try {
-    response = await call();
-  } catch {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.hostedAiProviderFailed,
-      "The model provider call failed; nothing was charged.",
-    );
+    if (recovering) {
+      const snapshot = snapshotHostedResponse(restoredResponse);
+      if (snapshot === undefined) return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The retained provider response is not supported bounded JSON. Keep the same key; do not call the provider again.");
+      response = snapshot.value;
+    } else {
+      const answer = await call();
+      if (operation !== undefined) {
+        const snapshot = snapshotHostedResponse(answer);
+        if (snapshot === undefined) return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.");
+        response = snapshot.value;
+      } else response = answer;
+    }
+  } catch (error) {
+    if (operation !== undefined && debit?.store.hostedCalls !== undefined) {
+      if (error instanceof HostedAiProviderUncertainError) return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "Provider outcome is uncertain; the reservation remains held and must not be automatically retried.");
+
+      try { await debit.store.hostedCalls.release(operation); }
+      catch { return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "Provider failed but reservation release could not be confirmed."); }
+    }
+
+    return billingRefuse(BILLING_REFUSE_REASONS.hostedAiProviderFailed, "The model provider call failed; nothing was charged.");
+  }
+
+  if (operation !== undefined && debit?.store.hostedCalls !== undefined && !recovering) {
+    try { await debit.store.hostedCalls.saveResponse(operation, response); }
+    catch { return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The provider response could not be durably confirmed. Keep the same key; do not call the provider again."); }
   }
 
   // Free BYO, and the captain's unlimited allowance: no debit exists to append,
@@ -723,18 +866,39 @@ export async function runMeteredModelCall<Response>(
     );
   }
 
-  const metered = await meterCredits({
+  // Reservations coordinate funding; after provider work the current chain is
+  // reloaded rather than charging against a pre-call snapshot another key moved.
+  let current: LedgerState;
+
+  try {
+    const loaded = loadLedgerState(debit.persisted.account, await debit.store.listEntries(debit.persisted.account.accountId));
+
+    if (!loaded.ok) return loaded;
+    current = loaded.value;
+  } catch { return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The response is retained but the current debit ledger is unavailable."); }
+
+  if (admin === undefined) return billingRefuse(BILLING_REFUSE_REASONS.requestInvalid, "A credit-priced call requires an admin identity configuration.");
+
+  const meteringRequest: MeteringRequest = {
     principal,
-    admin: admin as AdminIdentity,
+    admin,
     store: debit.store,
-    state: debit.persisted,
+    state: current,
     amount: debit.amount,
     reason: debit.reason,
     idempotencyKey: debit.idempotencyKey,
     now,
-    ...(surface === undefined ? {} : { surface }),
-  });
+  };
+
+  if (surface !== undefined) meteringRequest.surface = surface;
+  const metered = await meterCredits(meteringRequest);
+
   if (!metered.ok) return metered;
+
+  if (operation !== undefined && debit.store.hostedCalls !== undefined) {
+    try { await debit.store.hostedCalls.finish(operation); }
+    catch { return billingRefuse(BILLING_REFUSE_REASONS.storeFailed, "The debit exists but operation completion could not be confirmed. Refresh and replay the same key."); }
+  }
 
   // `replayed: false` is a fact about *this* call, not about the debit: the
   // provider was entered and `response` is its answer, which is exactly what
@@ -758,3 +922,7 @@ export async function runMeteredModelCall<Response>(
     }),
   );
 }
+
+type EntitlementRequest = { -readonly [Key in keyof Parameters<typeof evaluateEntitlement>[0]]: Parameters<typeof evaluateEntitlement>[0][Key] };
+
+type MeteringRequest = { -readonly [Key in keyof Parameters<typeof meterCredits>[0]]: Parameters<typeof meterCredits>[0][Key] };

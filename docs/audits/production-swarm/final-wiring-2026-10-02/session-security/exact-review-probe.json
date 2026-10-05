@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "predicate": "raw configured origin refuses before principal read",
+      "raw": "https://umbrella.example.invalid/path",
+      "status": 403,
+      "principalReads": 0,
+      "expectedStatus": 403,
+      "pass": true
+    },
+    {
+      "predicate": "raw configured origin refuses before principal read",
+      "raw": "https://umbrella.example.invalid?query=x",
+      "status": 403,
+      "principalReads": 0,
+      "expectedStatus": 403,
+      "pass": true
+    },
+    {
+      "predicate": "raw configured origin refuses before principal read",
+      "raw": "https://umbrella.example.invalid#fragment",
+      "status": 403,
+      "principalReads": 0,
+      "expectedStatus": 403,
+      "pass": true
+    },
+    {
+      "predicate": "raw configured origin refuses before principal read",
+      "raw": "https://user:pass@umbrella.example.invalid",
+      "status": 403,
+      "principalReads": 0,
+      "expectedStatus": 403,
+      "pass": true
+    },
+    {
+      "predicate": "raw configured origin refuses before principal read",
+      "raw": " https://umbrella.example.invalid ",
+      "status": 403,
+      "principalReads": 0,
+      "expectedStatus": 403,
+      "pass": true
+    },
+    {
+      "predicate": "actual catalog composition refuses accessor without evaluating getter",
+      "getters": 0,
+      "networkCalls": 0,
+      "result": {
+        "ok": false,
+        "reason": "SITE_REQUEST_MALFORMED",
+        "message": "The identity request is malformed."
+      },
+      "pass": true
+    }
+  ]
+}

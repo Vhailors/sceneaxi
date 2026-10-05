@@ -635,3 +635,55 @@ make `proven` unreachable for a refuse-only profile, for a profile that has not 
 conformance, for an operation outside the row's own list, and for a row with no committed
 evidence. Adversarial inputs for all four are in
 `tests/sites/umbrella-profile-matrix.test.ts`.
+
+## Redesign 2026-10 (lane-umbrella, DIRECTION.md v5)
+
+Evidence: `/home/devuser/Documents/Reports/sceneaxi-redesign/after/umbrella/` (88 PNGs). Each of the
+18 umbrella states has full-page shots at 390×844, 768×1024 and 1440×900, plus one 1440 shot
+taken with `prefers-reduced-motion: reduce` (`<route>-1440-reduced.png`). Per-shot measurements are in
+`metrics.json` in the same folder (horizontal overflow, smallest text size, `.eyebrow` count,
+`backdrop-filter` count, worst text contrast against the composited background).
+
+- Every state: horizontal overflow 0, no `.eyebrow`, no `backdrop-filter`, smallest text 11px.
+  The lowest body contrast measured is 5.16:1 (`/open`).
+- `editor-*` shows the preview-flag shell (`SCENEAXI_SITE_EDITOR_PREVIEW=1`).
+  `editor-refused-*` shows the refused route. `editor-shell-{1280,1920}*.png` show the
+  shell, a mode switch caught mid-animation, and the open palette.
+- `404`, `error-boundary`, `docs-loading` and `editor-loading` were captured the same way as
+  BEFORE: `error.tsx` and the two loading fallbacks were injected into `main#main`.
+
+**Snapshots:** none were re-recorded. No `*.visual.spec.ts` calls `toHaveScreenshot`, so
+`test/*.visual.spec.ts-snapshots/` does not exist. `first-release.visual.spec.ts` passes in full
+(6 of 7 specs pass). The one failure is `identity.visual.spec.ts:32`: the
+`/api/auth/sign-in/email` response sends `cache-control: private, no-store`. That is an API
+header, and this redesign did not change it.
+
+**Structural measures carried forward** (they were measured, not only asserted):
+
+| Measure | Result |
+|---|---|
+| `/` at 1440×900 (re-run) | H1 at y 163–302 (2 lines); chip at 309–333, flush left under the H1, because the 539px copy column leaves 20px after "Keep the source."; lede at 359–415; action row from 439; canvas frame at 132–607. Everything sits inside the first viewport. |
+| `/` at 768×1024 (re-run) | H1 at y 154–266 (2 lines); the chip sits inline at the end of "Keep the source." (x 454–634, y 236–260). |
+| `/` at 390×844 (re-run) | H1 at 188–272 (2 lines); the chip wraps under it at 280–304. The action row ends at y 694 and the viewport starts at 718, so the viewport sits below the actions. |
+| `/profiles` at 1440 | H1 wraps to 2 lines. |
+| `/docs/getting-started` | Prose measure is 61ch. |
+| `/docs#plugins` | The rail item draws its accent indicator (`:has(:target)`, clip-path `inset(0)`). |
+| Editor shell at 1280×800 and 1920×1080 | Smallest text 11px, document overflow 0; ⌘K opens the palette. |
+| `/editor` below the minimum (390, 768; re-run) | `.ed-minimum` computes a 1px `--line` border on all four sides; the 2px accent left stripe is gone. |
+
+**Re-run 2026-10-04 (review `reviews/lanes.md`):** the home hero H1 is now an inline run made of two
+unbreakable phrases (`.hero-line`, nowrap from 400px), so the release chip follows the H1 inline
+whenever its last line has room and wraps flush left otherwise. A width sweep from 360 to 1920px in
+20px steps (`E/after/umbrella/_work/hero-chip-sweep.txt`) shows the H1 breaks only between the two
+phrases from 380px up, with no overflow at any width. `home-*` and `editor-*` after-shots were
+re-captured. No snapshot was re-recorded.
+
+**Re-run 2, 2026-10-04 (review round 2):** from 1025px the home hero head (H1 + release chip) takes
+its own row across both columns; the lede and actions sit in the copy column beside the canvas.
+Measured at 1440×900: H1 y 129–201 on one line (x 112–1061), chip inline at x 1077–1256, lede 223–279,
+actions from 303, canvas frame 223–698, all in the first viewport. The chip is inline at 768, 1024,
+1100, 1280, 1440 and 1920 and wraps under the H1 only at 390. Overflow 0. `/open` readout values now
+settle in when they change (row 16), the editor rail needle and tab underlines glide between
+selections (row 17), `/docs` guide summaries are no longer clamped, and the selected editor tree row
+is a tint without a side bar. All 18 states were re-captured. No snapshot file exists or was
+re-recorded; every `first-release` spec passes.

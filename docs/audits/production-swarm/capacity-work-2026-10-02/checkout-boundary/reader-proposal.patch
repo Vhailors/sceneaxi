@@ -1,0 +1,37 @@
+--- a/sites/umbrella/src/app/api/checkout/checkout-handler.ts
++++ b/sites/umbrella/src/app/api/checkout/checkout-handler.ts
+@@ -3,21 +3,31 @@
+       if (reader === undefined) throw new Error("missing checkout form");
+       const chunks: Uint8Array[] = [];
+       let size = 0;
++      let completed = false;
++      let rejectStopped: (reason: Error) => void = () => {};
++      const stopped = new Promise<never>((_, reject) => { rejectStopped = reject; });
++      const onAbort = () => rejectStopped(new Error("aborted checkout form"));
++      const deadline = setTimeout(() => rejectStopped(new Error("checkout form deadline")), 5000);
++      request.signal.addEventListener("abort", onAbort, { once: true });
++      if (request.signal.aborted) onAbort();
+ 
+       try {
+         while (true) {
+-          const chunk = await reader.read();
++          const chunk = await Promise.race([reader.read(), stopped]);
+ 
+-          if (chunk.done) break;
++          if (chunk.done) { completed = true; break; }
+           size += chunk.value.byteLength;
+ 
+           if (size > 8192) {
+-            await reader.cancel();
+             throw new Error("oversized checkout form");
+           }
+ 
+           chunks.push(chunk.value);
+         }
+       } finally {
++        clearTimeout(deadline);
++        request.signal.removeEventListener("abort", onAbort);
++        // Transport cancellation must not hold a named refusal indefinitely.
++        if (!completed) { void reader.cancel().catch(() => {}); }
+         reader.releaseLock();
+       }

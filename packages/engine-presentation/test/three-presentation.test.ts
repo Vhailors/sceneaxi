@@ -477,12 +477,12 @@ describe("Three presentation core — camera input wiring", () => {
   });
 
   it("mounts shared UV and decoded PNG payloads as an sRGB Three texture and disposes it", () => {
-    let scene: ThreeRenderableHandle | null = null;
+    const rendered: { scene: ThreeRenderableHandle | null } = { scene: null };
     const backend = createThreeSculptPresentationBackend({
       surface: {
         kind: "headless",
         resize() {},
-        draw(value) { scene = value; return { drawCalls: 1, pixelsDrawn: false }; },
+        draw(value) { rendered.scene = value; return { drawCalls: 1, pixelsDrawn: false }; },
         capture() { return null; },
         dispose() {},
       },
@@ -502,6 +502,7 @@ describe("Three presentation core — camera input wiring", () => {
     backend.mountTriangleAsset({ instanceId: "textured", transform, meshes: [meshPayload], nodes: [{ node: 0, parent: null, matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], matrixAuthored: false, translation: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }] });
     backend.playTriangleAnimation("textured", { name: "move", duration: 1, channels: [{ node: 0, path: "translation", interpolation: "LINEAR", times: [0, 1], values: [0, 0, 0, 2, 1, 0] }] }, 0.5);
     expect(backend.render(["textured"]).pixelsDrawn).toBe(false);
+    const scene = rendered.scene;
     expect(scene).toBeInstanceOf(Object3D);
     if (!(scene instanceof Object3D)) return;
     const animatedNode = scene.getObjectByName("gltf-node-0");
