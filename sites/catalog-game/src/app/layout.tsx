@@ -12,7 +12,7 @@ import {
   CATALOG_SITE_SURFACE,
   resolveUmbrellaOrigin,
 } from "../lib/site-config.js";
-import { foundationsStylesheet } from "../lib/foundations.js";
+import { foundationsStylesheet, signalStoreFor } from "../lib/foundations.js";
 import { resolveFamilyBar, resolveStoreDomain } from "../lib/family-bar.js";
 import { FamilyBar } from "./_components/family-bar.js";
 import { StoreNav } from "./_components/store-nav.js";
@@ -101,7 +101,11 @@ export default function RootLayout({ children }: { readonly children: React.Reac
   const domain = resolveStoreDomain(process.env, CATALOG_SITE_SURFACE);
 
   return (
-    <html lang="en" className={`${archivo.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="en"
+      className={`${archivo.variable} ${jetbrainsMono.variable}`}
+      data-store={signalStoreFor(CATALOG_SITE_FOUNDATION_SURFACE)}
+    >
       <head>
         {foundations.ok ? (
           <style
@@ -120,6 +124,8 @@ export default function RootLayout({ children }: { readonly children: React.Reac
           Skip to the {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()}
         </a>
 
+        {/* Names the family and marks this store; no links, so it adds no Tab stop
+            before the masthead (family-bar.tsx, RULINGS release fix round 2). */}
         <FamilyBar entries={family} domain={domain} />
 
         <header className="masthead">
@@ -131,11 +137,28 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 <span className="storetag">{CATALOG_SITE_BRAND.storeTag}</span>
               </span>
             </a>
-            <StoreNav
-              catalogueLabel={CATALOG_SITE_BRAND.catalogueWord}
-              publishLabel={STORE_COPY.publishLabel}
-              engine={umbrella.ok ? { href: umbrella.value, label: "SceneAxi engine" } : null}
-            />
+            {/* The umbrella's no-script Menu: narrow, the bench is storemark and Menu and
+                the panel also carries the family links; from 861px the store links show
+                in place and the family links are reached from the footer (globals.css
+                `.menu`, `.nav-family`), so a listing's primary action is Tab stop 5. */}
+            <details className="menu">
+              <summary className="menu-toggle">Menu</summary>
+              <StoreNav
+                catalogueLabel={CATALOG_SITE_BRAND.catalogueWord}
+                publishLabel={STORE_COPY.publishLabel}
+              >
+                {family.map((entry) =>
+                  entry.href === null ? null : (
+                    <a key={entry.key} className="nav-family" href={entry.href}>
+                      {entry.label}
+                      <span className="glyph" aria-hidden="true">
+                        ↗
+                      </span>
+                    </a>
+                  ),
+                )}
+              </StoreNav>
+            </details>
           </div>
         </header>
 
@@ -191,6 +214,18 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                       <span>Engine origin not configured for this deployment</span>
                     )}
                   </li>
+                  {family.map((entry) =>
+                    entry.key === "engine" || entry.href === null ? null : (
+                      <li key={entry.key}>
+                        <a href={entry.href}>
+                          {entry.label}
+                          <span className="glyph" aria-hidden="true">
+                            ↗
+                          </span>
+                        </a>
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
             </div>

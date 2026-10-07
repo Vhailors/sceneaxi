@@ -18,7 +18,9 @@ import {
   FOUNDATION_STATUSES,
   foundationsCss,
   ok,
+  signalCss,
   type FoundationSurfaceAccentId,
+  type SignalStoreId,
   type SiteResult,
 } from "@sceneaxi/site-kit";
 
@@ -65,6 +67,64 @@ export function foundationsStylesheet(surface: StorefrontSurface): SiteResult<st
   const sheet = foundationsCss({ surface });
 
   if (!sheet.ok) return sheet;
+  const signal = storefrontSignalLayersCss(surface);
 
-  return ok(`${sheet.value}\n${foundationsStatusVariablesCss()}`);
+  if (!signal.ok) return signal;
+
+  return ok(
+    [
+      sheet.value,
+      foundationsStatusVariablesCss(),
+      "/* v6 Interlocking layer (A-rich), from @sceneaxi/site-kit signalCss(): tokens, components, utilities. */",
+      signal.value,
+    ].join("\n"),
+  );
+}
+
+/** The site-kit store plate each storefront surface paints its mark with (DIRECTION §8). */
+export function signalStoreFor(surface: StorefrontSurface): SignalStoreId {
+  return surface === "game-assets" ? "forge" : "vitrine";
+}
+
+/**
+ * The v6 signal layer, minus `reset` and `base`: those restyle every element, and the
+ * storefront's own sheet still owns its element rules. Same cut as the umbrella pilot
+ * (`sites/umbrella/src/lib/foundations.ts`), so a redesigned rule opts in by class and
+ * every token here is inert until a rule reads it. The store plate block is scoped to
+ * `[data-store]`, which the layout sets on `<html>`.
+ */
+export function storefrontSignalLayersCss(surface: StorefrontSurface): SiteResult<string> {
+  const sheet = signalCss({ scheme: "dark", store: signalStoreFor(surface) });
+
+  if (!sheet.ok) return sheet;
+  const kept: string[] = [];
+
+  for (const layer of ["tokens", "components", "utilities"] as const) {
+    const block = cascadeLayerBlock(sheet.value, layer);
+
+    if (block === null) throw new Error(`site-kit signalCss() emitted no @layer ${layer} block`);
+    kept.push(block);
+  }
+
+  return ok(kept.join("\n"));
+}
+
+/** One `@layer name { ... }` block, matched by brace depth so nested rules stay whole. */
+function cascadeLayerBlock(css: string, layer: string): string | null {
+  const start = css.indexOf(`@layer ${layer} {`);
+
+  if (start === -1) return null;
+  let depth = 0;
+
+  for (let index = css.indexOf("{", start); index < css.length; index += 1) {
+    if (css[index] === "{") depth += 1;
+
+    if (css[index] === "}") {
+      depth -= 1;
+
+      if (depth === 0) return css.slice(start, index + 1);
+    }
+  }
+
+  return null;
 }

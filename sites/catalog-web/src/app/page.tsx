@@ -123,7 +123,12 @@ export default async function ShowroomPage({ searchParams }: { readonly searchPa
                 {CATALOG_SITE_BRAND.heroSecondaryCta}
               </a>
             </div>
-            <StatePanel tone="warn" level={2} title="TEST catalog · purchases refuse here">
+            <StatePanel
+              tone="warn"
+              level={2}
+              density="compact"
+              title="TEST catalog · purchases refuse here"
+            >
               <p>
                 These are committed TEST fixture listings. Browse and detail are available;
                 asset delivery and payment completion are not. The catalog sites own no

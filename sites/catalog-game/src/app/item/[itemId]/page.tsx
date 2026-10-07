@@ -114,22 +114,18 @@ export default async function ItemPage({
 
   return (
     <div className="shell detail">
-      <nav className="crumbs" aria-label="Breadcrumb">
-        <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
+      <p className="crumbs">
+        <span>{CATALOG_SITE_BRAND.catalogueWord}</span>
         <span className="glyph" aria-hidden="true">
           ›
         </span>
         <span aria-current="page">{listing.title}</span>
-      </nav>
+      </p>
 
       <div className="detail-grid">
-        <div
-          className="detail-side"
-          role="region"
-          aria-label="Pricing and listing record"
-          tabIndex={0}
-        >
-          <div className="buy">
+        {/* Title, price and the primary action precede the scrolling record region in DOM
+            order, so the action is reached before the region's Tab stop (RULINGS, release fix 2). */}
+        <div className="buy">
             <div className="buy-body">
               <div className="buy-title">
                 <h1>{listing.title}</h1>
@@ -144,7 +140,11 @@ export default async function ItemPage({
                 <span className="chip chip-accent">{listing.availability.mode.toUpperCase()}</span>
               </p>
 
-              <section className="buy-block" aria-labelledby="detail-price-heading">
+              <section
+                className="buy-block"
+                aria-labelledby="detail-price-heading"
+                data-inspect="price"
+              >
                 <h2 className="block-title" id="detail-price-heading">Committed TEST price</h2>
                 <dl className="evidence">
                   <div className="evidence-row">
@@ -169,7 +169,7 @@ export default async function ItemPage({
 
               <div className="buy-actions">
                 {link.ok ? (
-                  <a className="button button-xl button-block" href={link.value}>
+                  <a className="button button-xl button-block button-commit" href={link.value}>
                     Open in the SceneAxi editor
                     <span className="glyph glyph-nudge" aria-hidden="true">
                       ↗
@@ -184,6 +184,15 @@ export default async function ItemPage({
                     Editor link unavailable
                   </span>
                 )}
+              </div>
+            </div>
+            <div
+              className="detail-side"
+              role="region"
+              aria-label="Pricing and listing record"
+              tabIndex={0}
+            >
+              <div className="buy-actions">
                 <p className="note">
                   The link carries this listing id and source catalog only. It is a
                   reference for the umbrella editor, not a claim that this fixture
@@ -203,8 +212,20 @@ export default async function ItemPage({
                   itemId={listing.itemId}
                   viewer={viewer}
                 />
+                  {/* Purchase history is read from what this origin can complete, which is
+                    nothing: an empty record, stated, rather than a hidden section. */}
+                <section className="buy-history" aria-labelledby="detail-history-heading">
+                  <h2 className="block-title" id="detail-history-heading">
+                    Purchase history
+                  </h2>
+                  <p className="note">
+                    {viewer.ok
+                      ? "No purchase of this listing is recorded for your account."
+                      : "No account is resolved here, so no purchase record is read."}{" "}
+                    This TEST catalog completes no payment, so it records no purchase.
+                  </p>
+                </section>
               </div>
-            </div>
 
             <dl className="evidence buy-spec" aria-label="Listing record summary">
               <div className="evidence-row">
