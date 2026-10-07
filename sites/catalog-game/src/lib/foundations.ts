@@ -50,6 +50,7 @@ export function foundationsStatusVariablesCss(): string {
     `  --status-${status.id}-bg: ${status.bg};`,
     `  --status-${status.id}-line: ${status.line};`,
   ]);
+
   return `:root {\n${lines.join("\n")}\n}\n`;
 }
 
@@ -62,6 +63,8 @@ export function foundationsStatusVariablesCss(): string {
  */
 export function foundationsStylesheet(surface: StorefrontSurface): SiteResult<string> {
   const sheet = foundationsCss({ surface });
+
   if (!sheet.ok) return sheet;
+
   return ok(`${sheet.value}\n${foundationsStatusVariablesCss()}`);
 }

@@ -49,14 +49,11 @@ export function StatePanel({
   readonly evidence?: readonly StatePanelEvidence[] | undefined;
   readonly children?: React.ReactNode | undefined;
 }) {
-  const model = createStatePanelModel({
-    tone,
-    title,
-    ...(level === undefined ? {} : { level }),
-    ...(reason === undefined ? {} : { reason }),
-    ...(evidence === undefined ? {} : { evidence }),
-    variant: "diagnostic",
-  });
+  // The model reads every optional field through `??` / `===`, so an explicit
+  // undefined reason or evidence renders exactly like an omitted one.
+  const input = { tone, title, reason, evidence, variant: "diagnostic" as const };
+  const model = createStatePanelModel(level === undefined ? input : { ...input, level });
+
   const Heading = model.headingTag;
 
   return (

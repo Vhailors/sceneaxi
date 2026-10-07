@@ -83,6 +83,7 @@ export function umbrellaStatusVariablesCss(): string {
     `  --status-${status.id}-bg: ${status.bg};`,
     `  --status-${status.id}-line: ${status.line};`,
   ]);
+
   return `:root {\n${lines.join("\n")}\n}\n`;
 }
 
@@ -97,6 +98,7 @@ export function umbrellaStatusVariablesCss(): string {
  */
 export function umbrellaLocalVariablesCss(): string {
   const gaps = UMBRELLA_RECORDED_GAPS.map((entry) => `  ${entry.token}: ${entry.value};`);
+
   return [
     ":root {",
     "  color-scheme: dark;",
@@ -122,7 +124,9 @@ export function umbrellaLocalVariablesCss(): string {
  */
 export function umbrellaFoundationsCss(): SiteResult<string> {
   const shared = foundationsCss({ surface: UMBRELLA_SURFACE });
+
   if (!shared.ok) return shared;
+
   return ok(
     [
       shared.value,

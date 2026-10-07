@@ -59,6 +59,7 @@ export function modeRailStyles(): string {
 export function modeRailIndicatorStyles(modes: DesktopVisualView["modes"]): string {
   const primary = modes.filter((mode) => mode.surface !== "details").map((mode) => mode.id);
   const all = modes.map((mode) => mode.id);
+
   const slot = (prefix: string, ids: readonly string[]): string =>
     ids
       .map((id, index) => `  ${prefix}.mode-rail:has(.rail-mode[data-value="${id}"][aria-pressed="true"]){--rail-i:${index}}`)

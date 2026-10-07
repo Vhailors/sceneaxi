@@ -38,14 +38,17 @@ type StageDeparture = {
 
 export function KidsStudio() {
   const [activity, setActivity] = useState(createKidsActivityState);
+
   const [note, setNote] = useState<ActivityNote>({
     text: "Your sunny meadow is ready.",
     refused: false,
     serial: 0,
   });
+
   const [departure, setDeparture] = useState<StageDeparture | null>(null);
 
   const world = KIDS_ACTIVITY_WORLDS.find((candidate) => candidate.id === activity.worldId);
+
   if (world === undefined) throw new Error("The curated Kids world is missing.");
 
   const pieceCount = activity.pieceIds.length;
@@ -58,15 +61,18 @@ export function KidsStudio() {
     const decision = applyKidsActivityAction(activity, request);
     const serial = note.serial + 1;
     setNote({ text: decision.message, refused: !decision.ok, serial });
+
     if (decision.ok) {
       const next = decision.state;
       const keptCount = next.pieceIds.length;
+
       const leaving =
         keptCount < activity.pieceIds.length
           ? activity.pieceIds
               .slice(keptCount)
               .map((pieceId, offset) => ({ symbol: symbolFor(pieceId), slot: keptCount + offset }))
           : [];
+
       const leavingWorld = next.worldId !== activity.worldId ? activity.worldId : null;
       setDeparture(
         leaving.length > 0 || leavingWorld !== null
@@ -99,6 +105,7 @@ export function KidsStudio() {
           <div className="placed-pieces" aria-hidden="true">
             {activity.pieceIds.map((pieceId, index) => {
               const piece = KIDS_ACTIVITY_PIECES.find((candidate) => candidate.id === pieceId);
+
               return (
                 <span className={`placed-piece ${piecePositionClasses[index]}`} key={`${pieceId}-${index}`}>
                   {piece?.symbol}

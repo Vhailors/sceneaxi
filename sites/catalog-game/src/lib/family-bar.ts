@@ -38,9 +38,11 @@ export type FamilyKey = (typeof FAMILY_KEYS)[number];
  */
 function surfaceDot(surface: FoundationSurfaceAccentId): string {
   const accent = resolveSurfaceAccent(surface);
+
   if (!accent.ok) {
     throw new Error(`Foundations accent unresolved for "${surface}": ${accent.reason}`);
   }
+
   return accent.value.accent;
 }
 
@@ -78,14 +80,17 @@ export function resolveFamilyBar(
 ): readonly FamilyEntry[] {
   const siblings = resolveFamilyLinks(env);
   const umbrella = resolveUmbrellaEditorOrigin(env);
+
   const origins: Readonly<Record<FamilyKey, string | null>> = {
     engine: umbrella.ok ? umbrella.value : null,
     "catalog-game": siblings.gameCatalog,
     "catalog-web": siblings.webCatalog,
   };
+
   return Object.freeze(
     FAMILY_KEYS.map((key) => {
       const current = key === surface;
+
       return Object.freeze({
         key,
         label: FAMILY_LABELS[key],
@@ -111,5 +116,6 @@ export function resolveStoreDomain(
 ): string | null {
   const entry = resolveFamilyLinks(env);
   const origin = surface === "catalog-game" ? entry.gameCatalog : entry.webCatalog;
+
   return origin === null ? null : new URL(origin).host;
 }

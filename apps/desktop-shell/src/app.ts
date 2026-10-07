@@ -44,13 +44,20 @@ export const DesktopExit = {
 
 export type DesktopExitCode = (typeof DesktopExit)[keyof typeof DesktopExit];
 
-export type DesktopResult = {
+/**
+ * The JSON fields a command reports. They are serialised verbatim to stdout
+ * (`--json`) or as `key: value` lines, so the open shape is the wire contract.
+ * @rawTransportContract
+ */
+export type DesktopResultFields = Readonly<Record<string, unknown>>;
+
+export interface DesktopResult {
   readonly exitCode: DesktopExitCode;
   readonly ok: boolean;
   readonly command: string;
-  readonly result: Readonly<Record<string, unknown>>;
+  readonly result: DesktopResultFields;
   readonly help: readonly string[];
-};
+}
 
 export type DesktopRunResult = DesktopResult & {
   readonly stdout: string;
@@ -115,22 +122,28 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
+
     if (token === undefined) continue;
+
     if (token.startsWith("--")) {
       if (token.includes("=")) {
         const eq = token.indexOf("=");
         flags.set(token.slice(0, eq), token.slice(eq + 1));
         continue;
       }
+
       const next = argv[i + 1];
+
       if (next !== undefined && !next.startsWith("--")) {
         flags.set(token, next);
         i += 1;
       } else {
         switches.add(token);
       }
+
       continue;
     }
+
     positionals.push(token);
   }
 
@@ -144,7 +157,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
 
 function ok(
   command: string,
-  result: Readonly<Record<string, unknown>>,
+  result: DesktopResultFields,
   help: readonly string[],
 ): DesktopResult {
   return {
@@ -160,7 +173,7 @@ function refuse(
   command: string,
   exitCode: DesktopExitCode,
   message: string,
-  extra: Readonly<Record<string, unknown>> = {},
+  extra: DesktopResultFields = {},
   help: readonly string[] = USAGE_LINES,
 ): DesktopResult {
   return {
@@ -175,9 +188,10 @@ function refuse(
 function diagnosticsResult(
   command: string,
   diagnostics: readonly ApplyDiagnostic[],
-  extra: Readonly<Record<string, unknown>> = {},
+  extra: DesktopResultFields = {},
 ): DesktopResult {
   const primary = diagnostics[0];
+
   return refuse(
     command,
     primary !== undefined && VALIDATION_DIAGNOSTICS.has(primary.code)
@@ -189,22 +203,30 @@ function diagnosticsResult(
   );
 }
 
+/** A snapshot as reported: absent facts are omitted, never written as null. */
+type SnapshotPayload = {
+  phase: DesktopSnapshot["phase"];
+  journalRecoveryPending: boolean;
+  transactionId?: string;
+  renderedDiff?: string;
+  appliedPaths?: readonly string[];
+};
+
 function snapshotPayload(
   snapshot: DesktopSnapshot,
-): Readonly<Record<string, unknown>> {
-  return {
+): SnapshotPayload {
+  const payload: SnapshotPayload = {
     phase: snapshot.phase,
     journalRecoveryPending: snapshot.journalRecoveryPending,
-    ...(snapshot.transactionId === null
-      ? {}
-      : { transactionId: snapshot.transactionId }),
-    ...(snapshot.renderedDiff === null
-      ? {}
-      : { renderedDiff: snapshot.renderedDiff }),
-    ...(snapshot.appliedPaths === null
-      ? {}
-      : { appliedPaths: snapshot.appliedPaths }),
   };
+
+  if (snapshot.transactionId !== null) payload.transactionId = snapshot.transactionId;
+
+  if (snapshot.renderedDiff !== null) payload.renderedDiff = snapshot.renderedDiff;
+
+  if (snapshot.appliedPaths !== null) payload.appliedPaths = snapshot.appliedPaths;
+
+  return payload;
 }
 
 /** Require a valued flag, or return the refusal. */
@@ -214,6 +236,7 @@ function need(
   command: string,
 ): { readonly ok: true; readonly value: string } | { readonly ok: false; readonly refusal: DesktopResult } {
   const value = args.flags.get(name);
+
   if (value === undefined || value.length === 0) {
     return {
       ok: false,
@@ -224,6 +247,7 @@ function need(
       ),
     };
   }
+
   return { ok: true, value };
 }
 
@@ -241,6 +265,7 @@ function unknownArgs(
       );
     }
   }
+
   for (const name of args.switches) {
     if (name !== "--help") {
       return refuse(
@@ -250,6 +275,7 @@ function unknownArgs(
       );
     }
   }
+
   return null;
 }
 
@@ -270,10 +296,12 @@ function unknownArgs(
  */
 function openPathResult(args: ParsedArgs): DesktopResult {
   const command = "open-path";
+
   const outcome = resolveOpenPathSurfaceRequest({
     profile: args.flags.get("--profile"),
     operation: args.flags.get("--operation"),
   });
+
   const notes = openPathSurfaceNotes(outcome);
 
   if (outcome.kind === "policy" || outcome.kind === "projection") {
@@ -284,15 +312,16 @@ function openPathResult(args: ParsedArgs): DesktopResult {
     return ok(command, { decision: outcome.decision }, [...notes]);
   }
 
+  const refusal = {
+    reason: outcome.refusal.code,
+    profile: outcome.refusal.profile,
+  };
+
   return refuse(
     command,
     DesktopExit.USAGE,
     outcome.refusal.message,
-    {
-      reason: outcome.refusal.code,
-      profile: outcome.refusal.profile,
-      ...(outcome.operation === null ? {} : { operation: outcome.operation }),
-    },
+    outcome.operation === null ? refusal : { ...refusal, operation: outcome.operation },
     [...notes, ...USAGE_LINES],
   );
 }
@@ -308,14 +337,17 @@ function pick<Value extends string>(
   fallback: Value,
 ): { readonly ok: true; readonly value: Value } | { readonly ok: false; readonly message: string } {
   const raw = args.flags.get(flag);
+
   if (raw === undefined) return { ok: true, value: fallback };
   const match = allowed.find((candidate) => candidate === raw);
+
   if (match === undefined) {
     return {
       ok: false,
       message: `${flag} must be one of: ${allowed.join(", ")} (got ${JSON.stringify(raw)})`,
     };
   }
+
   return { ok: true, value: match };
 }
 
@@ -325,11 +357,14 @@ function pickSize(
   fallback: number,
 ): { readonly ok: true; readonly value: number } | { readonly ok: false; readonly message: string } {
   const raw = args.flags.get(flag);
+
   if (raw === undefined) return { ok: true, value: fallback };
   const parsed = Number(raw);
+
   if (!Number.isFinite(parsed) || parsed <= 0 || !Number.isInteger(parsed)) {
     return { ok: false, message: `${flag} must be a positive integer number of CSS pixels` };
   }
+
   return { ok: true, value: parsed };
 }
 
@@ -344,54 +379,74 @@ function pickSize(
 function chromeResult(args: ParsedArgs): DesktopResult {
   const command = "chrome";
   const mode = pick<DesktopModeId>(args, "--mode", DESKTOP_MODE_IDS, "build");
+
   if (!mode.ok) return refuse(command, DesktopExit.USAGE, mode.message);
   const profile = pick<DesktopProfileId>(args, "--profile", DESKTOP_PROFILE_IDS, "game");
+
   if (!profile.ok) return refuse(command, DesktopExit.USAGE, profile.message);
+
   const overlay = pick<"none" | DesktopOverlayId>(
     args,
     "--overlay",
     ["none", ...DESKTOP_OVERLAY_IDS],
     "none",
   );
+
   if (!overlay.ok) return refuse(command, DesktopExit.USAGE, overlay.message);
+
   const assistantMode = pick<DesktopAssistantModeId>(
     args,
     "--assistant-mode",
     DESKTOP_ASSISTANT_MODE_IDS,
     "build",
   );
+
   if (!assistantMode.ok) return refuse(command, DesktopExit.USAGE, assistantMode.message);
   const sculpt = pick<"idle" | "running">(args, "--sculpt", ["idle", "running"], "idle");
+
   if (!sculpt.ok) return refuse(command, DesktopExit.USAGE, sculpt.message);
   const width = pickSize(args, "--width", 1680);
+
   if (!width.ok) return refuse(command, DesktopExit.USAGE, width.message);
   const height = pickSize(args, "--height", 1000);
+
   if (!height.ok) return refuse(command, DesktopExit.USAGE, height.message);
 
-  const state = createDesktopVisualState({
+  const requested = {
     mode: mode.value,
     profile: profile.value,
     overlay: overlay.value === "none" ? null : overlay.value,
     assistantMode: assistantMode.value,
     sculpt: sculpt.value,
-    ...(sculpt.value === "running" ? { sculptPass: 2, sculptPassFraction: 0.64 } : {}),
-    window: { width: width.value, height: height.value },
-  });
+  };
+
+  const size = { width: width.value, height: height.value };
+
+  const state = createDesktopVisualState(
+    sculpt.value === "running"
+      ? { ...requested, sculptPass: 2, sculptPassFraction: 0.64, window: size }
+      : { ...requested, window: size },
+  );
+
   const view = desktopVisualView(state);
+
+  const reported = {
+    mode: view.state.mode,
+    profile: view.state.profile,
+    tier: view.tier,
+    dockTab: view.state.dockTab,
+    assistant: view.assistant.state,
+    overlay: view.state.overlay ?? "none",
+    pixelsDrawn: view.viewport.pixelsDrawn,
+  };
+
+  const html = renderDesktopChrome(view);
 
   return ok(
     command,
-    {
-      mode: view.state.mode,
-      profile: view.state.profile,
-      tier: view.tier,
-      dockTab: view.state.dockTab,
-      assistant: view.assistant.state,
-      overlay: view.state.overlay ?? "none",
-      pixelsDrawn: view.viewport.pixelsDrawn,
-      ...(view.refusal === null ? {} : { refusal: view.refusal.code }),
-      html: renderDesktopChrome(view),
-    },
+    view.refusal === null
+      ? { ...reported, html }
+      : { ...reported, refusal: view.refusal.code, html },
     [
       "Text output is the HTML document itself — redirect it to a file and open that file",
       "The standalone document draws no pixels; a packaged host may supply project and play results",
@@ -412,7 +467,9 @@ export function runDesktopCommand(
 
   if (args.command === null) {
     const unknown = unknownArgs(args, "help", new Set());
+
     if (unknown !== null) return unknown;
+
     return ok(
       "help",
       {
@@ -435,10 +492,13 @@ export function runDesktopCommand(
 
   const command = args.command;
   const allowedFlags = COMMAND_FLAGS[command];
+
   if (allowedFlags === undefined) {
     return refuse(command, DesktopExit.USAGE, `Unknown command: ${command}`);
   }
+
   const unknown = unknownArgs(args, command, allowedFlags);
+
   if (unknown !== null) return unknown;
 
   if (args.switches.has("--help")) {
@@ -447,6 +507,8 @@ export function runDesktopCommand(
       {
         app: "sceneaxi-desktop",
         command,
+        // SAFETY: an unknown command was refused above via COMMAND_FLAGS, which
+        // names exactly the DESKTOP_COMMANDS keys, so `command` is a key here.
         description: DESKTOP_COMMANDS[command as keyof typeof DESKTOP_COMMANDS],
       },
       USAGE_LINES,
@@ -463,6 +525,7 @@ export function runDesktopCommand(
 
   // Policy is contracts, not documents: this command opens no session at all.
   if (command === "open-path") return openPathResult(args);
+
   // Neither does the chrome: it is a projection of the visual model.
   if (command === "chrome") return chromeResult(args);
 
@@ -470,25 +533,33 @@ export function runDesktopCommand(
 
   if (command === "undo") {
     const result = session.undo();
+
     if (!result.ok) return diagnosticsResult(command, result.diagnostics);
+
     return ok(command, { transactionId: result.transactionId, restoredPaths: result.restoredPaths }, [
       "The last completed apply was reverted",
     ]);
   }
+
   if (command === "redo") {
     const result = session.redo();
+
     if (!result.ok) return diagnosticsResult(command, result.diagnostics);
+
     return ok(command, { transactionId: result.transactionId, restoredPaths: result.restoredPaths }, [
       "The next undone apply was restored",
     ]);
   }
 
   const document = need(args, "--document", command);
+
   if (!document.ok) return document.refusal;
 
   if (command === "status") {
     const status = session.status(document.value);
+
     if (!status.ok) return diagnosticsResult(command, status.diagnostics);
+
     return ok(
       command,
       {
@@ -506,17 +577,24 @@ export function runDesktopCommand(
   }
 
   const pointer = args.flags.get("--pointer");
+
   if (pointer === undefined) {
     return refuse(command, DesktopExit.USAGE, "Missing required flag --pointer");
   }
+
   const rawValue = need(args, "--value", command);
+
   if (!rawValue.ok) return rawValue.refusal;
 
   let newValue: unknown;
+
   try {
+    // SAFETY: JSON.parse returns `any`; narrowing it to `unknown` only removes
+    // unchecked access, and the value is validated before use.
     newValue = JSON.parse(rawValue.value) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
     return refuse(
       command,
       DesktopExit.USAGE,
@@ -529,6 +607,7 @@ export function runDesktopCommand(
     jsonPointer: pointer,
     newValue,
   });
+
   if (proposed.phase !== "reviewing") {
     return diagnosticsResult(command, proposed.diagnostics ?? []);
   }
@@ -541,6 +620,7 @@ export function runDesktopCommand(
   }
 
   const accepted = session.accept();
+
   if (accepted.phase !== "applied") {
     return diagnosticsResult(
       command,
@@ -548,6 +628,7 @@ export function runDesktopCommand(
       snapshotPayload(accepted),
     );
   }
+
   return ok(command, snapshotPayload(accepted), [
     "Documents updated atomically via tmp-then-rename",
     "Run `sceneaxi-desktop undo` to revert this apply",
@@ -578,21 +659,29 @@ export function renderDesktopResult(
   // `--json` still gets the envelope, with the same bytes under `html`.
   if (result.ok && result.command === "chrome") {
     const html = result.result["html"];
-    if (typeof html === "string") return html;
+
+    if (isText(html)) return html;
   }
 
   const lines: string[] = [
     `${result.ok ? "ok" : "refused"}: ${result.command}`,
   ];
+
   for (const [key, value] of Object.entries(result.result)) {
     lines.push(
-      typeof value === "string" && !value.includes("\n")
+      isText(value) && !value.includes("\n")
         ? `  ${key}: ${value}`
         : `  ${key}: ${JSON.stringify(value)}`,
     );
   }
+
   for (const line of result.help) lines.push(line.length === 0 ? "" : `  ${line}`);
+
   return `${lines.join("\n")}\n`;
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === "string";
 }
 
 /** Run argv and produce the exact stdout the binary writes. Pure. */
@@ -601,6 +690,7 @@ export function runDesktopShell(
   sessionFor?: (cwd: string | undefined) => DesktopSession,
 ): DesktopRunResult {
   const format = argv.includes("--json") ? "json" : "text";
+
   const result =
     sessionFor === undefined
       ? runDesktopCommand(argv.filter((token) => token !== "--json"))
@@ -608,6 +698,7 @@ export function runDesktopShell(
           argv.filter((token) => token !== "--json"),
           sessionFor,
         );
+
   return { ...result, format, stdout: renderDesktopResult(result, format) };
 }
 
@@ -619,5 +710,6 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
   const run = runDesktopShell(argv);
   process.stdout.write(run.stdout);
   process.exitCode = run.exitCode;
+
   return run.exitCode;
 }

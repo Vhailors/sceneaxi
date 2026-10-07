@@ -1,14 +1,14 @@
 import { SITE_CAPABILITIES, SITE_CAPABILITY_IDS } from "@sceneaxi/site-kit";
 
-const REQUIRES_COPY: Readonly<Record<string, string>> = {
+const REQUIRES_COPY = {
   nothing: "nothing — anonymous",
   entitlement: "credits or the starter allotment",
   credits: "credits above zero",
   "credits-and-tier-6b": "credits and tier-6b marketplace activation",
   billing: "the billing plane",
-};
+} as const satisfies Readonly<Record<string, string>>;
 
-const CAPABILITY_COPY: Readonly<Record<string, string>> = {
+const CAPABILITY_COPY = {
   "docs-and-product": "Product pages and documentation",
   "engine-sdk-download": "Public engine SDK zip and checksum",
   "cli-byo-ai-docs": "CLI use with your own AI provider",
@@ -18,7 +18,7 @@ const CAPABILITY_COPY: Readonly<Record<string, string>> = {
   "hosted-ai": "Hosted AI generation",
   "catalog-purchase": "Buying a catalog asset",
   "credit-pack-checkout": "Buying credit packs",
-};
+} as const satisfies Readonly<Record<string, string>>;
 
 /** The published free-vs-paid matrix, rendered from the same data the gate asserts. */
 export function CapabilityTable() {
@@ -35,6 +35,7 @@ export function CapabilityTable() {
         <tbody>
           {SITE_CAPABILITY_IDS.map((id) => {
             const spec = SITE_CAPABILITIES[id];
+
             return (
               <tr key={id}>
                 <td className="wrap">

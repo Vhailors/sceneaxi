@@ -51,6 +51,11 @@ type ModeId = EditorShellView["modes"][number]["id"];
  * the indicator appears in place. View state only: it reads the DOM the render
  * already produced and decides nothing.
  */
+/** Older engines ship Element without the Web Animations API. */
+function isCallable<Value>(value: Value): value is Value & CallableFunction {
+  return typeof value === "function";
+}
+
 function useIndicatorGlide(
   strip: RefObject<HTMLElement | null>,
   selector: string,
@@ -67,8 +72,11 @@ function useIndicatorGlide(
     previous.current = current;
 
     if (root == null || current === null || before === null) return;
+
     if (before === current || !before.isConnected) return;
-    if (typeof current.animate !== "function") return;
+
+    if (!isCallable(current.animate)) return;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const tokens = getComputedStyle(root);

@@ -277,6 +277,7 @@ export function installDesktopByoConfigurationSurface(
       keyInput.value = "";
 
       busy(save, true);
+
       try {
         await request({
           action: "save",

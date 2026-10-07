@@ -47,22 +47,28 @@ import {
 /** WCAG 2.2 relative luminance. */
 function luminance(hex: string): number {
   const value = hex.replace("#", "");
+
   const channel = (offset: number): number => {
     const raw = Number.parseInt(value.slice(offset, offset + 2), 16) / 255;
+
     return raw <= 0.04045 ? raw / 12.92 : ((raw + 0.055) / 1.055) ** 2.4;
   };
+
   return 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
 }
 
 function contrast(a: string, b: string): number {
+  // SAFETY: a two-element array literal sorted in place still has two numbers.
   const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
     number,
     number,
   ];
+
   return (high + 0.05) / (low + 0.05);
 }
 
 const SURFACES = Object.values(SURFACE).filter((value) => value !== SURFACE.backdrop);
+
 const TEXT_TOKENS = [
   TEXT.primary, TEXT.secondary, TEXT.label, TEXT.dim, TEXT.faint,
   ACCENT.base, ACCENT.hover, ACCENT.noteText,
@@ -73,18 +79,24 @@ const TEXT_TOKENS = [
 /** Evaluate the shipped sRGB mix, including its declared percentage and operands. */
 function tintColor(css: string): string {
   const match = /^color-mix\(in srgb, var\((--[a-z]+)\) (\d+)%, var\((--[a-z]+)\)\)$/.exec(css);
+
   if (!match) throw new Error(`Unsupported tint: ${css}`);
+
   const colors = new Map([
     ["--play", PLAY.frame], ["--proposed", PROPOSED.base],
     ["--panel", SURFACE.panel], ["--raised", SURFACE.raised],
   ]);
+
   const foreground = colors.get(match[1] ?? "");
   const background = colors.get(match[3] ?? "");
+
   if (!foreground || !background) throw new Error(`Unknown tint operands: ${css}`);
   const fraction = Number(match[2]) / 100;
+
   return `#${[1, 3, 5].map((offset) => {
     const front = Number.parseInt(foreground.slice(offset, offset + 2), 16);
     const back = Number.parseInt(background.slice(offset, offset + 2), 16);
+
     return Math.round(front * fraction + back * (1 - fraction)).toString(16).padStart(2, "0");
   }).join("")}`;
 }
@@ -126,11 +138,13 @@ describe("engine desktop visual tokens", () => {
       SIGNAL.sceneText,
       ...TEXT_TOKENS,
     ];
+
     const failures = textTokens.flatMap((token) =>
       SURFACES.filter((surface) => contrast(token, surface) < 4.5).map(
         (surface) => `${token} on ${surface} = ${contrast(token, surface).toFixed(2)}:1`,
       ),
     );
+
     expect(failures).toEqual([]);
   });
 
@@ -139,12 +153,15 @@ describe("engine desktop visual tokens", () => {
       play: "color-mix(in srgb, var(--play) 6%, var(--panel))",
       proposed: "color-mix(in srgb, var(--proposed) 8%, var(--raised))",
     });
+
     for (const tint of Object.values(TINT)) {
       const background = tintColor(tint);
+
       for (const text of TEXT_TOKENS) {
         expect(contrast(text, background), `${text} on ${tint}`).toBeGreaterThanOrEqual(4.5);
       }
     }
+
     // Removed suggestion rows are red; the rejected 10% mix would fail this pairing.
     expect(contrast(SIGNAL.refuse, tintColor(TINT.proposed.replace("8%", "10%")))).toBeLessThan(4.5);
   });
@@ -185,6 +202,7 @@ describe("engine desktop visual tokens", () => {
       hero: { size: 24, lineHeight: 30, weight: 650 },
       mono: { size: 12, lineHeight: 16, weight: 400, fontVariantNumeric: "tabular-nums" },
     });
+
     for (const token of Object.values(TYPE_SCALE)) {
       expect(token.size).toBeGreaterThanOrEqual(11);
       expect(Object.isFrozen(token)).toBe(true);
@@ -198,6 +216,7 @@ describe("engine desktop visual tokens", () => {
       comfortable: { row: 28, control: 28, toolbarIcon: 32, panelHeader: 32, panelPadding: 12, body: 13 },
       compact: { row: 24, control: 24, toolbarIcon: 28, panelHeader: 28, panelPadding: 8, body: 12 },
     });
+
     for (const density of Object.values(DENSITY)) {
       expect(density.row).toBeGreaterThanOrEqual(24);
       expect(density.control).toBeGreaterThanOrEqual(24);
@@ -233,9 +252,11 @@ describe("engine desktop visual tokens", () => {
   it("records every raised colour, and each archive value it replaced did fail", () => {
     const raised = DEVIATIONS.filter((row) => row.id.startsWith("text-contrast-"));
     expect(raised.length).toBeGreaterThan(0);
+
     for (const row of raised) {
       // The archive value failed on the darkest chrome surface...
       expect(contrast(row.archive, SURFACE.canvas)).toBeLessThan(4.5);
+
       // ...and the shipped replacement passes on every one of them.
       for (const surface of SURFACES) {
         expect(contrast(row.shipped, surface)).toBeGreaterThanOrEqual(4.5);
@@ -257,11 +278,14 @@ describe("engine desktop visual tokens", () => {
     const document = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState()),
     );
+
     for (const retired of SUPERSEDED_V1.retiredValues) {
       expect(document).not.toContain(retired);
     }
+
     // The retired amber must not be a token either, only absent from one render.
     const tokens = JSON.stringify({ SURFACE, LINE, ACCENT, SIGNAL, TEXT, TYPE });
+
     for (const retired of SUPERSEDED_V1.retiredValues) {
       expect(tokens).not.toContain(retired);
     }
@@ -293,6 +317,7 @@ describe("engine desktop visual tokens", () => {
       const declarations = document
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
+
       expect([...declarations.matchAll(/opacity\s*:[^;}]*/g)].map(([d]) => d)).toEqual(
         [],
       );
@@ -302,10 +327,12 @@ describe("engine desktop visual tokens", () => {
     expect(contrast(INERT.text, SURFACE.panel)).toBeLessThan(
       contrast(TEXT.dim, SURFACE.panel),
     );
+
     // ...and still readable on every surface an inert control can sit on.
     const failures = SURFACES.filter(
       (surface) => contrast(INERT.text, surface) < 4.5,
     ).map((surface) => `${INERT.text} on ${surface} = ${contrast(INERT.text, surface).toFixed(2)}:1`);
+
     expect(failures).toEqual([]);
 
     // The accent fill is the one background that is not a chrome surface: a
@@ -387,7 +414,10 @@ describe("foundations v2 alignment", () => {
     const carried = FOUNDATIONS_V2_ALIGNMENT.filter(
       (row) => row.disposition === "carried",
     );
+
     expect(carried.length).toBeGreaterThan(0);
+
+    // SAFETY: every carried row names a sheet token (FOUNDATIONS_V2_COLORS key).
     const drift = carried
       .filter(
         (row) =>
@@ -398,6 +428,7 @@ describe("foundations v2 alignment", () => {
         (row) =>
           `${row.token} sheet=${FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS]} ${row.local}=${row.value}`,
       );
+
     expect(drift).toEqual([]);
   });
 
@@ -405,11 +436,14 @@ describe("foundations v2 alignment", () => {
     const semantic = FOUNDATIONS_V2_ALIGNMENT.filter(
       (row) => row.disposition === "semantic",
     );
+
     expect(semantic.length).toBeGreaterThan(0);
+
     for (const row of semantic) {
       expect(row.reason ?? "").not.toHaveLength(0);
       expect(row.value).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
+
     expect(DEVIATIONS.map((row) => row.id)).toContain("desktop-first-cinematic-pro");
   });
 
@@ -417,16 +451,23 @@ describe("foundations v2 alignment", () => {
     const raised = FOUNDATIONS_V2_ALIGNMENT.filter(
       (row) => row.disposition === "raised",
     );
+
     expect(raised.length).toBeGreaterThan(0);
+
     for (const row of raised) {
+      // SAFETY: alignment rows are keyed by sheet tokens.
       const sheet =
         FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS];
+
       // The raise has to be earned: the sheet value must actually fail here...
       expect(contrast(sheet, SURFACE.canvas)).toBeLessThan(4.5);
+
       // ...the shipped value must pass everywhere...
       for (const surface of SURFACES) {
+        // SAFETY: a raised row carries the shipped hex value it raised the token to.
         expect(contrast(row.value as string, surface)).toBeGreaterThanOrEqual(4.5);
       }
+
       // ...and it must be a recorded deviation, not an unexplained edit.
       expect(DEVIATIONS.map((d) => d.id)).toContain(row.deviation);
     }
@@ -439,13 +480,17 @@ describe("foundations v2 alignment", () => {
     const document = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState()),
     );
+
     for (const row of FOUNDATIONS_V2_ALIGNMENT.filter(
       (entry) => entry.disposition === "absent",
     )) {
       expect(row.reason ?? "").not.toHaveLength(0);
+
       // An absent token must not be smuggled in under a different local name.
+      // SAFETY: alignment rows are keyed by sheet tokens.
       const sheet =
         FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS];
+
       const tokens = JSON.stringify({
         SURFACE,
         LINE,
@@ -462,6 +507,7 @@ describe("foundations v2 alignment", () => {
         PROFILE_DOT,
         VIEWPORT_GRADIENT,
       });
+
       expect(tokens, row.token).not.toContain(sheet);
       expect(document, row.token).not.toContain(sheet);
     }
@@ -473,6 +519,7 @@ describe("foundations v2 alignment", () => {
     const document = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState()),
     );
+
     const declared = new Set(
       [
         ...Object.values(SURFACE),
@@ -492,9 +539,11 @@ describe("foundations v2 alignment", () => {
         ...Object.values(VIEWPORT_GRADIENT),
       ].map((value) => value.toUpperCase()),
     );
+
     const shipped = [...document.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map(([hex]) =>
       hex.toUpperCase(),
     );
+
     expect(shipped.length).toBeGreaterThan(0);
     expect([...new Set(shipped)].filter((hex) => !declared.has(hex))).toEqual([]);
 
@@ -507,6 +556,7 @@ describe("foundations v2 alignment", () => {
     expect([...document.matchAll(/rgba?\([^)]*\)/g)].map(([call]) => call)).toEqual(
       [],
     );
+
     for (const value of Object.values(SCRIM)) {
       expect(value).toMatch(/^color-mix\(in srgb, var\(--[a-z-]+\) \d{1,3}%, transparent\)$/);
       expect(document).toContain(value);
@@ -524,6 +574,7 @@ describe("foundations v2 alignment", () => {
     const document = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState()),
     );
+
     // The decision is about what ships, so assert the emitted surface, not tokens.
     expect(document).toContain(ACCENT.base);
     expect(document).toContain(SURFACE.canvas);

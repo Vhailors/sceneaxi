@@ -15,6 +15,7 @@ import { el, type SiteElement } from "./site-element.js";
 export const STATE_PANEL_TONES = Object.freeze(["ok", "warn", "deny", "iso"] as const);
 
 export type StatePanelTone = (typeof STATE_PANEL_TONES)[number];
+
 export type StatePanelVariant = "compact" | "diagnostic";
 
 export type StatePanelEvidence = {
@@ -51,9 +52,11 @@ const STATUS_ID_BY_TONE = Object.freeze({
 
 function statusFor(tone: StatePanelTone): FoundationStatus {
   const status = FOUNDATION_STATUSES.find((candidate) => candidate.id === STATUS_ID_BY_TONE[tone]);
+
   if (status === undefined) {
     throw new Error(`Foundations status is missing for state-panel tone: ${tone}`);
   }
+
   return status;
 }
 
@@ -64,6 +67,7 @@ export function createStatePanelModel(input: StatePanelInput): StatePanelModel {
       Object.freeze({ term: entry.term, value: entry.value }),
     ),
   );
+
   return Object.freeze({
     tone: input.tone,
     variant: input.variant ?? "compact",
@@ -105,7 +109,9 @@ export function statePanelElement(
     el("span", { className: "dot", attributes: { "aria-hidden": "true" } }),
     el("span", { text: model.status.label }),
   ]);
+
   const head = el("div", { className: "state-head" }, [status, heading, ...reason]);
+
   const evidence =
     model.evidence.length === 0
       ? []
@@ -119,6 +125,7 @@ export function statePanelElement(
             ]),
           ),
         ];
+
   return el("section", { className: model.sectionClassName }, [
     head,
     ...bodyElement,
