@@ -8,6 +8,7 @@
  * WCAG floor its declared role claims". A token cannot be promoted to `body` by
  * editing a table — only by contrast.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   FOUNDATIONS_SOURCE,
@@ -23,13 +24,27 @@ import {
   FOUNDATION_SURFACES,
   FOUNDATION_SURFACE_ACCENTS,
   FOUNDATION_TYPE_SCALE,
+  SIGNAL_COLORS,
+  SIGNAL_DENSITIES,
+  SIGNAL_LAYER_ORDER,
+  SIGNAL_MOTION,
+  SIGNAL_PAIRS,
+  SIGNAL_PENDING_PLATE,
+  SIGNAL_STATES,
   contrastRatio,
+  foundationsMotionCss,
+  signalColor,
+  signalCss,
+  signalPairRatio,
+  signalPendingPlateCss,
+  signalStoreBlockCss,
   foundationsBaseCss,
   foundationsCss,
   foundationsStatusCss,
   foundationsSurfacesCss,
   foundationsVariablesCss,
   meetsContrast,
+  operateCssVars,
   resolveSurfaceAccent,
 } from "@sceneaxi/site-kit";
 import type { FoundationContrastRole, SiteResult } from "@sceneaxi/site-kit";
@@ -73,7 +88,7 @@ describe("Foundations v2 transcription", () => {
   });
 
   it("pins the load-bearing semantic hexes", () => {
-    expect(hexOf("--accent")).toBe("#FF6B2C");
+    expect(hexOf("--accent")).toBe("#F1EEE4");
     expect(hexOf("--ok")).toBe("#5EEAD4");
     expect(hexOf("--danger")).toBe("#FF4D5E");
     expect(hexOf("--stale")).toBe("#7A6448");
@@ -91,8 +106,9 @@ describe("Foundations v2 transcription", () => {
       "mint-means-verified",
       "red-means-refused",
     ]);
+    // v6: pending is lever yellow (`SIGNAL_COLORS` --pending), no longer the accent.
     expect(FOUNDATION_COLOR_LAWS.map((law) => law.rail)).toEqual([
-      hexOf("--accent"),
+      signalColor("--pending", "dark"),
       hexOf("--ok"),
       hexOf("--danger"),
     ]);
@@ -205,7 +221,7 @@ describe("surface accents", () => {
     const withHover = FOUNDATION_SURFACE_ACCENTS.filter((surface) => surface.accentHi !== null);
     expect(withHover.map((surface) => surface.id)).toEqual(["umbrella", "engine-desktop"]);
 
-    for (const surface of withHover) expect(surface.accentHi).toBe("#FF8A54");
+    for (const surface of withHover) expect(surface.accentHi).toBe("#FFFFFF");
   });
 
   it("resolves the storefront accents and repeats the accent as its own hover", () => {
@@ -266,7 +282,9 @@ describe("CSS emission", () => {
     const css = foundationsBaseCss();
     expect(css).toContain("background: var(--bg-base)");
     expect(css).toContain("font-family: var(--font-ui)");
-    expect(css).toContain("a:hover { color: var(--accent-hi); }");
+    // v6 (DIRECTION §2.5): the global link-hover ink rule is deleted (BASELINE defect 1).
+    expect(css).not.toMatch(/a:hover[^{]*\{[^}]*\bcolor\s*:/);
+    expect(css).toContain(":where(a) { color: var(--accent); text-decoration: none; }");
   });
 
   it("emits one class per surface step and one per status", () => {
@@ -284,6 +302,7 @@ describe("CSS emission", () => {
     expect(css).toContain(":root {");
     expect(css).toContain(".sx-surface-float {");
     expect(css).toContain(".sx-status-refused {");
+    expect(css).toContain(SIGNAL_LAYER_ORDER);
   });
 
   it("keeps the package framework-free: the emitters return plain strings", () => {
@@ -317,6 +336,106 @@ describe("D-4 motion: stated, not transcribed", () => {
       expect(motionLines(unwrap(foundationsCss({ surface })))).toEqual(motionDeclarations);
     },
   );
+});
+
+describe("v6 Interlocking tokens (docs/redesign-v6/DIRECTION.md)", () => {
+  const sheet = unwrap(signalCss({ scheme: "system" }));
+
+  it("measures every sanctioned fg/bg pair in each scheme at its floor", () => {
+    expect(SIGNAL_PAIRS.length).toBeGreaterThanOrEqual(40);
+
+    for (const pair of SIGNAL_PAIRS) {
+      for (const scheme of pair.schemes) {
+        expect(signalPairRatio(pair, scheme), `${scheme} ${pair.fg} on ${pair.bg}`).toBeGreaterThanOrEqual(pair.min);
+      }
+    }
+  });
+
+  it("pairs every state with a label and an icon, never paint alone", () => {
+    for (const state of SIGNAL_STATES) {
+      expect(state.label.length).toBeGreaterThan(0);
+      expect(state.icon.length).toBeGreaterThan(0);
+      expect(sheet).toContain(`.sx-plate[data-state="${state.id}"]`);
+    }
+
+    for (const id of ["pending", "verified", "refused"]) expect(SIGNAL_STATES.map((state) => state.id)).toContain(id);
+  });
+
+  it("declares the five cascade layers first, and every emitted colour token", () => {
+    expect(sheet.split("\n")[1]).toBe("@layer reset, tokens, base, components, utilities;");
+
+    for (const color of SIGNAL_COLORS) expect(sheet).toContain(`${color.token}: ${color.light};`);
+  });
+
+  it("lets no hover rule change ink except a button's own --b-ink", () => {
+    for (const rule of sheet.match(/[^{}]*:hover[^{]*\{[^}]*\}/g) ?? []) {
+      const color = /(?:^|[;{\s])color\s*:\s*([^;]+);/.exec(rule.slice(rule.indexOf("{")));
+
+      if (color !== null) expect(color[1]?.trim(), rule).toBe("var(--b-ink)");
+    }
+
+    expect(sheet).toContain(":where(a:hover) { text-decoration-thickness: 3px; }");
+  });
+
+  it("writes density custom properties per placement and motion tokens zeroed under reduce", () => {
+    for (const density of SIGNAL_DENSITIES.filter((entry) => entry.emitted)) {
+      expect(sheet).toContain(`--density-control: ${density.controlPx}px;`);
+      expect(density.targetMinPx).toBeGreaterThanOrEqual(24);
+    }
+
+    expect(sheet).toContain('[data-density="compact"]');
+    expect(sheet).not.toMatch(/(^|\n)\.state\s*\{/);
+
+    for (const motion of SIGNAL_MOTION) expect(sheet).toContain(`${motion.token}: ${motion.value};`);
+    expect(sheet).toMatch(/prefers-reduced-motion: reduce\) \{ :root \{ --catch: 0ms;/);
+  });
+
+  it("differs between the two stores only in the store token block", () => {
+    const forge = unwrap(signalCss({ store: "forge" }));
+    const vitrine = unwrap(signalCss({ store: "vitrine" }));
+
+    expect(forge.replace(signalStoreBlockCss("forge"), "")).toBe(vitrine.replace(signalStoreBlockCss("vitrine"), ""));
+    expect(forge).not.toBe(vitrine);
+  });
+
+  it("refuses to theme Kids", () => {
+    const kids = signalCss({ surface: "kids" });
+    expect(kids.ok ? null : kids.reason).toBe("KIDS_SURFACE_DENIED");
+  });
+
+  it("layers the legacy motion sheet too", () => {
+    expect(foundationsMotionCss()).toContain(SIGNAL_LAYER_ORDER);
+  });
+
+  it("keeps the web-shell Operate token snapshot byte-identical to operateCssVars()", () => {
+    // web-shell cannot import site-kit (docs/dependency-matrix.json), so it inlines a generated
+    // copy; this read is the drift alarm. Regenerate per the snapshot's header.
+    const snapshot = readFileSync(new URL("../../../apps/web-shell/src/operate-tokens.ts", import.meta.url), "utf8");
+    const literal = /export const OPERATE_CSS_VARS: string = (".*");\n/.exec(snapshot)?.[1];
+
+    expect(literal === undefined ? null : JSON.parse(literal)).toBe(operateCssVars());
+
+    const plate = /export const OPERATE_PENDING_PLATE_CSS: string = (".*");\n/.exec(snapshot)?.[1];
+    expect(plate === undefined ? null : JSON.parse(plate)).toBe(signalPendingPlateCss());
+  });
+
+  it("ships the yellow pending fill only together with its boundary line, in both schemes", () => {
+    const { fill, ink, line } = SIGNAL_PENDING_PLATE;
+    const components = sheet.slice(sheet.indexOf("@layer components {"));
+    expect(components).toContain(signalPendingPlateCss());
+
+    for (const rule of components.match(/[^{}]+\{[^{}]*background: var\((?:--pending|--commit)\)[^{}]*\}/g) ?? []) {
+      expect(rule, rule).toContain(`var(${line})`);
+    }
+
+    for (const scheme of ["light", "dark"] as const) {
+      expect(contrastRatio(signalColor(ink, scheme), signalColor(fill, scheme))).toBeGreaterThanOrEqual(4.5);
+
+      for (const plane of ["--panel", "--panel-band", "--iron", "--iron-raised", "--well", "--bed", "--plate"]) {
+        expect(contrastRatio(signalColor(line, scheme), signalColor(plane, scheme)), `${scheme} ${line} on ${plane}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
 });
 
 function isCssText(value: unknown): value is string {

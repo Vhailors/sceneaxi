@@ -343,6 +343,43 @@ export {
   type FoundationMotionToken,
 } from "./design-tokens.js";
 
+// v6 "Interlocking" token layer (docs/redesign-v6/DIRECTION.md §2, §5, §9).
+export {
+  SIGNAL_COLORS,
+  SIGNAL_DENSITIES,
+  SIGNAL_FONT_STACKS,
+  SIGNAL_ICONS,
+  SIGNAL_LAYER_ORDER,
+  SIGNAL_MOTION,
+  SIGNAL_PAIRS,
+  SIGNAL_PENDING_PLATE,
+  SIGNAL_RADII,
+  SIGNAL_SPACING_PX,
+  SIGNAL_STATES,
+  SIGNAL_STORES,
+  SIGNAL_TEXT_FLOOR_PX,
+  SIGNAL_TYPE_SCALE,
+  SIGNAL_VERSION,
+  operateCssVars,
+  signalColor,
+  signalCss,
+  signalPairRatio,
+  signalPendingPlateCss,
+  signalState,
+  signalStoreBlockCss,
+  type SignalColor,
+  type SignalCssOptions,
+  type SignalDensity,
+  type SignalDensityId,
+  type SignalIconId,
+  type SignalPair,
+  type SignalPairRole,
+  type SignalScheme,
+  type SignalState,
+  type SignalStateId,
+  type SignalStoreId,
+} from "./design-tokens.js";
+
 export {
   el,
   escapeHtml,
@@ -352,9 +389,12 @@ export {
 } from "./site-element.js";
 
 export {
+  STATE_PANEL_DENSITIES,
   STATE_PANEL_TONES,
   createStatePanelModel,
   statePanelElement,
+  statePlateElement,
+  type StatePanelDensity,
   type StatePanelEvidence,
   type StatePanelInput,
   type StatePanelModel,
