@@ -25,12 +25,20 @@ function overlayLine(host: Element, id: string, kind: string, bottom: string, te
     // Absolute siblings paint in DOM order; keep the note above the canvas.
     line.style.position = "absolute";
     line.style.left = "12px";
-    line.style.right = "12px";
+    line.style.right = "auto";
     line.style.bottom = bottom;
     line.style.margin = "0";
     line.style.textAlign = "left";
-    line.style.maxWidth = "none";
+    line.style.maxWidth = "calc(100% - 24px)";
     line.style.pointerEvents = "none";
+    // Operate evidence plate: chrome tokens give the note a solid ground, so its contrast never
+    // depends on whatever the canvas drew behind it. Machine evidence reads in the mono face.
+    line.style.padding = "2px var(--space-2, 8px)";
+    line.style.border = "1px solid var(--line-control)";
+    line.style.borderRadius = "var(--r-control)";
+    line.style.background = "var(--overlay)";
+    line.style.color = "var(--text-2)";
+    line.style.font = "13px/1.5 var(--mono)";
     // Preserve field boundaries in the multi-line safe-evidence overlay.
     line.style.whiteSpace = "pre-wrap";
     host.append(line);

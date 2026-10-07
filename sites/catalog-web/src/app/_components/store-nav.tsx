@@ -6,24 +6,26 @@
  * A client component for one reason: `aria-current="page"` has to know the active route,
  * and the same state draws the visible current marker, so the assistive and the visual
  * state cannot drift apart. The catalogue word stays current across `/` and every
- * `/item/*` detail page, and the publish word on `/publish`. It holds no other behaviour:
- * no menu state and no JavaScript-only disclosure, and on a phone the strip scrolls
- * sideways so every destination stays a real link at every size.
+ * `/item/*` detail page, and the publish word on `/publish`. It holds no other behaviour
+ * and no menu state: at ≤860px the layout wraps it in the umbrella's no-script `<details>`
+ * Menu, so a listing's primary action stays within 5 Tab stops (RULINGS, release fix 2).
  *
  * The labels arrive as props because they are store copy; this file is byte-identical on
- * both storefronts. The engine link leaves this origin, so it carries the `↗` glyph, and
- * it exists only when the deployment configured an umbrella origin.
+ * both storefronts. `children` carries the cross-site family links into the ≤860px Menu
+ * panel only (globals.css `.nav-family`); from 861px they are hidden here and reached
+ * from the footer, so the masthead's Tab sequence is storemark, Catalogue, publish.
  */
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 export function StoreNav({
   catalogueLabel,
   publishLabel,
-  engine,
+  children,
 }: {
   readonly catalogueLabel: string;
   readonly publishLabel: string;
-  readonly engine: { readonly href: string; readonly label: string } | null;
+  readonly children?: ReactNode;
 }) {
   const pathname = usePathname();
   const onCatalogue = pathname === "/" || pathname.startsWith("/item/");
@@ -37,14 +39,7 @@ export function StoreNav({
       <a href="/publish" {...(onPublish ? { "aria-current": "page" as const } : {})}>
         {publishLabel}
       </a>
-      {engine !== null && (
-        <a href={engine.href}>
-          {engine.label}
-          <span className="glyph" aria-hidden="true">
-            ↗
-          </span>
-        </a>
-      )}
+      {children}
     </nav>
   );
 }

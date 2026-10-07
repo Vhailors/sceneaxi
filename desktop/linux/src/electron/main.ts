@@ -28,7 +28,7 @@ import { join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { types } from "node:util";
 import { BrowserWindow, Menu, app, crashReporter, dialog, ipcMain, shell } from "electron";
-import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
+import { DESKTOP_MINIMUM_WINDOW, SURFACE } from "@sceneaxi/desktop-shell";
 import { runAssistantSculptAction, inspectProjectModel } from "@sceneaxi/authoring-core";
 import {
   createEditorCommandInvocation,
@@ -1111,7 +1111,9 @@ async function start(): Promise<void> {
     // Shown in smoke mode too: a hidden window throttles painting, and the smoke
     // exists to observe the real one (under xvfb on headless hosts).
     show: true,
-    backgroundColor: "#111113",
+    // The v6 canvas (signal-box quadrant well) the chrome paints behind every
+    // panel, read from the shell's tokens so the first frame matches the page.
+    backgroundColor: SURFACE.backdrop,
     title: "SceneAxi Engine Desktop",
     webPreferences: {
       preload: join(__dirname, "preload.cjs"),

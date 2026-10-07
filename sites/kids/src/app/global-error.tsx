@@ -7,11 +7,11 @@
  * The CSS stays free of quotes, angle brackets, ampersands and URLs, and it is static.
  */
 const ROOT_FALLBACK_STYLE = [
-  "html{background:#07080a;color-scheme:dark}",
-  "body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px 16px;box-sizing:border-box;background:#07080a;color:#edeff2;font-family:ui-rounded,system-ui,sans-serif;-webkit-text-size-adjust:100%}",
-  ".rest{box-sizing:border-box;width:min(560px,100%);padding:32px;background:#0d0f12;border:2px solid #2c323b;border-radius:16px}",
+  "html{background:#d6ecf4;color-scheme:light}",
+  "body{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px 16px;box-sizing:border-box;background:#d6ecf4;color:#13302a;font-family:ui-rounded,system-ui,sans-serif;-webkit-text-size-adjust:100%}",
+  ".rest{box-sizing:border-box;width:min(560px,100%);padding:32px;background:#eaf5f9;border:2px solid #3d6b7a;border-radius:16px}",
   "main h1{margin:0;font-size:2rem;line-height:1.1;letter-spacing:-0.02em;font-weight:800;text-wrap:balance}",
-  ".rest-note{margin:16px 0 0;max-width:44ch;color:#8a929c;font-size:1.125rem;line-height:1.6;text-wrap:pretty}",
+  ".rest-note{margin:16px 0 0;max-width:44ch;color:#2f4d46;font-size:1.125rem;line-height:1.6;text-wrap:pretty}",
   "@media (max-width:560px){.rest{padding:24px}main h1{font-size:1.75rem}}",
 ].join("");
 

@@ -34,4 +34,8 @@ describe("post-PR inspector presentation", () => {
     expect(html).toContain("code { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }");
     expect(html).toContain(":user-invalid { border-color: #FF4D5E; }");
   });
+
+  it("ships every commit-yellow fill together with its commit-edge line (pending plate contract)", () => {
+    expect(html.match(/[^{}]+\{[^{}]*background: var\(--commit\)[^{}]*\}/g)?.filter((rule) => !rule.includes("var(--commit-edge)")) ?? ["no commit fill rule"]).toEqual([]);
+  });
 });

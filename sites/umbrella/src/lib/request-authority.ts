@@ -24,6 +24,7 @@ import {
   BILLING_PLANE_PENDING_NOTE,
   classifyUmbrellaPlane,
   createUmbrellaIdentityPlane,
+  umbrellaConstructionDiagnostics,
   umbrellaPlaneHandles,
   verifyUmbrellaDeploymentFormOrigin,
   type UmbrellaIdentityPlane,
@@ -44,6 +45,7 @@ export {
   STRIPE_SIGNATURE_HEADER,
   creditWebhookHttpStatus,
   creditWebhookOutcomeHttpStatus,
+  umbrellaConstructionDiagnostics,
 };
 
 export type UmbrellaRequestEvidence = Readonly<{

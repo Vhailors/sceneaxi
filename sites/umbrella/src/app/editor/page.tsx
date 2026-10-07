@@ -256,7 +256,7 @@ export default async function EditorPage({
         a second notice can never land on top of the first, and scrolled internally so
         the whole rail stays reachable at the smallest supported window.
       */}
-      <div className="ed-overlay-notes">
+      <div className="ed-overlay-notes" role="region" aria-label="Editor notices" tabIndex={0}>
         {resolved.decision.mode === "preview" && (
           <p className="ed-preview-note" role="note">
             Preview — the server-side editor preview flag is set, nothing is

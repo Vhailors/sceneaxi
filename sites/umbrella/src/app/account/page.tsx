@@ -7,6 +7,7 @@ import {
 import { readSessionToken } from "../_session.js";
 import { umbrellaRequestAuthority } from "../../lib/request-authority.js";
 import { CREDIT_LEDGER_FACTS, CREDIT_LEDGER_COPY } from "../../lib/site-content.js";
+import { SignalIcon } from "../_components/signal-icon.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
@@ -74,7 +75,7 @@ export default async function AccountPage({
     const history = resolved.principal === null ? null : await plane.purchaseHistory.read(historyRequest);
 
   return (
-    <div className="page page-state">
+    <div className="page op" data-density="comfortable">
       <div className="page-head">
         <h1>Your SceneAxi account</h1>
         <p className="lede">
@@ -89,6 +90,8 @@ export default async function AccountPage({
         <>
           <StatePanel
             tone="ok"
+            level={2}
+            density="comfortable"
             title="Signed in"
             evidence={[
               { term: "Email", value: resolved.principal.user.email },
@@ -107,7 +110,7 @@ export default async function AccountPage({
 
           <h2>Credits</h2>
           {resolved.credits === null ? (
-            <StatePanel tone="ok" title="Administrator — no balance was read">
+            <StatePanel density="comfortable" tone="ok" title="Administrator — no balance was read">
               <p>
                 This account is an administrator, so editor access does not depend on a
                 credit balance and none was read. Nothing was debited to render this page.
@@ -115,24 +118,28 @@ export default async function AccountPage({
             </StatePanel>
           ) : resolved.credits.ok ? (
             <>
-              <dl className="dl dl-balance">
-                <div className="dl-row">
+              <dl className="op-readout">
+                <div>
                   <dt>Balance</dt>
                   <dd>
                     <span className="ledger-balance">{resolved.credits.value.balance}</span>{" "}
                     credits
                   </dd>
                 </div>
-                <div className="dl-row">
+                <div>
                   <dt>Starter grant</dt>
                   <dd>
-                    <span
-                      className={`chip chip-${
-                        resolved.credits.value.starterGrantConsumed ? "dormant" : "validated"
-                      }`}
-                    >
-                      {resolved.credits.value.starterGrantConsumed ? "used" : "available"}
-                    </span>
+                    {resolved.credits.value.starterGrantConsumed ? (
+                      <span className="sx-plate" data-state="stale">
+                        <SignalIcon name="limit" />
+                        used
+                      </span>
+                    ) : (
+                      <span className="sx-plate" data-state="verified">
+                        <SignalIcon name="verified" />
+                        available
+                      </span>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -141,6 +148,7 @@ export default async function AccountPage({
           ) : (
             <StatePanel
               tone="deny"
+              density="comfortable"
               title="The balance could not be read"
               reason={resolved.credits.reason}
             >
@@ -150,19 +158,22 @@ export default async function AccountPage({
           )}
 
           <h2>Purchase and intent history</h2>
-          {history !== null && (history.ok ? <section aria-label="Purchase history" className="history">
-            {history.value.purchases.length === 0 ? <p role="status">No purchase intents on this page.</p> : <ul>{history.value.purchases.map(item => <li key={item.intentId}>
-              <code>{item.intentId}</code> — {item.itemId} — <time dateTime={item.createdAt}>{item.createdAt}</time> — {item.mode} — {item.status} — {item.credits} credits
+          {history !== null && (history.ok ? <section aria-label="Purchase history" className="op-rows">
+            {history.value.purchases.length === 0 ? <p role="status" className="op-empty"><SignalIcon name="limit" />No purchase intents on this page.</p> : <ul>{history.value.purchases.map(item => <li key={item.intentId}>
+              <span className="sx-plate" data-state={item.status === "granted" ? "verified" : item.status === "refunded" ? "stale" : undefined}><SignalIcon name={item.status === "granted" ? "verified" : "limit"} />{item.status}</span>
+              <code>{item.intentId}</code>
+              <span className="op-meta">{item.itemId} · <time dateTime={item.createdAt}>{item.createdAt}</time> · {item.mode} · {item.credits} credits</span>
             </li>)}</ul>}
             {history.value.reconciliationTruncated && <p role="status">Reconciliation evidence reached its bound; pending is not proof of payment.</p>}
             {history.value.next !== undefined && <a href={`/account?beforeAt=${encodeURIComponent(history.value.next.createdAt)}&beforeId=${encodeURIComponent(history.value.next.intentId)}`}>Older purchase intents</a>}
             {cursorRequested && <p><a href="/account">Newest purchase intents</a></p>}
-          </section> : <StatePanel tone="deny" title="Purchase history unavailable" reason={history.reason}><p>{history.message}</p></StatePanel>)}
+          </section> : <StatePanel density="comfortable" tone="deny" title="Purchase history unavailable" reason={history.reason}><p>{history.message}</p></StatePanel>)}
 
           <h2>Editor access</h2>
           {resolved.entitlement.entitled ? (
             <StatePanel
               tone="ok"
+              density="comfortable"
               title="Entitled"
               evidence={[{ term: "Basis", value: resolved.entitlement.basis }]}
             >
@@ -173,6 +184,7 @@ export default async function AccountPage({
           ) : (
             <StatePanel
               tone="deny"
+              density="comfortable"
               title="Not entitled"
               reason={resolved.entitlement.reason}
             >
@@ -188,6 +200,8 @@ export default async function AccountPage({
       ) : (
         <StatePanel
           tone="deny"
+          level={2}
+          density="comfortable"
           title={outcome === null ? "No session is present" : outcome.title}
           reason={identityRefusal?.reason}
         >
@@ -213,7 +227,7 @@ export default async function AccountPage({
       )}
 
       {params.checkout === "success" && (
-        <StatePanel tone="warn" title="Returned from checkout — confirmation pending">
+        <StatePanel tone="warn" level={2} density="comfortable" title="Returned from checkout — confirmation pending">
           <p>This return link is not proof of payment. Credits appear only after a verified payment is persisted in your ledger.</p>
         </StatePanel>
       )}

@@ -3,6 +3,7 @@ import {
   createCommerceNoticeModel,
 } from "@sceneaxi/site-kit/commerce-notice";
 import type { CatalogSurface, SitePrincipal, SiteResult } from "@sceneaxi/site-kit";
+import type { StatePanelDensity } from "@sceneaxi/site-kit/state-panel";
 import { StatePanel } from "./state-panel.js";
 
 /**
@@ -22,15 +23,21 @@ import { StatePanel } from "./state-panel.js";
  *
  * Every word below is the model's: the tone, the title, the reason key, the policy, the
  * explanation and the four labelled facts.
+ *
+ * Density belongs to the placement: the acquire block is comfortable (the default), and
+ * the v5 defect — this refusal drawn at editor-dock density inside it — cannot recur
+ * because the panel carries its own `data-density` rather than inheriting one.
  */
 export function CommerceNotice({
   surface,
   itemId,
   viewer,
+  density = "comfortable",
 }: {
   readonly surface: CatalogSurface;
   readonly itemId: string;
   readonly viewer: SiteResult<SitePrincipal>;
+  readonly density?: StatePanelDensity | undefined;
 }) {
   const model = createCommerceNoticeModel({ surface, itemId, viewer });
 
@@ -39,6 +46,7 @@ export function CommerceNotice({
       tone={model.tone}
       title={model.title}
       reason={model.reason ?? undefined}
+      density={density}
     >
       <p>
         {model.policy} {model.explanation}

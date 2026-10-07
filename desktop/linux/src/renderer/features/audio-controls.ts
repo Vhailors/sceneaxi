@@ -9,18 +9,20 @@ type AudioClipManifest = Readonly<{
   byteLength: number;
 }>;
 
-function audioClipManifest(value: unknown): readonly AudioClipManifest[] | null {
+function audioClipManifest<Input>(value: Input): readonly AudioClipManifest[] | null {
   if (!Array.isArray(value)) return null;
   const clips: AudioClipManifest[] = [];
+
   for (const item of value) {
-    if (typeof item !== "object" || item === null) return null;
+    if (!isObjectLike(item)) return null;
     const clip = item;
+
     if (
       !("assetId" in clip) || !("mediaType" in clip) || !("digest" in clip) || !("byteLength" in clip) ||
-      typeof clip["assetId"] !== "string" || clip["assetId"].length === 0 ||
+      !isText(clip["assetId"]) || clip["assetId"].length === 0 ||
       (clip["mediaType"] !== "audio/wav" && clip["mediaType"] !== "audio/ogg" && clip["mediaType"] !== "audio/mpeg") ||
-      typeof clip["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(clip["digest"]) ||
-      typeof clip["byteLength"] !== "number" || !Number.isSafeInteger(clip["byteLength"]) || clip["byteLength"] < 1 || clip["byteLength"] > 8 * 1024 * 1024
+      !isText(clip["digest"]) || !/^sha256:[0-9a-f]{64}$/.test(clip["digest"]) ||
+      !isNumeric(clip["byteLength"]) || !Number.isSafeInteger(clip["byteLength"]) || clip["byteLength"] < 1 || clip["byteLength"] > 8 * 1024 * 1024
     ) return null;
     clips.push({
       assetId: clip["assetId"],
@@ -29,6 +31,7 @@ function audioClipManifest(value: unknown): readonly AudioClipManifest[] | null 
       byteLength: clip["byteLength"],
     });
   }
+
   return clips;
 }
 
@@ -37,16 +40,22 @@ function browserAudioContext(): AudioContextLike {
   void context.resume();
   const nodes = new WeakMap<object, AudioNode>();
   let analyser: AnalyserNode | null = null;
+
   const wrap = (node: AudioNode) => {
     const facade = { connect: (destination: AudioNodeLike) => node.connect(resolve(destination)) };
     nodes.set(facade, node);
+
     return facade;
   };
-  const resolve = (facade: object): AudioNode => {
+
+  const resolve = (facade: AudioNodeLike): AudioNode => {
     const node = nodes.get(facade);
+
     if (node === undefined) throw new Error("AUDIO_NODE_INVALID");
+
     return node;
   };
+
   return {
     destination: wrap(context.destination),
     decodeAudioData: (bytes) => context.decodeAudioData(bytes),
@@ -54,6 +63,7 @@ function browserAudioContext(): AudioContextLike {
       analyser = context.createAnalyser();
       resolve(gain).connect(analyser);
       analyser.connect(context.destination);
+
       return wrap(analyser);
     },
     measureOutputRms: () => {
@@ -61,18 +71,22 @@ function browserAudioContext(): AudioContextLike {
       const samples = new Float32Array(analyser.fftSize);
       analyser.getFloatTimeDomainData(samples);
       let energy = 0;
+
       for (const sample of samples) energy += sample * sample;
+
       return Math.sqrt(energy / samples.length);
     },
     createGain: () => {
       const node = context.createGain();
       const facade = { gain: node.gain, connect: (destination: AudioNodeLike) => node.connect(resolve(destination)) };
       nodes.set(facade, node);
+
       return facade;
     },
     createBufferSource: () => {
       const node = context.createBufferSource();
       let buffer: object | null = null;
+
       return {
         get buffer() { return buffer; },
         set buffer(value) {
@@ -96,10 +110,11 @@ function mountAudioControls(
   clips: readonly AudioClipManifest[],
 ): () => void {
   const { stage: host, request, createAudioPlaybackPort, report } = services;
+
   if (clips.length === 0) return () => undefined;
   const controls = host.ownerDocument.createElement("div");
   controls.dataset.audioPlayback = "true";
-  controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;pointer-events:auto";
+  controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1,4px);padding:var(--space-1,4px);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--overlay);accent-color:var(--accent);pointer-events:auto";
   controls.setAttribute("aria-label", "Play session audio");
   const volume = host.ownerDocument.createElement("input");
   volume.type = "range";
@@ -118,9 +133,11 @@ function mountAudioControls(
     }
   });
   controls.append(volume);
+
   for (const clip of clips) {
     const button = host.ownerDocument.createElement("button");
     button.type = "button";
+    button.className = "ui-control";
     button.textContent = `Play ${clip.assetId}`;
     button.addEventListener("click", () => {
       try {
@@ -129,46 +146,63 @@ function mountAudioControls(
         controls.dataset.audioVolume = volume.value;
       } catch {
         report.openPathLine(`Audio refused: AUDIO_CONTEXT_UNAVAILABLE ${clip.assetId}`);
+
         return;
       }
+
       const playback = audio;
       void (async () => {
         const result = await request({ action: "audio-asset", payload: { assetId: clip.assetId, documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } });
-        if (!result.ok || typeof result.data !== "object" || result.data === null) {
+
+        if (!result.ok || !isObjectLike(result.data)) {
           report.openPathLine(`Audio refused: AUDIO_CLIP_UNKNOWN ${clip.assetId}`);
+
           return;
         }
+
         const data = result.data;
-        if (typeof data !== "object" || data === null || !("bytesBase64" in data)) {
+
+        if (!isObjectLike(data) || !("bytesBase64" in data)) {
           report.openPathLine(`Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
+
           return;
         }
+
         const encoded = data["bytesBase64"];
+
         if (
           !("assetId" in data) || !("mediaType" in data) || !("digest" in data) || !("byteLength" in data) ||
           data["assetId"] !== clip.assetId || data["mediaType"] !== clip.mediaType ||
           data["digest"] !== clip.digest || data["byteLength"] !== clip.byteLength ||
-          typeof encoded !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)
+          !isText(encoded) || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)
         ) {
           report.openPathLine(`Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
+
           return;
         }
+
         const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
         const digest = `sha256:${[...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+
         if (bytes.byteLength !== clip.byteLength || digest !== clip.digest) {
           report.openPathLine(`Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
+
           return;
         }
+
         try {
           await playback.load(clip.assetId, bytes);
+
           if (!disposed) {
             playback.play(clip.assetId);
             button.dataset.audioState = "started";
+
             const updateRms = () => {
               if (disposed || button.dataset.audioState !== "started") return;
               controls.dataset.audioRms = String(playback.measureOutputRms());
               requestAnimationFrame(updateRms);
             };
+
             requestAnimationFrame(updateRms);
           }
         } catch {
@@ -181,10 +215,13 @@ function mountAudioControls(
     buttons.push(button);
     controls.append(button);
   }
+
   host.append(controls);
+
   return () => {
     if (disposed) return;
     disposed = true;
+
     if (audio === null) controls.dataset.audioContextDisposed = "true";
     else {
       const closing = audio;
@@ -194,6 +231,7 @@ function mountAudioControls(
       void new Promise((resolve) => setTimeout(resolve, 100))
         .then(() => {
           controls.dataset.audioRms = String(closing.measureOutputRms());
+
           return closing.dispose();
         })
         .then(
@@ -201,27 +239,34 @@ function mountAudioControls(
           () => report.openPathLine("Audio refused: AUDIO_CONTEXT_CLOSE_FAILED"),
         );
     }
+
     for (const button of buttons) {
       if (button.dataset.audioState === "started") button.dataset.audioState = "stopped";
     }
+
     controls.remove();
   };
 }
 
 export function installAudioControls(services: ViewportServices) {
   let disposeAudioControls: (() => void) | null = null;
+
   const stop = () => {
     disposeAudioControls?.();
     disposeAudioControls = null;
   };
+
   return {
     stop,
-    play: (mountable: unknown) => {
+    play: <Input>(mountable: Input) => {
       stop();
-      const projectedClips = typeof mountable === "object" && mountable !== null && "audioClips" in mountable
+
+      const projectedClips = isObjectLike(mountable) && "audioClips" in mountable
         ? mountable.audioClips
         : [];
+
       const clips = audioClipManifest(projectedClips);
+
       if (clips === null) {
         services.report.openPathLine("Audio refused: AUDIO_CLIP_MANIFEST_INVALID");
       } else {
@@ -230,3 +275,9 @@ export function installAudioControls(services: ViewportServices) {
     },
   };
 }
+
+function isObjectLike<Value>(value: Value): value is Value & object { return typeof value === "object" && value !== null; }
+
+function isText(value: unknown): value is string { return typeof value === "string"; }
+
+function isNumeric(value: unknown): value is number { return typeof value === "number"; }

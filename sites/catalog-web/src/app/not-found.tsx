@@ -1,3 +1,4 @@
+import { StatePlate } from "./_components/state-plate.js";
 import { CATALOG_SITE_BRAND } from "../lib/site-config.js";
 
 /**
@@ -9,16 +10,13 @@ import { CATALOG_SITE_BRAND } from "../lib/site-config.js";
 export default function NotFound() {
   const catalogue = CATALOG_SITE_BRAND.catalogueWord.toLowerCase();
 
-  // An Operate state route: the H1 leads, its status chip follows on the same row, and a
+  // An Operate state route: the H1 leads, its state plate (label + icon) follows on the same row, and a
   // 2px accent mark under the head draws once (DIRECTION row 13). Nothing rises.
   return (
     <div className="shell page page-state">
       <div className="page-head tone-accent">
         <h1>No {CATALOG_SITE_BRAND.listingWord} with that id</h1>
-        <p className="chip chip-accent">
-          <span className="chip-dot" aria-hidden="true" />
-          Not found
-        </p>
+        <StatePlate tone="iso" label="Not found" />
       </div>
       <p className="lede">
         This {catalogue} only publishes its own committed{" "}

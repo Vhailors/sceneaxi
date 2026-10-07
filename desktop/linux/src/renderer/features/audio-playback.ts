@@ -321,7 +321,9 @@ function mountAudioControls(services: ViewportServices, clips: readonly AudioCli
         return () => undefined;
     const controls = host.ownerDocument.createElement("div");
     controls.dataset.audioPlayback = "true";
-    controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;pointer-events:auto";
+    // Operate viewport chrome: one raised plate (chrome tokens, so it reads over any canvas pixels) and
+    // the shared density-aware `ui-control` buttons from the desktop ui-kit.
+    controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1,4px);padding:var(--space-1,4px);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--overlay);accent-color:var(--accent);pointer-events:auto";
     controls.setAttribute("aria-label", "Play session audio");
     const audio = createDesktopAudioLifecycle({ createAudioPlaybackPort: services.createAudioPlaybackPort, createContext: browserAudioContext, request: services.request, getProfile, report: message => { if (!services.signal?.aborted) report.openPathLine(message); }, digest: async (bytes) => "sha256:" + [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes.slice().buffer))].map(byte => byte.toString(16).padStart(2, "0")).join("") });
     const volume = host.ownerDocument.createElement("input");
@@ -341,6 +343,7 @@ function mountAudioControls(services: ViewportServices, clips: readonly AudioCli
     for (const clip of clips) {
         const play = host.ownerDocument.createElement("button"), stop = host.ownerDocument.createElement("button");
         play.type = stop.type = "button";
+        play.className = stop.className = "ui-control";
         play.textContent = "Play " + clip.assetId;
         stop.textContent = "Stop " + clip.assetId;
         play.addEventListener("click", () => {

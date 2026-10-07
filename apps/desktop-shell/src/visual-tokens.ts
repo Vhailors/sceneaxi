@@ -25,6 +25,18 @@
  *
  * No DOM, no `node:*`: this package's `src` is type-checked with `lib: es2023`
  * and `types: ["node"]` only, and the chrome renderer is a string builder.
+ *
+ * v6 "Interlocking" (docs/redesign-v6/DIRECTION.md §5, §8, §9): the semantic
+ * values below (`SURFACE`, `LINE`, `ACCENT`, `SIGNAL`, `TEXT`, `INERT`) now carry the
+ * signal-box materials and lever paints, mirrored from
+ * `packages/site-kit/src/design-tokens.ts` `SIGNAL_COLORS` **without importing it**
+ * (the dependency matrix still forbids the edge; see `FOUNDATIONS_V2_SOURCE`).
+ * `INTERLOCKING` holds the full mirror in both schemes, and `STATE_PLATES` the
+ * label + icon + paint + on-ink quadruples. Chrome surfaces map onto the iron family
+ * (docks and desk columns are cast-iron frames, §8), which is also where the
+ * viewport's own hues (axis, selection, category) keep their measured floors. The
+ * Cinematic Pro graphite + cyan values are retired; the archive provenance above is
+ * kept for the non-colour metrics only.
  */
 
 /** The canonical archive this surface is implemented from. */
@@ -88,8 +100,9 @@ export const FOUNDATIONS_V2_COLORS = Object.freeze({
   "--fg": "#EDEFF2",
   "--fg-2": "#8A929C",
   "--fg-4": "#3F464F",
-  "--accent": "#FF6B2C",
-  "--accent-hi": "#FF8A54",
+  // v6 retirement mirrored from site-kit: the v5 orange accent is now enamel.
+  "--accent": "#F1EEE4",
+  "--accent-hi": "#FFFFFF",
   "--ok": "#5EEAD4",
   "--danger": "#FF4D5E",
   "--info": "#5B9CFF",
@@ -118,7 +131,7 @@ export const SUPERSEDED_V1 = Object.freeze({
   status: "superseded — reference only",
   /** Values from v1 that must not appear in this surface's output. */
   retiredValues: Object.freeze([
-    "#F5A524", // amber accent, replaced by signal orange #FF6B2C
+    "#F5A524", // amber accent, superseded (v6 accent is enamel)
     "#FFC24D", // amber hover
     "Space Grotesk",
     "IBM Plex Sans",
@@ -132,71 +145,223 @@ export const SUPERSEDED_V1 = Object.freeze({
   retiredModel: "project-launcher storyboard without a mode rail",
 });
 
+/** Where the v6 mirror comes from, so drift is checkable from either side. */
+export const INTERLOCKING_SOURCE = Object.freeze({
+  direction: "docs/redesign-v6/DIRECTION.md",
+  upstream: "packages/site-kit/src/design-tokens.ts#SIGNAL_COLORS",
+  /** Same reason as `FOUNDATIONS_V2_SOURCE`: copied, never imported. */
+  duplicationReason: "dependency-matrix-forbids-site-kit",
+});
+
+/**
+ * The v6 colour tokens in both schemes, value for value with site-kit's
+ * `SIGNAL_COLORS` (DIRECTION §5.1–5.3). Desktop follows the system scheme: the
+ * chrome reads `dark` today; `light` is here so the desktop lane can emit the
+ * `prefers-color-scheme: light` block from data rather than literals.
+ */
+export const INTERLOCKING = Object.freeze({
+  dark: Object.freeze({
+    panel: "#2F4A44", panelBand: "#27403A", iron: "#1E2B28", ironRaised: "#263632", well: "#182320",
+    ink: "#F1EEE4", ink2: "#BCD0C9", edge: "#86A39B", rule: "#4E6B64", siding: "#7F9A93", track: "#E9E6DC",
+    enamel: "#F1EEE4", enamelHi: "#FFFFFF", onEnamel: "#1A2623", focus: "#F1EEE4", disabledInk: "#BCD0C9",
+    pending: "#F2C230", onPending: "#1A2623", pendingInk: "#F2C230", route: "#F2C230",
+    verified: "#7BDDB0", onVerified: "#12241E", verifiedRoute: "#7BDDB0",
+    refused: "#C4362C", onRefused: "#FFFFFF", refusedLamp: "#FF9A8C", refusedLampHi: "#FFB3A8",
+    stale: "#A3A9A4", onStale: "#1A2623",
+    // A-rich (concepts/a-rich/SPEC-DELTA.md §2-3): lunar = the INSPECT accent, commit = Accept, planes.
+    lunar: "#C4B4FF", onLunar: "#16112E", lunarDeep: "#5D4FA8", lunarMark: "#C4B4FF", onLunarMark: "#16112E",
+    commit: "#F2C230", onCommit: "#1A2623", commitHi: "#FFD45A", commitEdge: "#F2C230",
+    bed: "#141C1A", plate: "#395A53", hair: "#9AB8B0", ink2Plate: "#D2E2DC",
+    enamelInk2: "#3F5550", enamelRule: "#4E6B64", enamelFocus: "#1A2623",
+  }),
+  light: Object.freeze({
+    panel: "#E7E9E3", panelBand: "#F4F4EF", iron: "#FBFBF8", ironRaised: "#EEEFEA", well: "#FFFFFF",
+    ink: "#17221F", ink2: "#3F5550", edge: "#6B807A", rule: "#C4CDC8", siding: "#6B807A", track: "#17221F",
+    enamel: "#17221F", enamelHi: "#000000", onEnamel: "#FFFFFF", focus: "#17221F", disabledInk: "#3F5550",
+    pending: "#F2C230", onPending: "#1A2623", pendingInk: "#6B5000", route: "#9A7400",
+    verified: "#7BDDB0", onVerified: "#12241E", verifiedRoute: "#1F8A5A",
+    refused: "#C4362C", onRefused: "#FFFFFF", refusedLamp: "#A62A21", refusedLampHi: "#A62A21",
+    stale: "#A3A9A4", onStale: "#1A2623",
+    lunar: "#5B3FD0", onLunar: "#FFFFFF", lunarDeep: "#C4B4FF", lunarMark: "#E4DCFF", onLunarMark: "#17221F",
+    commit: "#F2C230", onCommit: "#1A2623", commitHi: "#FFD45A", commitEdge: "#7A5C00",
+    bed: "#DFE3DC", plate: "#FFFFFF", hair: "#6B807A", ink2Plate: "#3F5550",
+    enamelInk2: "#BCD0C9", enamelRule: "#86A39B", enamelFocus: "#FFFFFF",
+  }),
+});
+
+/**
+ * Pairs where lunar is UI/large only (mirrors `uiOnly` in site-kit `SIGNAL_PAIRS`): never body text.
+ * Keys are `INTERLOCKING` keys.
+ */
+export const INTERLOCKING_UI_ONLY = Object.freeze([
+  Object.freeze({ fg: "lunar", bg: "plate", scheme: "dark", ratio: 4.1, reason: "rings, bars and large text only" }),
+]);
+
+/**
+ * The yellow PENDING plate pair, mirroring site-kit `SIGNAL_PENDING_PLATE` / `signalPendingPlateCss()`
+ * (`.sx-plate--pending`). Fill, ink and the 1px boundary line ship together, never the fill alone:
+ * in light the `commit` fill is 1.37:1 on `panel` and only `commitEdge` (5.11:1) bounds it; in dark
+ * the edge is the fill. `forcedColorsBorder` replaces paint + inset line under forced colours.
+ * Keys are `INTERLOCKING` keys; desktop emits this as one rule, not separate fill/line rules.
+ */
+export const INTERLOCKING_PENDING_PLATE = Object.freeze({
+  className: "sx-plate--pending",
+  fill: "commit",
+  ink: "onCommit",
+  line: "commitEdge",
+  lineWidthPx: 1,
+  forcedColorsBorder: "1px solid CanvasText",
+  measured: Object.freeze({
+    light: Object.freeze({ fillOnPanel: 1.37, lineOnPanel: 5.11, inkOnFill: 9.32 }),
+    dark: Object.freeze({ fillOnPanel: 5.74, lineOnPanel: 5.74, inkOnFill: 9.32 }),
+  }),
+});
+
+/** Depth shadows, value for value with site-kit `SIGNAL_SHADOWS` (offset only, never glow or blur). */
+export const INTERLOCKING_SHADOWS = Object.freeze({
+  dark: Object.freeze({
+    sink: "inset 0 2px 0 #00000066, inset 0 0 0 1px #00000040",
+    lift1: "0 1px 0 #FFFFFF14 inset, 0 14px 24px -14px #000000B3",
+    lift2: "0 1px 0 #FFFFFF inset, 0 28px 48px -24px #000000CC, 0 4px 10px -6px #00000080",
+  }),
+  light: Object.freeze({
+    sink: "inset 0 2px 0 #17221F1F",
+    lift1: "0 1px 0 #FFFFFF inset, 0 10px 20px -14px #17221F66",
+    lift2: "0 1px 0 #FFFFFF inset, 0 28px 48px -24px #000000CC, 0 4px 10px -6px #00000080",
+  }),
+});
+
+/**
+ * Six planes on four levels (site-kit `SIGNAL_ELEVATION`). Each value names `INTERLOCKING` /
+ * `INTERLOCKING_SHADOWS` keys; `boundary` is the >= 3:1 line for that plane.
+ */
+export const INTERLOCKING_ELEVATION = Object.freeze([
+  Object.freeze({ level: -1, plane: "bed", shadow: "sink", boundary: "hair", ink: "ink", ink2: "ink2", focus: "focus" }),
+  Object.freeze({ level: -1, plane: "well", shadow: "sink", boundary: "edge", ink: "ink", ink2: "ink2", focus: "focus" }),
+  Object.freeze({ level: 0, plane: "panel", shadow: null, boundary: null, ink: "ink", ink2: "ink2", focus: "focus" }),
+  Object.freeze({ level: 1, plane: "plate", shadow: "lift1", boundary: "hair", ink: "ink", ink2: "ink2Plate", focus: "focus" }),
+  Object.freeze({ level: 1, plane: "iron", shadow: "lift1", boundary: "edge", ink: "ink", ink2: "ink2", focus: "focus" }),
+  Object.freeze({ level: 2, plane: "enamel", shadow: "lift2", boundary: "enamelRule", ink: "onEnamel", ink2: "enamelInk2", focus: "enamelFocus" }),
+]);
+
+/**
+ * The propose -> inspect -> commit sequence (site-kit `SIGNAL_SEQUENCE`), in ms. The autoplay
+ * ends ARMED, never committed; `reduced` is the prefers-reduced-motion value of every field
+ * (the three-still strip carries the meaning instead).
+ */
+export const INTERLOCKING_SEQUENCE = Object.freeze({
+  phases: Object.freeze({
+    propose: Object.freeze({ startMs: 0, endMs: 900, paint: "pending", still: "1 · Propose" }),
+    inspect: Object.freeze({ startMs: 1150, endMs: 1900, paint: "lunar", still: "2 · Inspect" }),
+    commit: Object.freeze({ startMs: 2250, endMs: 2800, paint: "commit", still: "3 · Commit" }),
+  }),
+  end: "armed",
+  barMs: 280,
+  scanMs: 760,
+  staggerMs: 80,
+  ease: "cubic-bezier(0.16, 1, 0.3, 1)",
+  reduced: Object.freeze({ durationMs: 0, delayMs: 0, staggerMs: 0, ease: "linear" }),
+});
+
+/**
+ * The v6 type scale in px (site-kit `SIGNAL_TYPE_SCALE`; clamp() steps at their minimum) and its
+ * 13px floor. The pinned Cinematic Pro `TYPE_SCALE` below still carries 11/12px steps the
+ * desktop lane must retire; new chrome reads this one.
+ */
+export const INTERLOCKING_TEXT_FLOOR_PX = 13;
+
+export const INTERLOCKING_TYPE_SCALE = Object.freeze({
+  display: 56, h2: 32, h3: 24, lede: 19, body: 16, plate: 15, small: 13,
+});
+
+/**
+ * State plates: label + icon + paint + on-ink, never paint alone (DIRECTION §2.1).
+ * `paint`/`on` name `INTERLOCKING` keys; `null` paint is outline-only.
+ */
+export const STATE_PLATES = Object.freeze({
+  pending: Object.freeze({ plate: "Pending", label: "Pending review · unwritten", icon: "pending", paint: "pending", on: "onPending" }),
+  verified: Object.freeze({ plate: "Verified", label: "Verified · written", icon: "verified", paint: "verified", on: "onVerified" }),
+  refused: Object.freeze({ plate: "Refused", label: "Rejected · nothing written", icon: "refused", paint: "refused", on: "onRefused" }),
+  stale: Object.freeze({ plate: "Superseded", label: "Superseded · not actionable", icon: "stale", paint: "stale", on: "onStale" }),
+  unknown: Object.freeze({ plate: "Outcome unknown", label: "Apply outcome pending", icon: "stale", paint: "stale", on: "onStale" }),
+  test: Object.freeze({ plate: "TEST", label: "TEST", icon: "test", paint: null, on: "ink" }),
+});
+
 /**
  * Surfaces and lines, copied from the archive. Non-text: not contrast-gated.
  */
 export const SURFACE = Object.freeze({
-  /** Page behind the floating chrome. */
-  backdrop: "#05080E",
-  /** Editor body and viewport base. */
-  canvas: "#0A0F1A",
+  /** Page behind the floating chrome: quadrant well. */
+  backdrop: INTERLOCKING.dark.well,
+  /** Editor body and viewport base: quadrant well. */
+  canvas: INTERLOCKING.dark.well,
   /** Deepest inset wells (inputs, console, footers). */
-  well: "#070B13",
-  /** Assistant column. */
-  assistant: "#0F1624",
-  /** Docked panels: left dock, inspector, bottom dock. */
-  panel: "#0F1624",
-  /** Overlay dialogs and the command palette. */
-  overlay: "#131B2C",
-  /** Raised rows and cards inside a panel. */
-  raised: "#131B2C",
-  /** Panel section headers and chrome chips. */
-  header: "#182236",
+  well: INTERLOCKING.dark.well,
+  /** Assistant column: cast iron. */
+  assistant: INTERLOCKING.dark.iron,
+  /** Docked panels: left dock, inspector, bottom dock. Cast iron (§8 level 2). */
+  panel: INTERLOCKING.dark.iron,
+  /** Overlay dialogs and the command palette: raised iron. */
+  overlay: INTERLOCKING.dark.ironRaised,
+  /** Raised rows and cards inside a panel: iron, separated by `LINE.row`. */
+  raised: INTERLOCKING.dark.iron,
+  /** Panel section headers and chrome chips: raised iron (§8 level 3). */
+  header: INTERLOCKING.dark.ironRaised,
   /** Hover / selected chrome. */
-  hover: "#182236",
+  hover: INTERLOCKING.dark.ironRaised,
 });
 
 export const LINE = Object.freeze({
-  /** Structural borders between regions. */
-  strong: "#243044",
-  /** Card and control borders. */
-  card: "#243044",
+  /** Structural borders between regions (decoration; regions also differ in fill). */
+  strong: INTERLOCKING.dark.rule,
+  /** Card borders (decoration). */
+  card: INTERLOCKING.dark.rule,
   /** Row separators inside a scrolling panel. */
-  row: "#1A2436",
-  /** Control borders and dividers. */
-  control: "#2A3850",
+  row: INTERLOCKING.dark.panelBand,
+  /** Control borders: `--edge`, >= 3:1 on every surface (§2.4). */
+  control: INTERLOCKING.dark.edge,
   /** Emphasised control border. */
-  raised: "#334563",
-  /** Hover border. */
-  hover: "#3D5274",
+  raised: INTERLOCKING.dark.edge,
+  /** Hover border: enamel, as the quiet button's hover edge. */
+  hover: INTERLOCKING.dark.enamel,
 });
 
-/** Cyan-teal life-signal. Foundations orange is no longer the desktop accent. */
+/** Enamel: the primary action, the default plate and the focus ring (§5.1). */
 export const ACCENT = Object.freeze({
-  base: "#46D8EC",
-  hover: "#74E3F2",
-  /** Text/marks drawn *on* the accent. */
-  on: "#05121A",
-  /** Accent-tinted surface and line for notes and active chrome. */
-  surface: "#10242C",
-  line: "#1E5A66",
-  /** Accent-tinted note text (passes on every surface above). */
-  noteText: "#74E3F2",
+  base: INTERLOCKING.dark.enamel,
+  hover: INTERLOCKING.dark.enamelHi,
+  /** Text/marks drawn *on* the accent, in every state. */
+  on: INTERLOCKING.dark.onEnamel,
+  /** Active chrome and note surface: raised iron. */
+  surface: INTERLOCKING.dark.ironRaised,
+  line: INTERLOCKING.dark.edge,
+  /** Note text (passes on every surface above). */
+  noteText: INTERLOCKING.dark.ink,
 });
 
-/** Semantic marks. All are used as text somewhere, so all are contrast-gated. */
+/**
+ * Semantic marks. Everything without `on`/`Paint` in its name is used as text
+ * somewhere, so it is contrast-gated. Paints carry their own `on` ink and are
+ * never text (refused paint fails 3:1 on the panel; refusal *text* is the lamp).
+ */
 export const SIGNAL = Object.freeze({
-  ok: "#5FE3C0",
-  warn: "#F2C94C",
-  refuse: "#FF4D5E",
-  refuseSurface: "#211316",
-  refuseLine: "#5A2B32",
+  ok: INTERLOCKING.dark.verified,
+  onOk: INTERLOCKING.dark.onVerified,
+  warn: INTERLOCKING.dark.pending,
+  onWarn: INTERLOCKING.dark.onPending,
+  refuse: INTERLOCKING.dark.refusedLamp,
+  refusePaint: INTERLOCKING.dark.refused,
+  onRefuse: INTERLOCKING.dark.onRefused,
+  refuseSurface: INTERLOCKING.dark.well,
+  refuseLine: INTERLOCKING.dark.refusedLamp,
+  stalePaint: INTERLOCKING.dark.stale,
+  onStale: INTERLOCKING.dark.onStale,
   info: "#5B9CFF",
-  infoSurface: "#131820",
-  infoLine: "#223040",
+  infoSurface: INTERLOCKING.dark.well,
+  infoLine: INTERLOCKING.dark.rule,
   scene: "#A78BFA",
-  sceneSurface: "#1B1626",
-  sceneLine: "#3A2E52",
+  sceneSurface: INTERLOCKING.dark.well,
+  sceneLine: INTERLOCKING.dark.rule,
   sceneText: "#C3B0F0",
 });
 
@@ -253,7 +418,7 @@ export const TINT = Object.freeze({
  */
 export const PROFILE_DOT = Object.freeze({
   /** Unselected chip. */
-  idle: "#2A3850",
+  idle: INTERLOCKING.dark.rule,
   /** Website profile — kept as a semantic role, not the storefront hex. */
   web: "#5B9CFF",
 });
@@ -281,8 +446,8 @@ export const SCRIM = Object.freeze({
 
 /** The viewport's radial base gradient, from the archive. Non-text. */
 export const VIEWPORT_GRADIENT = Object.freeze({
-  inner: "#182236",
-  mid: "#0A0F1A",
+  inner: INTERLOCKING.dark.ironRaised,
+  mid: INTERLOCKING.dark.well,
 });
 
 /**
@@ -295,12 +460,13 @@ export const VIEWPORT_GRADIENT = Object.freeze({
  * carried by size, weight, and letter-spacing, which the chrome preserves.
  */
 export const TEXT = Object.freeze({
-  primary: "#EAF0F9",
-  secondary: "#ACB8CC",
-  label: "#ACB8CC",
-  dim: "#ACB8CC",
-  faint: "#95A2B8",
-  onAccent: "#05121A",
+  primary: INTERLOCKING.dark.ink,
+  secondary: INTERLOCKING.dark.ink2,
+  label: INTERLOCKING.dark.ink2,
+  dim: INTERLOCKING.dark.ink2,
+  /** The edge value as text: 4.66:1 on raised iron, the dimmest passing tier. */
+  faint: INTERLOCKING.dark.edge,
+  onAccent: INTERLOCKING.dark.onEnamel,
 });
 
 /**
@@ -323,9 +489,9 @@ export const INERT = Object.freeze({
   /** Inert label on any chrome surface. */
   text: TEXT.faint,
   /** Inert label on the accent fill: a primary button, a pressed assistant mode. */
-  onAccent: "#0A2A34",
+  onAccent: INTERLOCKING.light.ink2,
   /** The rail glyph inside an inert mode. Decorative and `aria-hidden`, so not text. */
-  glyph: LINE.hover,
+  glyph: LINE.strong,
 });
 
 /**
@@ -377,6 +543,13 @@ export const DEVIATIONS = Object.freeze([
     shipped: "fluid layout with four window tiers",
     reason:
       "a scaled mockup canvas is not a windowing strategy; see WINDOW_TIERS",
+  }),
+  Object.freeze({
+    id: "v6-interlocking",
+    archive: "Cinematic Pro graphite #0A0F1A–#182236 + the v5 cyan accent (retired)",
+    shipped: "Interlocking signal-box iron #182320/#1E2B28/#263632, enamel #F1EEE4 on #1A2623, lever paints with on-ink",
+    reason:
+      "docs/redesign-v6/DIRECTION.md replaces the v5 visual world (v5 is the anti-reference); values mirrored from site-kit SIGNAL_COLORS without importing it",
   }),
   Object.freeze({
     id: "desktop-first-cinematic-pro",
@@ -491,10 +664,10 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
     value: TEXT.faint,
     deviation: "text-contrast-3F464F",
   }),
-  Object.freeze({ token: "--accent", disposition: "semantic", local: "ACCENT.base", value: ACCENT.base, reason: "cyan life-signal replaces Foundations orange on desktop" }),
-  Object.freeze({ token: "--accent-hi", disposition: "semantic", local: "ACCENT.hover", value: ACCENT.hover, reason: "cyan hover tint" }),
+  Object.freeze({ token: "--accent", disposition: "semantic", local: "ACCENT.base", value: ACCENT.base, reason: "v6 enamel primary fill, shared with the sites" }),
+  Object.freeze({ token: "--accent-hi", disposition: "semantic", local: "ACCENT.hover", value: ACCENT.hover, reason: "v6 enamel-hi hover fill" }),
   Object.freeze({ token: "--ok", disposition: "semantic", local: "SIGNAL.ok", value: SIGNAL.ok, reason: "mint ready mark" }),
-  Object.freeze({ token: "--danger", disposition: "carried", local: "SIGNAL.refuse", value: SIGNAL.refuse }),
+  Object.freeze({ token: "--danger", disposition: "semantic", local: "SIGNAL.refuse", value: SIGNAL.refuse, reason: "v6 refusal lamp text; the stop-red paint is SIGNAL.refusePaint with its own on-ink" }),
   Object.freeze({ token: "--info", disposition: "carried", local: "SIGNAL.info", value: SIGNAL.info }),
   Object.freeze({
     token: "--stale",

@@ -1,36 +1,13 @@
 /*
  * SceneAxi Forge — the game-asset storefront.
  *
- * The Asset Storefronts screen in the accepted SceneAxi Design System archive holds both
- * catalogs in one file and flips between them at runtime. ADR 0018 makes each storefront
- * its own install root and its own deployed origin, so what the design calls a store
- * switch ships here as two sites that share one skeleton and differ only in the block
- * marked STORE IDENTITY below. Everything after that block is byte-identical to
+ * ADR 0018: each storefront is its own install root and origin. The two sheets differ only
+ * in the STORE IDENTITY block below; everything after it is byte-identical to
  * `sites/catalog-web/src/app/globals.css`, and a gate test keeps it that way.
  *
- * Two deliberate departures from the archive, both recorded in the visual gap matrix as
- * defects in the design rather than in the code:
- *
- *   Q-01  The mockup has no responsive behaviour at all — a real-browser probe measured
- *         scrollWidth 984 against innerWidth 390. Every fixed grid below is therefore
- *         declared single-column first and widened at a breakpoint, and `body` carries no
- *         `overflow-x: hidden`, so an overflow would show up in a probe instead of being
- *         masked by it.
- *   Q-03  The archive's micro type is 8.5px mono in `--fg-4` on `--bg-panel`, which
- *         measures about 2.1:1. `--fg-4` is not used for text anywhere here, and no rule
- *         below sets text smaller than `--micro`, 11px. The gate reads the shipped
- *         `font-size` declarations for that floor and computes the contrast of every text
- *         pairing in `tests/sites/catalog-storefronts.test.ts`.
- *
- * The palette is dark only, as the archive is. There is no light variant anywhere in the
- * accepted source, and inventing one would be designing rather than implementing.
- *
- * This sheet declares no Foundations v2 token. The palette, the type scale, the radii,
- * the surfaces, the motion timings and the status vocabulary are emitted by
- * `@sceneaxi/site-kit` and served by `layout.tsx` (`src/lib/foundations.ts`), which is the
- * single home the captain's D2 decision gives the shared token layer. What remains below
- * is what this storefront itself owns: the per-store derivations marked STORE IDENTITY,
- * the layout measures its own `:root` block declares, and its own components.
+ * Single-column first, widened at breakpoints; no `overflow-x: hidden` on `body`, so an
+ * overflow shows in a probe. Text floor 13px (RULINGS), dark only. The shared token layer
+ * comes from `@sceneaxi/site-kit` via `layout.tsx`; this sheet owns its layout and components.
  */
 
 /* --- STORE IDENTITY — the only block that differs between the two storefronts --- */
@@ -68,11 +45,7 @@
 :root {
   color-scheme: dark;
 
-  /*
-   * The resolved font stacks. `--font-ui` and `--font-mono` are site-kit's tokens and name
-   * Archivo and JetBrains Mono; `--site-font-*` are the self-hosted faces `layout.tsx`
-   * loads through `next/font`, since a package must not inject a network font.
-   */
+  /* The resolved font stacks. */
   --store-ui: var(--site-font-ui), var(--font-ui);
   --store-mono: var(--site-font-mono), var(--font-mono);
 
@@ -84,11 +57,7 @@
   /* The vertical rhythm of a page band: 44px on a phone and a tablet, 72px on a desktop. */
   --section-pad: var(--space-11);
 
-  /*
-   * How far below the sticky masthead a sticky column pins and a fragment target lands.
-   * Below 36rem the masthead is two rows (the storemark over one scrolling nav line), so
-   * the two-row value is the default and the one-row value below is the widened exception.
-   */
+  /* How far below the sticky masthead a sticky column pins and a fragment target lands. */
   --sticky-top: 8rem;
 }
 
@@ -107,18 +76,10 @@
 
 /* --- base --- */
 
-/*
- * The reset, the canvas and the link colour come from site-kit's `foundationsBaseCss()`;
- * the motion tokens and the shared keyframes (`sx-*`) from `foundationsMotionCss()`, which
- * `layout.tsx` serves beside it (DV-P1). Only what those sheets do not state is here.
- * Transitions read the D-4 pair (`--motion-fast` for paint, opacity and clip-path,
- * `--motion-base` for transforms, both on `--ease-standard`, DV-P2); keyframe animations
- * read the §6.1 tokens.
- */
+/* Reset, canvas, link colour, motion tokens and `sx-*` keyframes come from site-kit (DV-P1); transitions use --motion-fast / --motion-base on --ease-standard (DV-P2). */
 
 * {
-  /* Grid and flex children default to `min-width: auto`, which is how a long digest or a
-   * mono label pushes a track wider than its container and overflows the page. */
+  /* Grid and flex children default to `min-width: auto`, which is how a long digest or a mono label pushes a track wider than its container and overflows the page. */
   min-width: 0;
 }
 
@@ -130,15 +91,9 @@ html {
   scrollbar-color: var(--line-strong) var(--bg-base);
 }
 
-/*
- * `html body` rather than `body`: site-kit's sheet also sets the body family, and one
- * extra element wins by specificity whichever sheet the framework emits first. Body copy
- * is the 16px Body role (DV-F2). No `overflow-x: hidden`: an overflow must show up in a
- * probe, not be masked.
- */
+/* `html body` rather than `body`: site-kit's sheet also sets the body family, and one extra element wins by specificity whichever sheet the framework emits first. */
 html body {
   font-family: var(--store-ui);
-  font-size: 1rem;
   line-height: 1.6;
   min-height: 100dvh;
   display: flex;
@@ -154,12 +109,7 @@ html ::selection {
   color: var(--fg);
 }
 
-/*
- * Site-kit answers link hover with `--accent-hi`, which equals the accent on a storefront
- * (D-3). A plain link is set in the text colour with an underline that brightens on hover,
- * so colour is never the only cue. Every link that is really a card, tab or button sets
- * its own states below with a class selector.
- */
+/* Plain links: text colour plus an underline that brightens on hover, so colour is never the only cue (D-3). */
 html body a {
   color: var(--fg);
   text-decoration-line: underline;
@@ -173,14 +123,13 @@ html body a:hover {
   text-decoration-color: currentColor;
 }
 
-/* Prose links: the underline thickens on hover and a 12% layer of their own ink shows
- * while pressed; prose links never move. */
-:is(.prose, .note, .state, .results-empty, .rail-note, .footer-col, .footer-note, .crumbs) a:hover,
+/* Prose links: the underline thickens on hover and a 12% layer of their own ink shows while pressed; prose links never move. */
+:is(.prose, .note, .state, .results-empty, .rail-note, .footer-col, .footer-note) a:hover,
 .catalog-controls > a:hover {
   text-decoration-thickness: 2px;
 }
 
-:is(.prose, .note, .state, .results-empty, .rail-note, .footer-col, .footer-note, .crumbs) a:active,
+:is(.prose, .note, .state, .results-empty, .rail-note, .footer-col, .footer-note) a:active,
 .catalog-controls > a:active {
   background-color: color-mix(in srgb, currentColor 12%, transparent);
   border-radius: var(--radius-xs);
@@ -214,9 +163,7 @@ svg {
   max-width: 100%;
 }
 
-code,
-kbd,
-pre {
+code {
   font-family: var(--store-mono);
 }
 
@@ -265,13 +212,11 @@ pre {
   max-width: var(--shell);
   margin: 0 auto;
   padding: 0 var(--gutter);
-  width: 100%;
 }
 
 .skip-link {
   position: absolute;
   left: -9999px;
-  top: 0;
   z-index: 100;
   background: var(--accent);
   color: var(--bg-base);
@@ -300,21 +245,14 @@ html body .skip-link:focus:active {
   position: absolute;
   width: 1px;
   height: 1px;
-  padding: 0;
   margin: -1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-  border: 0;
 }
 
-/*
- * A text glyph: `→` for an action, `↗` for a link that leaves this origin, `›` between
- * crumbs. Always `aria-hidden` in markup, so a glyph repeats what the words say. The one
- * that moves is the action arrow, 3px to the right on hover (DV-P3).
- */
+/* A text glyph: `→` for an action, `↗` for a link that leaves this origin, `›` between crumbs. */
 .glyph {
-  font-style: normal;
   line-height: 1;
 }
 
@@ -323,17 +261,14 @@ html body .skip-link:focus:active {
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
-/* --- family bar: three ordinary cross-origin links, the current one marked --- */
+/* --- family bar: the three surfaces named, the current one marked; no links (the links sit in the footer and the ≤860px Menu, release fix round 2) --- */
 
 .family {
   background: #0a0c0e;
   border-bottom: 1px solid var(--line-soft);
 }
 
-/*
- * One row at every width. On a phone it scrolls inside itself rather than wrapping, and
- * the domain line, which nobody navigates by, waits for 48rem.
- */
+/* One row at every width. */
 .family-inner {
   display: flex;
   align-items: center;
@@ -360,8 +295,7 @@ html body .skip-link:focus:active {
   color: var(--fg-2);
 }
 
-/* The SceneAxi family mark, in the neutral text colour: the bar belongs to the family,
- * so the store accent stays on the storemark below it. */
+/* The SceneAxi family mark, in the neutral text colour: the bar belongs to the family, so the store accent stays on the storemark below it. */
 .family-glyph {
   width: 14px;
   height: 14px;
@@ -380,11 +314,8 @@ html body .skip-link:focus:active {
   transform: rotate(45deg);
 }
 
-.family nav {
-  flex: none;
-}
-
 .family-list {
+  flex: none;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -393,11 +324,7 @@ html body .skip-link:focus:active {
   padding: 0;
 }
 
-/*
- * The selection indicator is a 2px line under the entry. On the current store it is the
- * store accent and draws once on arrival; on a linked sibling a neutral line draws in
- * from the left on hover (clip-path) and retracts when the pointer leaves.
- */
+/* The selection indicator is a 2px line under the entry. */
 .family-item {
   position: relative;
   display: inline-flex;
@@ -423,28 +350,6 @@ html body .skip-link:focus:active {
   transition: clip-path var(--motion-fast) var(--ease-standard);
 }
 
-html body a.family-item {
-  color: var(--fg-2);
-  text-decoration: none;
-}
-
-html body a.family-item:hover {
-  color: var(--fg);
-}
-
-html body a.family-item:active {
-  background-color: color-mix(in srgb, currentColor 12%, transparent);
-  border-radius: var(--radius-xs);
-}
-
-a.family-item:hover::after {
-  clip-path: inset(0);
-}
-
-a.family-item:active::after {
-  background: var(--fg-2);
-}
-
 .family-item.is-current {
   color: var(--fg);
   font-weight: 600;
@@ -452,7 +357,6 @@ a.family-item:active::after {
 
 .family-item.is-current::after {
   background: var(--accent);
-  clip-path: inset(0);
 }
 
 .family-dot {
@@ -462,16 +366,12 @@ a.family-item:active::after {
   flex: none;
 }
 
-.family-out {
-  color: var(--fg-2);
-}
-
 .family-domain {
   display: none;
   flex: none;
   margin-left: auto;
   font-family: var(--store-mono);
-  font-size: var(--micro);
+  font-size: 0.8125rem;
   letter-spacing: 0.02em;
   color: var(--fg-2);
   white-space: nowrap;
@@ -508,10 +408,7 @@ a.family-item:active::after {
   }
 }
 
-/*
- * A phone gets two rows, the storemark and then one scrolling nav line of 44px targets.
- * From 36rem both share one row.
- */
+/* A phone gets two rows, the storemark and then one scrolling nav line of 44px targets. */
 .masthead-inner {
   display: flex;
   flex-wrap: wrap;
@@ -520,11 +417,7 @@ a.family-item:active::after {
   padding-top: var(--space-1);
 }
 
-/*
- * The storemark: `--fg` is restated on hover because site-kit ships
- * `a:hover { color: var(--accent-hi) }`. Hover and press are a state layer of its own ink
- * (paint only, DV-P3); the mark never moves.
- */
+/* The storemark: `--fg` is restated on hover because site-kit ships `a:hover { color: var(--accent-hi) }`. */
 html body .storemark {
   display: inline-flex;
   align-items: center;
@@ -533,7 +426,6 @@ html body .storemark {
   margin-inline: calc(-1 * var(--space-2));
   padding-inline: var(--space-2);
   border-radius: var(--radius-md);
-  color: var(--fg);
   text-decoration: none;
 }
 
@@ -546,10 +438,7 @@ html body .storemark:active {
   background-color: color-mix(in srgb, currentColor 12%, transparent);
 }
 
-/*
- * The store mark is a shape, not a colour: the tile and its knock-out both take the
- * store's `--mark-radius`, a square on the game store and a circle on the web store.
- */
+/* The store mark is a shape, not a colour: the tile and its knock-out both take the store's `--mark-radius`, a square on the game store and a circle on the web store. */
 .storemark-glyph {
   width: 28px;
   height: 28px;
@@ -575,7 +464,6 @@ html body .storemark:active {
 }
 
 .storename {
-  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1.1;
@@ -583,7 +471,7 @@ html body .storemark:active {
 
 .storetag {
   font-family: var(--store-mono);
-  font-size: var(--micro);
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.2;
@@ -593,9 +481,7 @@ html body .storemark:active {
 .nav {
   flex: 1 0 calc(100% + var(--space-6));
   display: flex;
-  align-items: center;
   gap: var(--space-1);
-  margin-inline: calc(-1 * var(--space-3));
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -604,12 +490,7 @@ html body .storemark:active {
   display: none;
 }
 
-/*
- * Nav items, as on the umbrella: a hovered link draws a quiet 2px indicator open from
- * its centre, press adds a state layer of its own ink, and the item `aria-current`
- * names carries the accent indicator. Every nav link is a full page navigation, so the
- * current indicator renders in place (row 17).
- */
+/* Nav items, as on the umbrella: hover draws a 2px indicator from the centre, press adds a 12% ink layer, `aria-current` carries the accent indicator (row 17). */
 html body .nav a {
   position: relative;
   isolation: isolate;
@@ -673,6 +554,102 @@ html body .nav a[aria-current="page"] {
   clip-path: inset(0);
 }
 
+/* The umbrella's no-script Menu (RULINGS, release fix 2), folded at ≤860px only. */
+.menu {
+  display: flex;
+  margin-left: auto;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--fg-2);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.menu-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.menu-toggle::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.menu[open] > .menu-toggle::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.menu-toggle:hover {
+  border-color: var(--fg);
+}
+
+.menu-toggle:active {
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* Narrow first: the open Menu drops a full-width panel under the masthead. */
+.menu .nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  padding: var(--space-2) var(--gutter) var(--space-4);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* From 861px the links sit in the masthead row, as before the Menu existed. */
+@media (min-width: 861px) {
+  .menu .nav {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    margin-inline: 0 calc(-1 * var(--space-3));
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+}
+
+@supports selector(::details-content) {
+  @media (min-width: 861px) {
+    .menu-toggle {
+      display: none;
+    }
+
+    .menu::details-content {
+      display: contents;
+      content-visibility: visible;
+    }
+  }
+}
+
+/* The family links ride in the Menu panel at ≤860px only; wider, the footer carries them so the masthead stays storemark, Catalogue, publish (release fix round 2). */
+html body .nav a:not(.nav-family) + .nav-family {
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 861px) {
+  html body .nav .nav-family {
+    display: none;
+  }
+}
+
 /* --- type: Foundations roles at the site sizes of DIRECTION §3 (rem literals, DV-F10) --- */
 
 h1,
@@ -687,22 +664,17 @@ h1 {
   font-size: clamp(1.875rem, 1.4rem + 1.9vw, 2.625rem);
   line-height: 1.08;
   letter-spacing: -0.025em;
-  font-weight: 700;
 }
 
 /* Heading: section H2s, which sit in the results column on the home route too. */
 h2 {
-  font-size: 1.5rem;
   line-height: 1.2;
   letter-spacing: -0.015em;
-  font-weight: 700;
 }
 
 /* Subhead. */
 h3 {
-  font-size: 1.0625rem;
   line-height: 1.35;
-  font-weight: 600;
 }
 
 p {
@@ -719,8 +691,6 @@ p {
 }
 
 .prose {
-  font-size: 1rem;
-  line-height: 1.6;
   color: var(--fg-2);
   max-width: 68ch;
   text-wrap: pretty;
@@ -739,10 +709,7 @@ p {
   text-wrap: pretty;
 }
 
-/*
- * Evidence read out of a contract: a rounding rule, a caption. A whole sentence reads in
- * the UI face; mono is kept for codes (`code.reason`).
- */
+/* Evidence read out of a contract: a rounding rule, a caption. */
 .mono-note,
 .reason {
   font-size: 0.8125rem;
@@ -754,8 +721,6 @@ p {
 }
 
 code.reason {
-  font-family: var(--store-mono);
-  font-size: 0.75rem;
   letter-spacing: 0.02em;
 }
 
@@ -777,7 +742,6 @@ code.reason {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  width: fit-content;
   min-height: 24px;
   padding: 0 var(--space-2);
   border: 1px solid var(--line);
@@ -785,20 +749,11 @@ code.reason {
   background: color-mix(in srgb, var(--bg-base) 78%, transparent);
   color: var(--fg-2);
   font-family: var(--store-mono);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.4;
   letter-spacing: 0.08em;
-  text-transform: none;
   overflow-wrap: anywhere;
-}
-
-.chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: var(--radius-full);
-  background: currentColor;
-  flex: none;
 }
 
 /* `TEST` is the one pending chip, so it is the one that carries the accent. */
@@ -808,53 +763,29 @@ code.reason {
   background: var(--accent-bg);
 }
 
-.chip-ok,
-.chip-validated {
+.chip-ok {
   color: var(--ok);
   border-color: var(--status-validated-line);
   background: var(--status-validated-bg);
-}
-
-.chip-needs-review {
-  color: var(--status-needs-review-fg);
-  border-color: var(--status-needs-review-line);
-  background: var(--status-needs-review-bg);
-}
-
-.chip-refused {
-  color: var(--danger);
-  border-color: var(--status-refused-line);
-  background: var(--status-refused-bg);
-}
-
-.chip-dormant {
-  color: var(--fg-2);
-  border-color: var(--status-dormant-line);
-  background: var(--status-dormant-bg);
 }
 
 /* A plain-language label in the UI role, for words that are not a machine status. */
 .tag {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
   min-height: 24px;
   padding: 0 var(--space-2);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   color: var(--fg-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.4;
 }
 
 /* --- buttons: five states each (DIRECTION §5) --- */
 
-/*
- * 44px on phones, the 38px chrome size from 48rem; `.button-xl` is the 46px marketing
- * size. Hover is an 8% state layer of the label's own ink; press deepens it (10% on an
- * accent fill so Forge red keeps 4.5:1, 12% on a quiet button) and never scales (DV-P3).
- */
+/* 44px on phones, the 38px chrome size from 48rem; `.button-xl` is the 46px marketing size. */
 html body .button {
   position: relative;
   isolation: isolate;
@@ -881,10 +812,6 @@ html body .button-xl {
   min-height: 2.875rem;
   padding: 0 var(--space-6);
   font-size: 0.9375rem;
-}
-
-html body .button-block {
-  width: 100%;
 }
 
 /* State layer: the control's own ink over its resting fill (DIRECTION §2.3). */
@@ -963,10 +890,7 @@ html body .button:disabled {
   display: none;
 }
 
-/*
- * Loading (`aria-busy`): the label stays; a 2px bar crosses the bottom edge once per loop
- * after the loading delay, so a fast response never flashes it (ruling R-1, row 5).
- */
+/* Loading (`aria-busy`): the label stays; a 2px bar crosses the bottom edge once per loop after the loading delay, so a fast response never flashes it (ruling R-1, row 5). */
 .button[aria-busy="true"] {
   pointer-events: none;
   cursor: progress;
@@ -994,11 +918,7 @@ html body .button:disabled {
 
 /* --- fields: the browse GET form --- */
 
-/*
- * The GET controls keep their contracts; labels sit above their fields.
- * SAFETY: only presentation changes; no control is hidden or visually reordered. The two
- * price/sort fields regroup on wider screens rather than shrink.
- */
+/* The GET controls keep their contracts; labels sit above their fields. */
 .catalog-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1041,15 +961,9 @@ html body .button:disabled {
 #catalog-price { grid-area: price; }
 #catalog-sort { grid-area: sort; }
 
-/*
- * Field states: rest line at `--fg-2` (3:1 against the field, as a control boundary
- * needs); hover brightens it; focus adds the ring and the accent line; an invalid value
- * paints the refusal red. A field never waits and is never disabled here: the submit
- * button carries `aria-busy` while the next page loads.
- */
+/* Fields: rest line --fg-2 (3:1 boundary), hover brightens, focus adds ring + accent line, invalid paints refusal red. */
 .catalog-controls input,
 .catalog-controls select {
-  width: 100%;
   min-height: 2.75rem;
   padding: 0 var(--space-3);
   border: 1px solid var(--fg-2);
@@ -1098,7 +1012,6 @@ html body .button:disabled {
 
 .hero-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-11);
   align-items: start;
   padding-top: var(--space-11);
@@ -1126,20 +1039,16 @@ html body .button:disabled {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
 }
 
-/* On a phone the primary action takes the full width and the quiet one keeps its own,
- * so the two never read as equals. */
+/* On a phone the primary action takes the full width and the quiet one keeps its own, so the two never read as equals. */
 .hero-actions .button:first-child {
   flex: 1 0 100%;
 }
 
-/* The TEST notice sits under the actions as a compact panel (R-8 density). */
+/* The TEST notice sits under the actions; its compact density is set on the panel itself. */
 .hero-copy > .state {
   max-width: 40rem;
-  padding: var(--space-4);
-  gap: var(--space-3);
 }
 
 .hero-plate {
@@ -1147,10 +1056,7 @@ html body .button:disabled {
   flex-direction: column;
 }
 
-/*
- * The shelf: the first record leads at full width, the rest sit under it at a smaller
- * size, so the hero has one focal record rather than a grid of equals.
- */
+/* The shelf: the first record leads at full width, the rest sit under it at a smaller size, so the hero has one focal record rather than a grid of equals. */
 .hero-plates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr));
@@ -1210,20 +1116,14 @@ html body .button:disabled {
   font-family: var(--store-mono);
   font-size: 0.8125rem;
   line-height: 1.4;
-  color: var(--fg);
   overflow-wrap: anywhere;
 }
 
 /* --- record plates: the card, lead and detail figure --- */
 
-/*
- * Everything drawn on a plate is either a pure function of the validated listing record's
- * own digest (the mark) or a real fact printed on it (the chips, the legend). Nothing
- * depicts an asset, which is why the plate carries a legend that names what it is.
- */
+/* Everything drawn on a plate is either a pure function of the validated listing record's own digest (the mark) or a real fact printed on it (the chips, the legend). */
 .plate {
   position: relative;
-  display: block;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   isolation: isolate;
@@ -1259,10 +1159,7 @@ html body .button:disabled {
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
-/*
- * The mark itself. Its greys come from the digest; the store accent is mixed in at 20%,
- * the most D-5 lets a record mark take, as identity rather than meaning.
- */
+/* The mark itself. */
 .plate-mark {
   position: absolute;
   left: 50%;
@@ -1315,7 +1212,7 @@ html body .button:disabled {
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-base) 82%, transparent);
   font-family: var(--store-mono);
-  font-size: var(--micro);
+  font-size: 0.8125rem;
   letter-spacing: 0.04em;
   line-height: 1;
   white-space: nowrap;
@@ -1338,11 +1235,7 @@ html body .button:disabled {
   bottom: var(--space-3);
 }
 
-/*
- * The shelf's smaller lead plates (two-up under the first) are too narrow for the label and
- * the digest on one line: they show the digest alone, like the card digest chip. The label
- * stays in the accessible text and the full digest in the title, so nothing is clipped.
- */
+/* The shelf's smaller lead plates (two-up under the first) are too narrow for the label and the digest on one line: they show the digest alone, like the card digest chip. */
 .plate-lead {
   container-type: inline-size;
 }
@@ -1378,7 +1271,6 @@ html body .button:disabled {
 .plate-stats .plate-legend,
 .plate-stat {
   position: static;
-  font-size: 0.75rem;
 }
 
 .plate-empty {
@@ -1389,19 +1281,14 @@ html body .button:disabled {
   padding: var(--space-4);
   text-align: center;
   font-family: var(--store-mono);
-  font-size: var(--micro);
+  font-size: 0.8125rem;
   letter-spacing: 0.08em;
   color: var(--fg-2);
 }
 
 /* --- listing tiles: unboxed; the framed media is the tile --- */
 
-/*
- * One listing-tile vocabulary for the hero lead plates, the grid cards and the publish
- * slot (DIRECTION §5): hover zooms the media 1.5% inside its clip, lays an 8% layer on it,
- * moves the frame to the store line and underlines the title; press deepens the layer to
- * 12%; focus-visible is the ring on the link. Nothing lifts or scales the tile (DV-P3).
- */
+/* One listing-tile vocabulary (DIRECTION §5): hover zooms media 1.5% in its clip with an 8% layer, store line and title underline; press 12%; focus is the ring (DV-P3). */
 html body .lead,
 html body .card-link,
 html body .slot-link {
@@ -1410,7 +1297,6 @@ html body .slot-link {
   gap: var(--space-3);
   flex: 1;
   border-radius: var(--radius-lg);
-  color: var(--fg);
   text-decoration: none;
 }
 
@@ -1483,7 +1369,7 @@ html body :is(.lead, .card-link, .slot-link):hover {
 
 .tile-meta {
   font-family: var(--store-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--fg-2);
 }
@@ -1502,12 +1388,11 @@ html body :is(.lead, .card-link, .slot-link):hover {
   font-family: var(--store-mono);
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--fg);
 }
 
 .price-unit,
 .price-or {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--fg-2);
 }
 
@@ -1517,26 +1402,20 @@ html body :is(.lead, .card-link, .slot-link):hover {
 
 .price-alt {
   font-family: var(--store-mono);
-  font-size: 0.75rem;
-  color: var(--fg);
+  font-size: 0.8125rem;
 }
 
 /* --- browse --- */
 
 .browse {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   align-items: start;
   padding-top: var(--space-8);
   padding-bottom: var(--section-pad);
 }
 
-/*
- * The rail is a tally of what the page holds, not a filter: no checkbox, no fill, no
- * pointer. On a phone it is one row that scrolls inside itself and is focusable, so the
- * listings arrive within a screen and a half.
- */
+/* The rail is a tally of what the page holds, not a filter: no checkbox, no fill, no pointer. */
 .rail {
   display: flex;
   gap: var(--space-3);
@@ -1575,7 +1454,6 @@ html body :is(.lead, .card-link, .slot-link):hover {
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: 0;
-  color: var(--fg);
 }
 
 .rail-intro {
@@ -1590,7 +1468,6 @@ html body :is(.lead, .card-link, .slot-link):hover {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0;
-  color: var(--fg);
 }
 
 .rail-list {
@@ -1619,7 +1496,6 @@ html body :is(.lead, .card-link, .slot-link):hover {
 
 .rail-count {
   font-family: var(--store-mono);
-  font-size: 0.75rem;
   color: var(--fg);
 }
 
@@ -1676,7 +1552,6 @@ html body :is(.lead, .card-link, .slot-link):hover {
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--fg);
 }
 
 .results-word {
@@ -1728,7 +1603,6 @@ html body :is(.lead, .card-link, .slot-link):hover {
 
 .grid-note {
   font-size: 0.875rem;
-  line-height: 1.6;
   color: var(--fg-2);
   max-width: var(--measure);
   text-wrap: pretty;
@@ -1744,7 +1618,6 @@ main > .state {
 
 .pricing {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
 
@@ -1773,16 +1646,9 @@ main > .state {
   font-weight: 600;
 }
 
-.worked-op {
-  color: var(--fg-2);
-}
-
 /* --- listing cards --- */
 
-/*
- * The shelf. Cells keep the store's own density (DEC-10); the first listing leads at two
- * tracks once the shelf holds three listings and the slot, and the slot closes the shelf.
- */
+/* The shelf. */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
@@ -1811,15 +1677,11 @@ main > .state {
   overflow-wrap: anywhere;
 }
 
-/*
- * A dual price reads "40 credits or 4.00 USD", so it takes its own line under the title
- * rather than crushing the title into three words per line.
- */
+/* A dual price reads "40 credits or 4.00 USD", so it takes its own line under the title rather than crushing the title into three words per line. */
 .card-price {
   font-family: var(--store-mono);
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: var(--fg);
   overflow-wrap: anywhere;
 }
 
@@ -1881,13 +1743,9 @@ html body .card-compact .card-link {
   border-top: 0;
 }
 
-/*
- * The publish slot closes the shelf so no store shows an empty track. It holds no
- * listing: an empty dashed frame where a plate would sit, the route, and one Accent chip.
- */
+/* The publish slot closes the shelf so no store shows an empty track. */
 .slot-plate {
   position: relative;
-  display: block;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border-style: dashed;
@@ -1913,7 +1771,6 @@ html body .card-compact .card-link {
 }
 
 .slot-title {
-  display: block;
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -1944,23 +1801,13 @@ html body .card-compact .card-link {
 
 .crumbs {
   display: flex;
+  min-height: 2.75rem;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   font-size: 0.8125rem;
   line-height: 1.4;
   color: var(--fg-2);
-}
-
-html body .crumbs a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  color: var(--fg-2);
-}
-
-html body .crumbs a:hover {
-  color: var(--fg);
 }
 
 .crumbs [aria-current="page"] {
@@ -1970,7 +1817,6 @@ html body .crumbs a:hover {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-11);
   align-items: start;
 }
@@ -2027,7 +1873,7 @@ html body .crumbs a:hover {
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
   font-family: var(--store-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--fg);
   overflow-wrap: anywhere;
 }
@@ -2069,7 +1915,6 @@ html body .crumbs a:hover {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0;
-  color: var(--fg);
 }
 
 /* The refusals sit where a purchase button would be (DIRECTION §7.3). */
@@ -2078,6 +1923,36 @@ html body .crumbs a:hover {
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
+}
+
+/* Purchase history: an empty record, stated under the refusal it follows from. */
+.buy-history {
+  display: grid;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* v6 signal layer (A-rich, DIRECTION §2): acquiring is a COMMIT, so the detail page’s primary action takes the site-kit commit-yellow fill with its --commit-edge boundary, and the price block the visitor is inspecting carries the lunar INSPECT rule. */
+html body .button-commit {
+  border-color: var(--commit-edge);
+  background: var(--commit);
+  color: var(--on-commit);
+}
+
+html body .button-commit:hover {
+  background: var(--commit-hi);
+  color: var(--on-commit);
+}
+
+.button-commit:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.buy-block[data-inspect] {
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--lunar);
 }
 
 /* --- evidence definition lists: term in the UI role, machine value in mono --- */
@@ -2093,7 +1968,6 @@ html body .crumbs a:hover {
 .evidence-row,
 .notice-fact {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1) var(--space-4);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--line-soft);
@@ -2114,7 +1988,6 @@ html body .crumbs a:hover {
   font-family: var(--store-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--fg);
   overflow-wrap: anywhere;
 }
 
@@ -2122,106 +1995,71 @@ html body .crumbs a:hover {
   font-family: var(--store-ui);
 }
 
-.notice-facts code {
-  font-size: 0.75rem;
-}
-
-/* --- named state panels: 1px tone frame, status chip after the title (DV-F6) --- */
-
+/* --- named state panels: the site-kit interlock (DIRECTION §3) --- Frame and sizes come from `.sx-interlock` and the panel's `data-density`; the plate carries label + icon + paint. */
 .state {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
+  max-width: 100%;
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 621px) {
-  .state {
-    padding: var(--space-6);
-  }
-}
-
-/*
- * The head: title, status chip, then the reason code on its own line. The tone underline
- * is a 2px mark under the head that draws once (rows 10 and 13).
- */
-.state-head {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-3);
-  padding-bottom: var(--space-3);
-}
-
-.state-head::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 3rem;
-  height: 2px;
-  border-radius: var(--radius-xs);
-  background: var(--line-strong);
-}
-
-.state-head .reason {
-  flex-basis: 100%;
-}
-
+/* The base h2/h3 rules sit outside site-kit's layer, so they would beat the interlock's `--density-title`. */
 .state :is(h2, h3) {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: 0;
-  color: var(--fg);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.state p {
-  color: var(--fg-2);
+.state[data-density="compact"] :is(h2, h3) {
+  font-size: 1rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.state code.reason {
   font-size: 0.875rem;
-  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.state[data-density="compact"] code.reason {
+  font-size: 0.8125rem;
+}
+
+.state[data-state="refused"] code.reason {
+  color: var(--refused-lamp);
+}
+
+.state p:not(.sx-plate) {
+  color: var(--ink-2);
+  line-height: 1.55;
   max-width: var(--measure);
   text-wrap: pretty;
 }
 
+.state[data-state="refused"] p:not(.sx-plate) {
+  color: var(--ink);
+}
+
 .state p code {
   font-size: 0.8125rem;
-  color: var(--fg);
+  color: var(--ink);
 }
 
-.state-deny {
-  border-color: var(--status-refused-line);
-  background: var(--status-refused-bg);
+.state .notice-facts {
+  border-top-color: var(--rule);
 }
 
-.state-deny .state-head::after {
-  background: var(--danger);
+.state .notice-fact {
+  border-bottom-color: var(--rule);
 }
 
-.state-warn {
-  border-color: var(--status-needs-review-line);
-  background: var(--status-needs-review-bg);
+.state .notice-facts dt {
+  color: var(--ink-2);
 }
 
-.state-warn .state-head::after {
-  background: var(--status-needs-review-fg);
+.state .notice-facts dd {
+  color: var(--ink);
 }
 
-.state-ok {
-  border-color: var(--status-validated-line);
-  background: var(--status-validated-bg);
-}
-
-.state-ok .state-head::after {
-  background: var(--ok);
-}
 
 /* --- document pages: 404, error and loading (Operate), publish (Persuade) --- */
 
@@ -2259,12 +2097,10 @@ html body .crumbs a:hover {
 .page-state .page-head::after {
   content: "";
   position: absolute;
-  left: 0;
   bottom: 0;
   width: 3rem;
   height: 2px;
   border-radius: var(--radius-xs);
-  background: var(--line-strong);
 }
 
 .page-state .tone-refused::after {
@@ -2299,7 +2135,6 @@ html body .crumbs a:hover {
 /* Publish: the head and the earnings example, then the requirements and the proof. */
 .publish-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-11);
   align-items: start;
   padding-top: var(--space-11);
@@ -2336,9 +2171,6 @@ html body .crumbs a:hover {
   flex-direction: column;
   gap: var(--space-3);
   max-width: 64ch;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--fg);
 }
 
 .steps li {
@@ -2351,11 +2183,7 @@ html body .crumbs a:hover {
   color: var(--fg-2);
 }
 
-/*
- * The TEST pipeline proof: the stored transitions as an ordered list of rows (the list
- * itself carries the order), each with its state, its status chip, the stored reason and
- * the time it was recorded.
- */
+/* The TEST pipeline proof: the stored transitions as an ordered list of rows (the list itself carries the order), each with its state, its status chip, the stored reason and the time it was recorded. */
 .flow {
   list-style: none;
   margin: 0;
@@ -2377,9 +2205,6 @@ html body .crumbs a:hover {
 .flow-state {
   font-family: var(--store-mono);
   font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--fg);
 }
 
 .flow-note,
@@ -2396,7 +2221,7 @@ html body .crumbs a:hover {
 
 .flow-at {
   font-family: var(--store-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   letter-spacing: 0.02em;
   color: var(--fg-2);
@@ -2406,7 +2231,6 @@ html body .crumbs a:hover {
 /* The proof's record, as evidence: term in the UI role, machine value in mono. */
 .dl {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   column-gap: var(--space-4);
   margin: 0;
   border-top: 1px solid var(--line-soft);
@@ -2427,12 +2251,7 @@ html body .crumbs a:hover {
   font-family: var(--store-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--fg);
   overflow-wrap: anywhere;
-}
-
-.dl code {
-  font-size: 0.75rem;
 }
 
 /* --- loading: final-size blocks, visible at once; the indicators start after the delay --- */
@@ -2497,7 +2316,6 @@ html body .crumbs a:hover {
 
 .footer-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   align-items: start;
   padding-top: var(--space-11);
@@ -2564,7 +2382,6 @@ html body .crumbs a:hover {
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--fg);
 }
 
 .footer-col ul {
@@ -2685,17 +2502,9 @@ html body .footer-col a:hover {
   }
 }
 
-/*
- * --- responsive ---
- *
- * Every multi-column layout is declared single-column above and widened here. 30rem
- * regroups the form, 36rem puts the masthead on one row, the tablet breakpoint splits the
- * rail, the pricing and the record lists, and the desktop breakpoint adds the hero split,
- * the browse rail column, the sticky panels and the 72px band rhythm.
- */
+/* --- responsive: single-column above, widened here (30rem form, 36rem masthead row, 48rem rail/pricing/records, 64rem hero split, sticky panels, 72px bands) --- */
 
-/* At 390px the controls use the full-width base layout. Only regroup once
- * two readable selects fit; keyboard order remains search, price, sort, apply. */
+/* At 390px the controls use the full-width base layout. */
 @media (min-width: 30rem) {
   .catalog-controls {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2872,7 +2681,6 @@ html body .footer-col a:hover {
     min-height: 2rem;
   }
 
-  html body .crumbs a,
   .results-empty a {
     min-height: 0;
   }
@@ -2897,11 +2705,7 @@ html body .footer-col a:hover {
     padding-top: var(--space-11);
   }
 
-  /*
-   * Both columns pin below the masthead and are bounded by the space that leaves: a
-   * sticky box taller than its scrollport would hide its own tail. `tabindex` makes the
-   * inner scroll reachable from the keyboard.
-   */
+  /* Both columns pin below the masthead and are bounded by the space that leaves: a sticky box taller than its scrollport would hide its own tail. */
   .rail {
     display: flex;
     flex-direction: column;
@@ -2929,14 +2733,19 @@ html body .footer-col a:hover {
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   }
 
-  /*
-   * Source order is title-and-price first, which is the order a small screen and a
-   * screen reader want. Desktop puts that column back on the right.
-   */
-  .detail-side {
+  /* Source order is title-and-price first, which is the order a small screen and a screen reader want. */
+  .buy {
     order: 2;
     position: sticky;
     top: var(--sticky-top);
+    max-height: calc(100dvh - var(--sticky-top));
+  }
+
+  /* Title, price and the action hold the top of the column; the record scrolls under them. */
+  .detail-side {
+    position: sticky;
+    top: var(--sticky-top);
+    min-height: 0;
     max-height: calc(100dvh - var(--sticky-top));
     overflow-y: auto;
     padding-right: var(--space-2);
@@ -2946,17 +2755,13 @@ html body .footer-col a:hover {
     order: 1;
   }
 
-  /*
-   * Column flex children would shrink into the bound instead of overflowing it; holding
-   * them at content height turns the bound into a scroll rather than a crop.
-   */
+  /* Column flex children would shrink into the bound instead of overflowing it; holding them at content height turns the bound into a scroll rather than a crop. */
   .rail > *,
   .detail-side > * {
     flex-shrink: 0;
   }
 
-  /* The lead listing spans two tracks and sets its text beside the mark, once the shelf
-   * holds three listings and the slot. */
+  /* The lead listing spans two tracks and sets its text beside the mark, once the shelf holds three listings and the slot. */
   .results .cards > .card:first-child:nth-last-child(n + 4) {
     grid-column: span 2;
   }
@@ -2993,12 +2798,7 @@ html body .footer-col a:hover {
   }
 }
 
-/*
- * WCAG 2.3.3. The blanket rule comes first, as the storefront test pins it; site-kit's
- * motion sheet already zeroes every distance token, so hover and press keep their
- * opacity and colour feedback without movement, and the literal hover transforms are
- * withdrawn here.
- */
+/* WCAG 2.3.3. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -25,44 +25,62 @@ function assistantProfile(shell: HTMLElement): DesktopByoConfigurationRequest["p
       : "@sceneaxi/profile-game";
 }
 
+/*
+ * Operate dialect (docs/redesign-v6/DIRECTION.md §5). Every value is a chrome custom property that
+ * apps/desktop-shell emits from visual-tokens.ts (`styles()` + `uiKitStyles()`), so this surface
+ * mirrors the desktop tokens at runtime and carries no colour literal. Density follows the shell's
+ * `data-density` through `--ui-control` / `--ui-text` (comfortable 28px default, compact 24px; text
+ * never below the 13px floor). The pending plate is the shared `sx-plate--pending` class, which
+ * ships the yellow fill together with its boundary line; it is never painted here.
+ * Rule notes (kept out of the shipped CSS for the 1.3x byte budget): neutral state paint yields to
+ * the shared pending plate; buttons keep a 32px floor at both densities (pinned) while fields follow
+ * density; the primary is the enamel plate, not the yellow commit fill; disabled labels paint with
+ * --inert, never composite opacity; one stable status well serves configured and unavailable states
+ * without implying success. Motion: the surface enters by keyframe when [hidden] lifts and leaves at
+ * once (row 6); the chrome's live-line wipe settles state/message text (row 10); a request in flight
+ * marks its button aria-busy, which draws the chrome's loading bar.
+ */
 function installStyles(): void {
   if (document.getElementById(STYLE_ID) !== null) return;
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-.desktop-byo-config{display:flex;flex:none;flex-direction:column;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--well);min-width:0}
+.desktop-byo-config{display:flex;flex:none;flex-direction:column;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--well);min-width:0;font:var(--ui-text,13px)/1.5 var(--sans)}
+.shell[data-density="compact"] .desktop-byo-config{gap:var(--space-1);padding:var(--space-2)}
 .desktop-byo-config[hidden]{display:none}
-.desktop-byo-config-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-2);min-width:0;flex-wrap:wrap}
-.desktop-byo-config-title{font-size:13px;font-weight:600;color:var(--text)}
-.desktop-byo-config-state{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere;text-align:right}
+.desktop-byo-config-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);min-width:0;flex-wrap:wrap}
+.desktop-byo-config-title{font-weight:600;color:var(--text)}
+.desktop-byo-config-state{display:inline-flex;align-items:center;gap:var(--space-1);padding:0 var(--space-2);min-height:22px;border:1px solid var(--line-control);border-radius:var(--r-control);font-weight:600;overflow-wrap:anywhere}
+.desktop-byo-config-state:not(.sx-plate--pending){background:var(--panel);color:var(--text-2)}
+.desktop-byo-config-state::before{content:"";flex:none;box-sizing:border-box;width:10px;height:0;border-top:2px solid currentColor}
+.desktop-byo-config-state[data-state="pending"]::before{height:10px;border:2px solid currentColor;border-radius:50%}
+.desktop-byo-config-state[data-state="verified"]{color:var(--ok)}
+.desktop-byo-config-state[data-state="verified"]::before{width:6px;height:10px;border:solid currentColor;border-width:0 2px 2px 0;rotate:45deg;translate:0 -1px}
+.desktop-byo-config-state[data-state="refused"]{color:var(--refuse)}
+.desktop-byo-config-state[data-state="refused"]::before{width:8px;height:8px;border:4px solid currentColor;rotate:45deg}
 .desktop-byo-config-field{display:flex;flex-direction:column;gap:var(--space-1);min-width:0}
-.desktop-byo-config-label{font-size:12px;color:var(--dim)}
-.desktop-byo-config select,.desktop-byo-config input{box-sizing:border-box;width:100%;min-width:0;height:36px;border:1px solid var(--line-control);border-radius:6px;background:var(--panel);color:var(--text);font:12px var(--sans);padding:0 var(--space-2)}
+.desktop-byo-config-label{color:var(--text-2)}
+.desktop-byo-config button{box-sizing:border-box;min-width:0;min-height:32px;padding:var(--space-1) var(--space-2);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--panel);color:var(--text);font:600 var(--ui-text,13px)/1.5 var(--sans);cursor:pointer}
+.desktop-byo-config select,.desktop-byo-config input{box-sizing:border-box;width:100%;min-width:0;height:max(var(--ui-control,28px),28px);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--panel);color:var(--text);font:inherit;padding:0 var(--space-2)}
 .desktop-byo-config input::placeholder{color:var(--dim)}
-.desktop-byo-config select:focus-visible,.desktop-byo-config input:focus-visible,.desktop-byo-config button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 4px var(--well);scroll-margin:var(--space-3)}
+.desktop-byo-config :focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 4px var(--well);scroll-margin:var(--space-3)}
 .desktop-byo-config :is(input,select):enabled:hover{border-color:var(--line-hover)}
 .desktop-byo-config :is(input,select):focus-visible{border-color:var(--accent)}
 .desktop-byo-config input:user-invalid{border-color:var(--refuse)}
-@media (forced-colors:active){.desktop-byo-config :focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}}
 .desktop-byo-config-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-2)}
-.desktop-byo-config button{min-width:0;min-height:32px;padding:var(--space-1) var(--space-2);border-radius:6px;border:1px solid var(--line-control);background:var(--panel);color:var(--text);font:600 12px var(--sans)}
-.desktop-byo-config button:not(:disabled):hover{border-color:var(--accent);background:var(--header)}
-.desktop-byo-config button[data-primary]{border-color:var(--accent);color:var(--accent)}
-/* Disabled labels keep AA contrast: paint with the inert token, never composite opacity. */
-.desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control);border-style:dashed}
-/* The same stable status well serves configured and unavailable states without implying success. */
-.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:12px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere;user-select:text}
+.desktop-byo-config button:not(:disabled):hover{border-color:var(--line-hover);background:var(--hover)}
+.desktop-byo-config button[data-primary]:not(:disabled){border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.desktop-byo-config button[data-primary]:not(:disabled):hover{border-color:var(--accent-hover);background:var(--accent-hover)}
+.desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);background:var(--panel);border-color:var(--line-control);border-style:dashed}
+.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);line-height:1.55;color:var(--text-2);overflow-wrap:anywhere;user-select:text}
 .desktop-byo-config-message:empty{display:none}
 .desktop-byo-config-message[role="alert"]{border-left-color:var(--refuse);color:var(--text)}
 .desktop-byo-config button:not(:disabled):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
 .desktop-byo-config button:not(:disabled):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
-/* Open: the surface enters by keyframe when its [hidden] lifts and leaves at once (row 6).
-   Validate: the chrome's live-line wipe settles the state and message text (row 10),
-   and a request in flight marks its button aria-busy, which draws the chrome's loading bar. */
+@media (forced-colors:active){.desktop-byo-config :focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}.desktop-byo-config button[data-primary]:not(:disabled){border:2px solid ButtonText}.desktop-byo-config-state{border-color:CanvasText}}
 @keyframes desktop-byo-config-in{from{opacity:0;translate:0 var(--motion-distance-sm,4px)}to{opacity:1;translate:0 0}}
 @media (prefers-reduced-motion: no-preference){.desktop-byo-config:not([hidden]){animation:desktop-byo-config-in var(--motion-duration-panel,280ms) var(--motion-ease-out-expo,cubic-bezier(0.16, 1, 0.3, 1)) backwards}}
-@media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}}
-@media (prefers-reduced-motion: reduce){.desktop-byo-config *{scroll-behavior:auto}}
+@media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}.desktop-byo-config *{scroll-behavior:auto}}
 `;
   document.head.append(style);
 }
@@ -100,7 +118,10 @@ export function installDesktopByoConfigurationSurface(
   const head = element("div", "desktop-byo-config-head");
   const title = element("strong", "desktop-byo-config-title");
   title.textContent = "OpenCode Flash key";
-  const state = element("span", "desktop-byo-config-state");
+  // The state label is a plate: label text plus a CSS glyph keyed by data-state (never colour alone).
+  // Checking is the only pending state, so it borrows the shared pending plate (fill + line).
+  const state = element("span", "desktop-byo-config-state sx-plate--pending");
+  state.dataset.state = "pending";
   state.textContent = "Checking…";
   head.append(title, state);
 
@@ -159,6 +180,12 @@ export function installDesktopByoConfigurationSurface(
     if (signal?.aborted) return;
     const view = desktopByoConfigurationView(response);
     state.textContent = view.state;
+    // Tone follows the response, never the label wording: a refusal or unready storage is refused,
+    // a removable (stored) key is verified, anything else (no key) is neutral.
+    state.dataset.state = !response.ok || !view.keyFieldEnabled
+      ? "refused"
+      : view.removeEnabled ? "verified" : "neutral";
+    state.className = "desktop-byo-config-state";
     message.textContent = view.message;
 
     if (view.saveLabel !== null) save.textContent = view.saveLabel;
@@ -277,6 +304,7 @@ export function installDesktopByoConfigurationSurface(
       keyInput.value = "";
 
       busy(save, true);
+
       try {
         await request({
           action: "save",

@@ -4,13 +4,13 @@ import type { FamilyEntry } from "../../lib/family-bar.js";
  * The SceneAxi family bar.
  *
  * The design's version is a runtime store switch inside one file. Here it is what ADR
- * 0018 allows it to be: three ordinary cross-origin links, one of which is the page you
- * are on. Entries whose origin this deployment has not configured render as text — a
- * storefront states the family it belongs to whether or not its siblings are deployed,
- * but it never emits a link it cannot resolve. A linked sibling leaves this origin, so it
- * carries the `↗` glyph.
+ * 0018 allows it to be: a statement of the family this storefront belongs to, with the
+ * page you are on marked. It holds no links. The cross-origin links live in the footer's
+ * SceneAxi column at every width and inside the masthead Menu at ≤860px, because a link
+ * here sat between the skip link and a listing's primary action and pushed that action
+ * to Tab stop 6 at 1440px (RULINGS, release fix round 2; the brief caps it at 5).
  *
- * `resolveFamilyBar` has no Kids key, so nothing here can point at Kids.
+ * `resolveFamilyBar` has no Kids key, so nothing here can name or point at Kids.
  */
 export function FamilyBar({
   entries,
@@ -26,45 +26,23 @@ export function FamilyBar({
           <span className="family-glyph" aria-hidden="true" />
           SceneAxi
         </span>
-        <nav aria-label="SceneAxi surfaces">
-          <ul className="family-list">
-            {entries.map((entry) => (
-              <li key={entry.key}>
-                {entry.current ? (
-                  <span className="family-item is-current" aria-current="page">
-                    <span
-                      className="family-dot"
-                      style={{ background: entry.dot }}
-                      aria-hidden="true"
-                    />
-                    {entry.label}
-                  </span>
-                ) : entry.href === null ? (
-                  <span className="family-item family-unlinked">
-                    <span
-                      className="family-dot"
-                      style={{ background: entry.dot }}
-                      aria-hidden="true"
-                    />
-                    {entry.label}
-                  </span>
-                ) : (
-                  <a className="family-item" href={entry.href}>
-                    <span
-                      className="family-dot"
-                      style={{ background: entry.dot }}
-                      aria-hidden="true"
-                    />
-                    {entry.label}
-                    <span className="glyph family-out" aria-hidden="true">
-                      ↗
-                    </span>
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <ul className="family-list" aria-label="SceneAxi surfaces">
+          {entries.map((entry) => (
+            <li key={entry.key}>
+              <span
+                className={entry.current ? "family-item is-current" : "family-item"}
+                {...(entry.current ? { "aria-current": "page" as const } : {})}
+              >
+                <span
+                  className="family-dot"
+                  style={{ background: entry.dot }}
+                  aria-hidden="true"
+                />
+                {entry.label}
+              </span>
+            </li>
+          ))}
+        </ul>
         {domain !== null && <span className="family-domain">{domain}</span>}
       </div>
     </div>

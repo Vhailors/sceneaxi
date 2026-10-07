@@ -1,96 +1,69 @@
 /*
- * SceneAxi umbrella: composition over the shared Foundations v2 token layer.
- *
- * This sheet holds no palette, no type token and no surface ladder. Every token it
- * reads is emitted by `@sceneaxi/site-kit` through `src/lib/foundations.ts`, motion
- * included (`--motion-*`, DV-F7), so nothing below declares a colour.
- *
- * Redesign 2026-10 (docs/redesign/DIRECTION.md v5). The world is kept, the scaffolding
- * goes: no eyebrows (state words are chips after their heading), no side rails (DV-F6),
- * no glass masthead (DV-F5), no ghost elevation, spacing on the 4px scale.
- *
- * Motion thesis: an instrument settling. Fast start, long exponential deceleration, no
- * overshoot. Each route type has its own entrance and nothing else moves on its own:
- *   Persuade (/, /engine, /pricing, /profiles): the head rises once (row 11).
- *   Experience (/, /open): the canvas opens its aperture inside the visible frame (row 15).
- *   Read (/docs*): static; only the rail indicator and control feedback move (row 12).
- *   Operate (/login, /account, /admin/ledger, /editor, 404, error): the state panel's
- *   tone underline draws once (row 13).
- * Defaults are the visible end state; every entrance is a one-shot keyframe inside
- * `prefers-reduced-motion: no-preference`, and site-kit zeroes every distance and
- * scale token under `reduce`, so state layers and colour still change but nothing moves.
- *
- * Cascade note: site-kit's sheet is inlined in `<head>` and this file arrives as a
- * framework-hoisted stylesheet. Element rules that must win regardless are written
- * `html body` / `html a`, which decides them by specificity rather than load order.
+ * SceneAxi umbrella on the v6 A-rich layer (docs/redesign-v6/DIRECTION.md, RULINGS.md).
+ * Every value is a site-kit token served by src/lib/foundations.ts; this sheet declares no colour.
+ * Planes: --panel field, --panel-band alternate band, --iron cast frame, --well/--bed recess,
+ * --plate raised plate. Ink: --ink / --ink-2; boundaries --hair (3:1), decoration --rule.
+ * Yellow (--commit / .sx-plate--pending) means COMMIT only; lunar marks INSPECT, UI/large only.
+ * Motion: one-shot entrances inside prefers-reduced-motion: no-preference; site-kit zeroes
+ * distance tokens under reduce. Element rules that must beat the inlined site-kit sheet are
+ * written `html body` / `html a` (specificity, not load order).
  */
 
-/* ==========================================================================
-   Base
-   ========================================================================== */
+/* Base */
+@font-face {
+  font-family: "Big Shoulders Display";
+  src: url("/fonts/big-shoulders-display.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson-next.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/fonts/atkinson-mono.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
 
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   color-scheme: dark;
-  scrollbar-color: var(--line-strong) var(--bg-base);
+  scrollbar-color: var(--hair) var(--panel);
 }
 
 html body {
-  margin: 0;
-  font-family: var(--sans);
+  font-family: var(--font-prose);
   font-size: 16px;
   line-height: 1.6;
-  background: var(--bg-base);
-  color: var(--fg);
-  caret-color: var(--accent);
+  background: var(--panel);
+  color: var(--ink);
+  caret-color: var(--enamel);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  /* Wide evidence tables scroll inside their own container, never the page. */
   overflow-x: hidden;
 }
 
 ::selection {
-  background: var(--status-needs-review-line);
-  color: var(--fg);
+  background: var(--lunar-deep);
+  color: var(--ink);
 }
-
-h1,
-h2,
-h3,
-p,
-dl,
-dd,
-ol,
-ul,
-figure {
-  margin: 0;
-}
-
-/*
- * Prose links inside body copy stay underlined: colour alone is not an accessible
- * affordance, and these sit inside sentences rather than in a nav or a button row.
- */
 main p a,
 main li a,
 main dd a,
 main td a {
-  color: var(--fg);
+  color: var(--ink);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-decoration-color: var(--fg-2);
+  text-decoration-color: var(--ink-2);
   text-underline-offset: 0.22em;
 }
-
-main p a:hover,
-main li a:hover,
-main dd a:hover,
-main td a:hover {
-  text-decoration-thickness: 2px;
-  text-decoration-color: var(--accent-hi);
-}
-
-/* Pressed: the state layer deepens to 12% of the link's own ink; prose links never move. */
 main p a:active,
 main li a:active,
 main dd a:active,
@@ -105,8 +78,6 @@ main th a:active {
 html a {
   color: inherit;
 }
-
-/* The ring appears instantly; it is never animated in (row 3). */
 html :focus-visible {
   outline: 2px solid var(--accent-hi);
   outline-offset: 2px;
@@ -117,12 +88,12 @@ code,
 kbd,
 pre,
 .mono {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
 }
 
 code {
-  font-size: 0.875em;
+  font-size: max(0.875em, var(--t-floor));
   overflow-wrap: anywhere;
 }
 
@@ -135,8 +106,6 @@ canvas {
 [id] {
   scroll-margin-top: calc(var(--masthead-h) + 24px);
 }
-
-/* Local one-shots. The shared ones (`sx-fade`, `sx-rise-*`, `sx-draw`) come from site-kit. */
 @keyframes sa-aperture {
   from {
     clip-path: inset(48% 0 48% 0 round 9px);
@@ -193,16 +162,10 @@ canvas {
   html {
     scroll-behavior: auto;
   }
-
-  /* Indeterminate indicators become a static 40% bar (R-1). */
   .loading-bar::after,
   .button[aria-busy="true"]::after {
-    animation: none;
     transform: none;
   }
-
-  /* Indicators jump instead of drawing (row 17), as the storefronts do. The `html`
-     prefix outranks the indicator rules, which come later in the sheet. */
   html .nav a::after,
   html .field::after,
   html .docs-rail a::before,
@@ -211,44 +174,38 @@ canvas {
   }
 }
 
-/* ==========================================================================
-   Shell: skip link, masthead, navigation
-   ========================================================================== */
+/* Shell: skip link, masthead, navigation */
 
 .skip-link {
   position: absolute;
   left: -9999px;
-  top: var(--space-2);
+  top: var(--sp-8);
   z-index: 100;
-  background: var(--accent);
-  color: var(--bg-base);
+  background: var(--enamel);
+  color: var(--panel);
   font-weight: 600;
   font-size: 0.875rem;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--sp-8) var(--sp-16);
   border-radius: var(--radius-md);
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
 .skip-link:focus {
-  left: var(--space-2);
-  color: var(--bg-base);
+  left: var(--sp-8);
+  color: var(--panel);
 }
-
-/* Once shown, it answers the pointer like a button: an 8% hover layer, a 12% press layer and the press scale. */
 .skip-link:focus:hover {
-  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--bg-base) 8%, transparent);
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--panel) 8%, transparent);
 }
 
 .skip-link:focus:active {
-  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--bg-base) 12%, transparent);
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--panel) 12%, transparent);
 }
-
-/* DV-F5: an opaque bench. Its hairline is a pseudo-element whose opacity follows the scroll. */
 .masthead {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--bg-base);
+  background: var(--panel);
 }
 
 .masthead::after {
@@ -258,7 +215,7 @@ canvas {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: var(--line);
+  background: var(--rule);
   pointer-events: none;
 }
 
@@ -279,25 +236,17 @@ canvas {
   padding: 0 var(--gutter);
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: var(--sp-24);
 }
 
 .wordmark {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   font-weight: 700;
-  font-size: 1rem;
   letter-spacing: -0.01em;
-  color: var(--fg);
-  text-decoration: none;
   flex: none;
-}
-
-/* site-kit's base `a:hover` recolours links; the wordmark keeps its own ink. */
-.wordmark:hover {
-  color: var(--fg);
 }
 
 .mark {
@@ -305,12 +254,9 @@ canvas {
   width: 18px;
   height: 18px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--accent);
+  border: 1.5px solid var(--enamel);
   flex: none;
   transition: transform var(--motion-base) var(--ease-standard);
-}
-
-.wordmark:active .mark {
 }
 
 .mark::before {
@@ -318,29 +264,17 @@ canvas {
   position: absolute;
   inset: 3px;
   border-radius: 1px;
-  background: var(--accent);
+  background: var(--enamel);
   transition: transform var(--motion-base) var(--ease-standard);
-}
-
-.mark-sm {
-  width: 14px;
-  height: 14px;
 }
 
 .mark-sm::before {
   inset: 2px;
 }
-
-/*
- * The primary nav. Every link carries a 2px indicator: the current page's is the
- * accent and draws open from its centre on arrival (row 17); a hovered link draws a
- * quiet one the same way, so the indicator always reads as the same instrument needle.
- */
 .nav {
   display: flex;
   align-items: stretch;
-  gap: var(--space-1);
-  min-width: 0;
+  gap: var(--sp-4);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -348,96 +282,100 @@ canvas {
 .nav::-webkit-scrollbar {
   display: none;
 }
+.menu {
+  display: flex;
+  margin-left: auto;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--ink-2);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.menu-toggle::-webkit-details-marker {
+  display: none;
+}
+.menu-toggle::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+
+.menu-toggle:hover {
+  border-color: var(--ink);
+}
+
+@supports selector(::details-content) {
+  @media (min-width: 861px) {
+    .menu-toggle {
+      display: none;
+    }
+
+    .menu::details-content {
+      display: contents;
+      content-visibility: visible;
+    }
+  }
+}
 
 .nav a {
   position: relative;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--sp-12);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: none;
   white-space: nowrap;
   border-radius: var(--radius-md);
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
-.nav a:active {
-  background-color: color-mix(in srgb, currentColor 12%, transparent);
-}
-
 .nav a::after {
   content: "";
   position: absolute;
-  left: var(--space-3);
-  right: var(--space-3);
+  left: var(--sp-12);
+  right: var(--sp-12);
   bottom: 6px;
   height: 2px;
   border-radius: 1px;
-  background: var(--line-strong);
+  background: var(--hair);
   clip-path: inset(0 50% 0 50%);
   transition: clip-path var(--motion-base) var(--ease-standard);
-}
-
-.nav a:hover {
-  color: var(--fg);
-}
-
-.nav a:hover::after {
-  clip-path: inset(0);
-}
-
-.nav a[aria-current="page"] {
-  color: var(--fg);
-}
-
-.nav a[aria-current="page"]::after {
-  background: var(--accent);
-  clip-path: inset(0);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .nav a[aria-current="page"]::after {
-    animation: sa-draw-center var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-}
-
-.masthead-spacer {
-  flex: 1;
 }
 
 .masthead-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--sp-16);
   flex: none;
 }
 
 .store-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-height: 44px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: none;
 }
 
-.store-link:hover {
-  color: var(--fg);
-}
-
-.masthead-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--line);
-}
-
 .dot {
-  display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -445,31 +383,28 @@ canvas {
   flex: none;
 }
 
-/* ==========================================================================
-   Type
-   ========================================================================== */
+/* Type */
 
 main {
-  display: block;
   min-height: calc(100vh - var(--masthead-h));
 }
 
 h1 {
-  font-size: clamp(1.875rem, 1.4rem + 1.9vw, 2.625rem);
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+  font-family: var(--font-plate);
+  font-size: clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1;
   text-wrap: balance;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  font-family: var(--font-plate);
+  font-size: clamp(1.625rem, 1.3rem + 1vw, 2.125rem);
+  font-weight: 800;
+  line-height: 1.05;
   text-wrap: balance;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 h3,
@@ -477,7 +412,7 @@ h3,
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 p {
@@ -487,14 +422,12 @@ p {
 .lede {
   font-size: 1.125rem;
   line-height: 1.55;
-  color: var(--fg-2);
+  color: var(--ink-2);
   max-width: 60ch;
-  text-wrap: pretty;
 }
 
 .prose {
-  max-width: 68ch;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .prose-wide {
@@ -504,75 +437,51 @@ p {
 .prose strong,
 .prose-block strong,
 .prose-note strong {
-  color: var(--fg);
+  color: var(--ink);
   font-weight: 600;
 }
 
 .note {
   font-size: 0.8125rem;
   line-height: 1.55;
-  color: var(--fg-2);
+  color: var(--ink-2);
   max-width: 72ch;
 }
 
 .meta {
   font-size: 0.8125rem;
-  color: var(--fg-2);
   font-variant-numeric: tabular-nums;
 }
 
 .body-copy {
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .wrap {
   white-space: normal;
   overflow-wrap: anywhere;
 }
-
-.hint {
-  font-size: 0.75rem;
-  color: var(--fg-2);
-}
-
-.ok {
-  color: var(--ok);
-}
-
-/*
- * A heading and the chip that replaced its eyebrow share one wrapping head. The chip
- * sits after the heading in DOM order, never above it, so on a phone it wraps under.
- */
 .title-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3) var(--space-4);
-  min-width: 0;
+  gap: var(--sp-12) var(--sp-16);
 }
 
-.title-row > h1,
-.title-row > h2,
-.title-row > h3 {
-  min-width: 0;
-}
-
-/* ==========================================================================
-   Chips, tags, tones
-   ========================================================================== */
+/* Chips, tags, tones */
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-height: 24px;
-  padding: 2px var(--space-2);
+  padding: 2px var(--sp-8);
   border: 1px solid var(--status-dormant-line);
   border-radius: var(--radius-sm);
   background: var(--status-dormant-bg);
   color: var(--status-dormant-fg);
-  font-family: var(--mono);
-  font-size: 0.6875rem;
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.4;
@@ -583,7 +492,21 @@ p {
 .chip .dot {
   width: 5px;
   height: 5px;
-  background: currentColor;
+}
+
+.mark-sm,
+.chip .sx-icon,
+.card-title .sx-icon,
+.command-label .sx-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.card-title,
+.command-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
 }
 
 .chip-validated,
@@ -628,12 +551,11 @@ p {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--line-strong);
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: var(--t-floor);
   font-weight: 500;
-  color: var(--fg-2);
   white-space: nowrap;
 }
 
@@ -653,15 +575,15 @@ p {
 }
 
 .tone-accent {
-  --tone: var(--accent);
+  --tone: var(--enamel);
 }
 
 .tone-ok {
-  --tone: var(--ok);
+  --tone: var(--verified);
 }
 
 .tone-info {
-  --tone: var(--info);
+  --tone: var(--ink);
 }
 
 .tone-iso {
@@ -675,32 +597,24 @@ p {
 .tone-game {
   --tone: var(--store-game);
 }
-
-/* Check marks: R-4 text glyphs, aria-hidden beside their own words. */
 .mark-box {
   display: inline-grid;
   place-items: center;
   width: 18px;
   height: 18px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line-strong);
-  font-size: 0.6875rem;
+  border: 1px solid var(--hair);
+  font-size: var(--t-floor);
   line-height: 1;
   flex: none;
 }
 
 .mark-yes {
-  color: var(--ok);
+  color: var(--verified);
   border-color: var(--status-validated-line);
 }
 
-.mark-no {
-  color: var(--fg-2);
-}
-
-/* ==========================================================================
-   Buttons (§5 Button: rest, hover, focus-visible, active, disabled, loading)
-   ========================================================================== */
+/* Buttons (§5 Button: rest, hover, focus-visible, active, disabled, loading) */
 
 .button {
   position: relative;
@@ -708,25 +622,22 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-height: 46px;
-  padding: 0 var(--space-6);
-  border: 1px solid var(--accent);
+  padding: 0 var(--sp-24);
+  border: 1px solid var(--enamel);
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--bg-base);
+  background: var(--enamel);
+  color: var(--panel);
   font: inherit;
   font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
-  text-decoration: none;
   cursor: pointer;
   user-select: none;
   transition: transform var(--motion-base) var(--ease-standard);
 }
-
-/* The state layer: the control's own ink at 8% (hover) and 12% (press), never a new colour. */
 .button::before {
   content: "";
   position: absolute;
@@ -738,21 +649,15 @@ p {
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
 }
-
-/* The focus halo fades in beside the instant outline (row 3). */
 .button:not(.button-arrow)::after {
   content: "";
   position: absolute;
   inset: -5px;
   border-radius: calc(var(--radius-md) + 4px);
-  border: 2px solid var(--status-needs-review-line);
+  border: 2px solid var(--focus);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
-}
-
-.button:focus-visible::after {
-  opacity: 1;
 }
 
 @media (hover: hover) {
@@ -760,47 +665,22 @@ p {
     opacity: 0.08;
   }
 }
-
-.button:active:not([aria-disabled="true"]):not(:disabled)::before {
-  opacity: 0.12;
-}
-
-.button-quiet {
-  background: transparent;
-  color: var(--fg);
-  border-color: var(--line-strong);
-}
-
-/* site-kit's base `a:hover` recolours links; a button keeps its own ink (state layer only). */
 a.button:hover {
-  color: var(--bg-base);
-}
-
-a.button-quiet:hover {
-  color: var(--fg);
+  color: var(--panel);
 }
 
 a.button[aria-disabled="true"]:hover {
-  color: var(--fg-2);
-}
-
-.button-sm {
-  min-height: 30px;
-  padding: 0 var(--space-3);
-  font-size: 0.8125rem;
+  color: var(--ink-2);
 }
 
 .button-block {
-  display: flex;
   width: 100%;
 }
-
-/* Disabled is painted, never faded: dashed line, secondary label, not-allowed. */
 .button[aria-disabled="true"],
 .button:disabled {
   background: transparent;
-  color: var(--fg-2);
-  border: 1px dashed var(--line-strong);
+  color: var(--ink-2);
+  border: 1px dashed var(--hair);
   cursor: not-allowed;
 }
 
@@ -808,8 +688,6 @@ a.button[aria-disabled="true"]:hover {
 .button:disabled::before {
   display: none;
 }
-
-/* Loading: the label stays, a 2px bar runs the bottom edge after the show delay (row 5, R-1). */
 .button[aria-busy="true"] {
   pointer-events: none;
   overflow: hidden;
@@ -828,17 +706,10 @@ a.button[aria-disabled="true"]:hover {
   animation: sa-progress var(--motion-duration-loop) var(--motion-ease-out-quart)
     var(--motion-delay-loading) infinite backwards;
 }
-
-/*
- * The card-link arrow (row 1). A text glyph hidden from the accessibility tree (D-7),
- * nudged 3px on hover (DV-P3); where the markup already carries the glyph (`.glyph`),
- * that span is the arrow and no pseudo-element is added.
- */
 .button-arrow::after,
 .guide-link:not(:has(.glyph))::after,
 .launch-proof dt a::after {
   content: "\2192" / "";
-  display: inline-block;
   font-weight: 500;
   line-height: 1;
   transition: transform var(--motion-base) var(--ease-standard);
@@ -849,8 +720,7 @@ a.button[aria-disabled="true"]:hover {
 .path-links .glyph,
 .doc-links .glyph,
 .proof-link .glyph {
-  display: inline-block;
-  margin-left: var(--space-2);
+  margin-left: var(--sp-8);
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
@@ -867,12 +737,10 @@ a.button[aria-disabled="true"]:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--sp-12);
 }
 
-/* ==========================================================================
-   Page frames and route entrances
-   ========================================================================== */
+/* Page frames and route entrances */
 
 .shell {
   max-width: var(--shell);
@@ -881,16 +749,10 @@ a.button[aria-disabled="true"]:hover {
 .page {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: var(--space-18) var(--gutter);
+  padding: var(--sp-72) var(--gutter);
   display: flex;
   flex-direction: column;
   gap: var(--space-11);
-  min-width: 0;
-}
-
-.page > h2,
-.stack > h2 {
-  margin-top: var(--space-4);
 }
 
 .page-narrow {
@@ -904,7 +766,7 @@ a.button[aria-disabled="true"]:hover {
 .page-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--sp-16);
   max-width: 64rem;
 }
 
@@ -914,52 +776,59 @@ a.button[aria-disabled="true"]:hover {
   margin: 0 auto;
 }
 
-.page-head-center .title-row {
-  justify-content: center;
-}
-
 .page-head-center .lede {
   margin: 0 auto;
 }
 
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+/* Operate pages (account, admin, sign-in, 404, error): the density on the page sets the title size, the rhythm and the control height; Persuade's display scale stays out. */
+.op {
+  gap: var(--sp-24);
+  padding-block: var(--sp-32) var(--sp-72);
+}
+
+.op h1 {
+  font-size: 2.25rem;
+  line-height: 1.1;
+}
+
+.op h2 {
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+
+.op-section {
+  display: grid;
+  gap: var(--sp-16);
+}
+
+.op-readout {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 0 var(--sp-24);
+  border-top: 1px solid var(--rule);
+}
+
+.op-readout :is(dt, dd) {
+  padding: var(--sp-12) 0;
+  border-bottom: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.stack-tight {
-  gap: var(--space-2);
+.op-readout dt {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  align-self: center;
 }
-
-.section-title {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-/* Row 11, Persuade: head items rise once with a 40ms stagger, at most three. */
 @media (prefers-reduced-motion: no-preference) {
   .page-persuade > .page-head > *,
   .release-hero .hero-copy > * {
     animation: sx-rise-lg var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
   }
-
-  .page-persuade > .page-head > :nth-child(2),
-  .release-hero .hero-copy > :nth-child(2) {
-    animation-delay: var(--motion-stagger-step);
-  }
-
-  .page-persuade > .page-head > :nth-child(n + 3),
-  .release-hero .hero-copy > :nth-child(n + 3) {
-    animation-delay: calc(2 * var(--motion-stagger-step));
-  }
 }
-
-/* Row 18: the loading fallbacks. Text is visible at once; the bar waits 300ms, then cycles. */
 .page-loading {
-  gap: var(--space-4);
+  gap: var(--sp-16);
 }
 
 .page-loading h1 {
@@ -974,7 +843,7 @@ a.button[aria-disabled="true"]:hover {
   max-width: 16rem;
   height: 2px;
   border-radius: 1px;
-  background: var(--line);
+  background: var(--rule);
   overflow: hidden;
 }
 
@@ -983,23 +852,21 @@ a.button[aria-disabled="true"]:hover {
   position: absolute;
   inset: 0 auto 0 0;
   width: 40%;
-  background: var(--accent);
+  background: var(--enamel);
   animation: sa-progress var(--motion-duration-loop) var(--motion-ease-out-quart)
     var(--motion-delay-loading) infinite backwards;
 }
 
-/* ==========================================================================
-   Bands and the release overview
-   ========================================================================== */
+/* Bands and the release overview */
 
 .band {
-  background: var(--bg-base);
+  background: var(--panel);
 }
 
 .band-sunk {
-  background: var(--bg-band);
-  border-top: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
+  background: var(--panel-band);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .band-inner {
@@ -1008,23 +875,24 @@ a.button[aria-disabled="true"]:hover {
   padding: var(--band-pad) var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
-  min-width: 0;
+  gap: var(--sp-32);
+}
+.hero {
+  border-bottom: 1px solid var(--rule);
 }
 
-.hero {
-  border-bottom: 1px solid var(--line-soft);
+.release-hero {
+  background: var(--panel-band);
 }
 
 .hero-inner {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: var(--space-18) var(--gutter) var(--space-11);
+  padding: var(--sp-72) var(--gutter) var(--space-11);
 }
 
 .hero-inner-split {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   align-items: center;
   gap: var(--space-11);
 }
@@ -1032,8 +900,7 @@ a.button[aria-disabled="true"]:hover {
 .hero-copy {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  min-width: 0;
+  gap: var(--sp-24);
 }
 
 .hero-copy h1 {
@@ -1043,26 +910,13 @@ a.button[aria-disabled="true"]:hover {
   font-variation-settings: "wdth" 104;
 }
 
-/*
- * The release chip runs inline after the last line of the H1. The H1 is an inline
- * run so the chip can share its last line box. Inline text cannot balance, so the
- * two phrases are kept whole (`.hero-line`) and the H1 can only break between them;
- * below 400px, where a whole phrase may not fit, ordinary wrapping returns. From
- * 768px the chip is glued to the last phrase (the head is nowrap, only the H1's own
- * space may break), so the H1 breaks before the chip ever drops to its own line; at
- * 390 the chip wraps under the H1, flush left (the gap is the H1's end margin).
- */
-.hero-title {
-  display: block;
-}
-
 .hero-title > h1 {
   display: inline;
-  margin-inline-end: var(--space-4);
+  margin-inline-end: var(--sp-16);
 }
 
 .hero-title > .release-chip {
-  margin-block-start: var(--space-2);
+  margin-block-start: var(--sp-8);
   vertical-align: 0.4em;
 }
 
@@ -1076,22 +930,10 @@ a.button[aria-disabled="true"]:hover {
   .hero-title {
     white-space: nowrap;
   }
-
-  .hero-title > h1 {
-    white-space: normal;
-  }
 }
-
-/*
- * Split hero (from 1025px). DV-P9: the overview pins a stage of at least 671×503 and a
- * proof rail that starts by 720px at 1440×900, so the H1 + chip cannot take a row of
- * their own across both columns. The head stays in the copy column: the H1 is a
- * balanced block and the chip wraps under its last line, flush left.
- */
 @media (min-width: 64.0625rem) {
   .release-hero .hero-inner {
     padding-top: var(--space-11);
-    padding-bottom: var(--space-11);
   }
 
   .release-hero .hero-inner-split {
@@ -1099,74 +941,340 @@ a.button[aria-disabled="true"]:hover {
     align-items: start;
   }
 
-  .hero-inner-split .hero-title {
-    white-space: normal;
-  }
-
   .hero-inner-split .hero-title > h1 {
     display: block;
     margin-inline-end: 0;
-    text-wrap: balance;
   }
 
-  .hero-inner-split .hero-line {
+  .hero-inner-split .hero-title,
+.hero-inner-split .hero-line {
     white-space: normal;
   }
 
   .hero-inner-split .hero-title > .release-chip {
-    margin-block-start: var(--space-3);
+    margin-block-start: var(--sp-12);
     vertical-align: baseline;
   }
 }
-
-.hero-copy .lede {
-  font-size: 1.125rem;
+.cr {
+  display: grid;
+  gap: var(--sp-16);
+  padding: var(--sp-24);
+  background: var(--plate);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-cast);
+  box-shadow: var(--lift-2);
 }
 
-.hero-stage {
+.cr-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+}
+
+.cr-title {
+  flex-basis: 100%;
+  font: 700 var(--t-h3)/1.1 var(--font-plate);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cr-doc {
+  color: var(--ink-2-plate);
+  font-size: var(--t-small);
+}
+
+.cr-state {
+  margin-inline-start: auto;
+}
+
+.cr [data-when] {
+  display: none;
+}
+
+.hero-title,
+.cr:has([value="review"]:checked) [data-when="review"],
+.cr:has([value="accept"]:checked) [data-when="accept"],
+.cr:has([value="reject"]:checked) [data-when="reject"] {
+  display: block;
+}
+.cr-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-small);
+}
+
+.cr-route li {
+  padding: var(--sp-4) var(--sp-8);
+  border-bottom: 3px solid var(--route);
+  background: var(--iron);
+  transform-origin: left;
+}
+
+.cr:has([value="accept"]:checked) .cr-route li {
+  border-bottom-color: var(--verified-route);
+}
+
+.cr:has([value="reject"]:checked) .cr-route li {
+  border-bottom-color: var(--edge);
+  border-bottom-style: dashed;
+}
+
+.cr-readout {
+  display: grid;
+  background: var(--well);
+  box-shadow: var(--sink);
+  border-radius: var(--radius-cast);
+}
+
+.cr-row {
+  display: grid;
+  grid-template-columns: 4.5rem auto 1fr;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-12);
+  padding: var(--sp-12) var(--sp-16);
+}
+
+.cr-row dt {
+  font: 700 var(--t-plate)/1.2 var(--font-plate);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cr-val {
+  font: 700 1.5rem/1 var(--font-data);
+}
+
+.cr-digest {
+  grid-column: 2 / -1;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+.cr-after {
+  box-shadow: inset 3px 0 0 var(--lunar);
+}
+
+[data-role="inspect"] .sx-icon,
+.cr-diff,
+.cr-act .sx-icon {
+  color: var(--lunar);
+}
+
+.cr-diff {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: var(--sp-4);
+  padding: 2px var(--sp-8) 2px var(--sp-4);
+  background: var(--lunar);
+  color: var(--on-lunar);
+  border-radius: var(--radius-cast);
+  font: 700 var(--t-plate)/1.2 var(--font-plate);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cr:has([value="reject"]:checked) .cr-after .cr-val,
+.cr:has([value="accept"]:checked) .cr-before .cr-val {
+  text-decoration: line-through;
+  color: var(--ink-2);
+}
+.cr-acts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+  padding: 0;
+  list-style: none;
+}
+
+.cr-acts li {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-4);
+  padding: var(--sp-8) var(--sp-12);
+  background: var(--iron);
+  border-top: 3px solid var(--rule);
+  font-size: var(--t-small);
+  line-height: 1.35;
+}
+
+.cr-acts [data-act="propose"] {
+  border-top-color: var(--pending);
+}
+
+.cr-acts [data-act="inspect"] {
+  border-top-color: var(--lunar);
+}
+
+.cr-acts [data-act="commit"] {
+  border-top-color: var(--commit);
+}
+
+.cr-act {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  font: 700 var(--t-plate)/1.2 var(--font-plate);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cr-act .sx-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.cr-note {
+  color: var(--ink-2);
+}
+
+.cr-decide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cr-legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--sp-8);
+  font: 700 var(--t-plate)/1.2 var(--font-plate);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cr-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  padding: 0 var(--sp-16) 0 var(--sp-12);
+  background: var(--iron-raised);
+  border: 2px solid var(--edge);
+  border-radius: var(--radius-cast);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cr-choice input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.cr-choice:has(:checked) {
+  box-shadow: inset 0 -3px 0 var(--ink);
+}
+.cr-choice:has(:focus-visible) {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+.cr-choice input:focus-visible {
+  outline-color: transparent;
+}
+.cr-accept {
+  background: var(--commit);
+  color: var(--on-commit);
+  border-color: var(--commit-edge);
+}
+
+.cr-accept input {
+  accent-color: var(--on-commit);
+}
+
+.cr-accept:hover {
+  background: var(--commit-hi);
+  border-color: var(--commit-hi);
+}
+
+.cr-accept:has(:checked) {
+  box-shadow: inset 0 -3px 0 var(--on-commit);
+}
+
+.cr-outcome p {
+  line-height: 1.5;
+}
+
+.cr-outcome code {
+  font-size: 0.9375em;
+}
+
+.cr-synthetic {
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--ink-2-plate);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cr:has([value="review"]:checked) :is(.cr-route li, .cr-acts [data-act="propose"]) {
+    animation: cr-draw var(--seq-bar) var(--seq-ease) backwards;
+  }
+
+  .cr:has([value="review"]:checked) .cr-route li:nth-child(2) {
+    animation-delay: var(--seq-stagger);
+  }
+
+  .cr:has([value="review"]:checked) .cr-route li:nth-child(3) {
+    animation-delay: calc(2 * var(--seq-stagger));
+  }
+
+  .cr:has([value="review"]:checked) .cr-route li:nth-child(4) {
+    animation-delay: calc(3 * var(--seq-stagger));
+  }
+
+  .cr:has([value="review"]:checked) :is(.cr-after, .cr-acts [data-act="inspect"]) {
+    animation: cr-scan var(--seq-inspect-duration) var(--seq-ease) var(--seq-inspect-delay) backwards;
+  }
+
+  .cr:has([value="review"]:checked) :is(.cr-accept, .cr-acts [data-act="commit"]) {
+    animation: cr-arm var(--seq-commit-duration) var(--seq-ease) var(--seq-commit-delay) backwards;
+  }
+}
+
+@keyframes cr-draw {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes cr-scan {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes cr-arm {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .hero-stage-note {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
   font-variant-numeric: tabular-nums;
-}
-
-/* DV-P9: `/` renders at most nine sizes, so the machine line shares the 13px UI step. */
-.hero-stage-note code {
-  color: var(--fg);
-  font-size: 0.8125rem;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero-stage-note {
-    animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-}
-
-.release-hero .hero-stage .viewport {
-  aspect-ratio: 4 / 3;
-  max-height: 560px;
 }
 
 .release-actions {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-3);
-}
-
-/* The CTA's children join the action grid, so Download and "Open the proof" share a row. */
-.download-cta {
-  display: contents;
+  gap: var(--sp-12);
 }
 
 .download-primary {
@@ -1182,20 +1290,14 @@ a.button[aria-disabled="true"]:hover {
 .download-context {
   grid-column: 1 / -1;
   font-size: 0.875rem;
-  color: var(--fg-2);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .download-context {
-    animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
+  color: var(--ink-2);
 }
 
 .platform-availability {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   padding: 0;
   list-style: none;
 }
@@ -1203,19 +1305,17 @@ a.button[aria-disabled="true"]:hover {
 .platform-availability li {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-height: 28px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--line);
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
-  color: var(--fg);
 }
 
 .platform-availability li > span:last-child {
-  font-family: var(--mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
+  font-family: var(--font-data);
+  color: var(--ink-2);
 }
 
 .platform-availability li[data-availability="recorded-build"] {
@@ -1223,14 +1323,12 @@ a.button[aria-disabled="true"]:hover {
 }
 
 .platform-availability li[data-availability="recorded-build"] > span:last-child {
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .platform-availability li[data-availability="coming-soon"] {
   border-style: dashed;
 }
-
-/* The four launch proofs: linked lines, two per row from 621px, each title a link. */
 .launch-proof-rail {
   max-width: var(--shell);
   margin: 0 auto;
@@ -1240,50 +1338,32 @@ a.button[aria-disabled="true"]:hover {
 .launch-proof-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--space-8);
-  border-top: 1px solid var(--line);
+  column-gap: var(--sp-32);
+  border-top: 1px solid var(--rule);
 }
 
 .launch-proof {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--line-soft);
-  min-width: 0;
+  gap: var(--sp-4);
+  padding: var(--sp-16) 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 .launch-proof dt {
   font-weight: 600;
-  font-size: 1rem;
-  color: var(--fg);
 }
 
 .launch-proof dt a {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-height: 28px;
   text-decoration: none;
 }
 
-.launch-proof dt a:hover {
-  color: var(--accent-hi);
-}
-
-.launch-proof dd {
-  font-size: 0.9375rem;
-  color: var(--fg-2);
-}
-
 .release-section {
-  gap: var(--space-8);
-}
-
-.release-heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--sp-32);
 }
 
 .release-heading h2 {
@@ -1291,11 +1371,6 @@ a.button[aria-disabled="true"]:hover {
   line-height: 1.08;
   letter-spacing: -0.025em;
 }
-
-/*
- * The evidence tables keep a floor so a phone scrolls them inside their labelled
- * region instead of crushing every column to a word (§0: "scrolls in its region").
- */
 .comparison-table,
 .profile-release-matrix {
   min-width: 960px;
@@ -1327,38 +1402,30 @@ a.button[aria-disabled="true"]:hover {
 
 .comparison-table th[scope="row"] > span {
   display: block;
-  font-family: var(--sans);
+  font-family: var(--font-prose);
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 .comparison-table th[scope="row"] > a {
   display: inline-block;
-  margin-top: var(--space-1);
-  font-family: var(--sans);
-  font-size: 0.8125rem;
+  margin-top: var(--sp-4);
+  font-family: var(--font-prose);
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
-  white-space: normal;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
-
-.comparison-table th[scope="row"] > a:hover {
-  color: var(--fg);
-}
-
-/* SceneAxi is marked by weight and strong hairlines, never by an accent fill. */
 .comparison-sceneaxi td,
 .comparison-sceneaxi th {
-  border-top: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
-  color: var(--fg);
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  color: var(--ink);
 }
 
 .comparison-sceneaxi td {
@@ -1366,39 +1433,35 @@ a.button[aria-disabled="true"]:hover {
 }
 
 .profile-release-matrix th[scope="row"] {
-  font-family: var(--sans);
+  font-family: var(--font-prose);
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--fg);
-}
-
-.profile-release-matrix thead th:not(:first-child) {
-  vertical-align: bottom;
+  color: var(--ink);
 }
 
 .profile-column-name {
   display: block;
-  margin-bottom: var(--space-2);
-  font-family: var(--sans);
+  margin-bottom: var(--sp-8);
+  font-family: var(--font-prose);
   font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 .matrix-note {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
+  gap: var(--sp-24);
 }
 
 .matrix-note p {
   font-size: 0.875rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
   max-width: 64ch;
 }
 
@@ -1411,8 +1474,8 @@ a.button[aria-disabled="true"]:hover {
 .path-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--space-6);
-  border-top: 1px solid var(--line);
+  column-gap: var(--sp-24);
+  border-top: 1px solid var(--rule);
 }
 
 .path-links a {
@@ -1420,13 +1483,10 @@ a.button[aria-disabled="true"]:hover {
   isolation: isolate;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
   min-height: 56px;
-  padding: 0 var(--space-2);
-  border-bottom: 1px solid var(--line);
+  padding: 0 var(--sp-8);
+  border-bottom: 1px solid var(--rule);
   font-weight: 500;
-  color: var(--fg);
   text-decoration: none;
   transition: transform var(--motion-base) var(--ease-standard);
 }
@@ -1450,23 +1510,18 @@ a.button[aria-disabled="true"]:hover {
   }
 }
 
+.button:active:not([aria-disabled="true"]):not(:disabled)::before,
 .path-links a:active::before,
 .guide-link:active::before {
   opacity: 0.12;
 }
 
-/* ==========================================================================
-   Panels and lists
-   ========================================================================== */
+/* Panels and lists */
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: var(--space-4);
-}
-
-.grid > * {
-  min-width: 0;
+  gap: var(--sp-16);
 }
 
 .grid-3 {
@@ -1481,72 +1536,46 @@ a.button[aria-disabled="true"]:hover {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-6);
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  min-width: 0;
+  background: var(--iron);
   overflow-wrap: anywhere;
 }
 
 .panel p {
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .panel-roomy {
-  padding: var(--space-8);
-  gap: var(--space-4);
-}
-
-.panel.tone-accent {
-  border-color: var(--status-needs-review-line);
+  padding: var(--sp-32);
+  gap: var(--sp-16);
 }
 
 .panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.panel-grow {
-  flex: 1;
-}
-
-.panel-foot {
-  margin-top: auto;
+  gap: var(--sp-12);
 }
 
 .card-title {
-  font-size: 1.0625rem;
-  font-weight: 600;
   line-height: 1.35;
-  overflow-wrap: anywhere;
 }
 
 h2.card-title {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 1rem;
   font-weight: 500;
 }
-
-.panel .meta {
-  font-size: 0.8125rem;
-}
-
-/* The digest is a field well that wraps; it is never truncated. */
 .panel .sha,
 .field-well {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: var(--fg);
-  padding: var(--space-3);
-  border: 1px solid var(--line);
+  font-family: var(--font-data);
+  font-size: var(--t-floor);
+  color: var(--ink);
+  padding: var(--sp-12);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-md);
-  background: var(--bg-field);
-  overflow-wrap: anywhere;
+  background: var(--well);
   word-break: break-all;
 }
 
@@ -1555,31 +1584,24 @@ h2.card-title {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--tone, var(--line-strong));
+  border: 1.5px solid var(--tone, var(--hair));
 }
 
 .pkg-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
-  column-gap: var(--space-6);
+  column-gap: var(--sp-24);
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule);
 }
 
 .pkg {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  color: var(--fg);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line-soft);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--rule);
   overflow-wrap: anywhere;
-}
-
-/* Pipeline: mono step indices on a 1px connector. The order carries meaning. */
-.pipeline {
-  background: transparent;
-  border: 0;
 }
 
 .pipeline-grid {
@@ -1591,9 +1613,8 @@ h2.card-title {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-6) var(--space-4) 0;
-  min-width: 0;
+  gap: var(--sp-8);
+  padding: var(--sp-24) var(--sp-24) var(--sp-16) 0;
 }
 
 .pipeline-rail {
@@ -1602,7 +1623,7 @@ h2.card-title {
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--line-strong);
+  background: var(--hair);
 }
 
 .pipeline-rail::before {
@@ -1613,33 +1634,21 @@ h2.card-title {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--tone, var(--fg-2));
+  background: var(--tone, var(--ink-2));
 }
 
 .pipeline-num {
-  font-family: var(--mono);
-  font-size: 0.6875rem;
+  font-family: var(--font-data);
+  font-size: var(--t-floor);
   letter-spacing: 0.08em;
-  color: var(--fg-2);
-}
-
-.pipeline-step h3 {
-  font-size: 1rem;
-}
-
-.bullets {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: 0;
-  list-style: none;
+  color: var(--ink-2);
 }
 
 .bullets li {
   position: relative;
-  padding-left: var(--space-4);
+  padding-left: var(--sp-16);
   font-size: 0.9375rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .bullets li::before {
@@ -1650,13 +1659,14 @@ h2.card-title {
   width: 5px;
   height: 5px;
   border-radius: 1px;
-  background: var(--fg-4);
+  background: var(--siding);
 }
 
+.bullets,
 .checks {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   padding: 0;
   list-style: none;
 }
@@ -1664,16 +1674,13 @@ h2.card-title {
 .checks li {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--sp-12);
   font-size: 0.9375rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
-
-/* Two-column prose with subheads: explanation, not cards. */
 .prose-notes {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-8);
+  gap: var(--sp-32);
   max-width: 72rem;
 }
 
@@ -1682,65 +1689,42 @@ h2.card-title {
   column-gap: var(--space-11);
 }
 
-.prose-note {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
 .prose-note p {
-  color: var(--fg-2);
+  color: var(--ink-2);
   max-width: 62ch;
 }
-
-.prose-note-accent h3 {
-  color: var(--accent-hi);
-}
-
-.prose-note-info h3 {
-  color: var(--info);
-}
-
-/* One prose block whose titles lead their paragraphs. */
 .prose-block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--sp-16);
   max-width: 68ch;
 }
 
 .prose-block p {
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
-/* ==========================================================================
-   Profiles
-   ========================================================================== */
+/* Profiles */
 
 .profile-compare {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+  gap: var(--sp-16);
 }
 
 .profile-isolated {
   grid-column: 1 / -1;
-  min-width: 0;
 }
 
 .profile-card {
   position: relative;
   display: flex;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
+  background: var(--iron);
   overflow: hidden;
-  min-width: 0;
   transition: transform var(--motion-base) var(--ease-standard);
 }
-
-/* Profile tone as a 2px top edge. */
 .profile-card::before {
   content: "";
   position: absolute;
@@ -1748,99 +1732,81 @@ h2.card-title {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--tone, var(--line-strong));
-}
-
-@media (hover: hover) {
-  .profile-card:hover {
-    border-color: var(--line-strong);
-  }
+  background: var(--tone, var(--hair));
 }
 
 .profile-card-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-8) var(--space-6) var(--space-6);
-  min-width: 0;
+  gap: var(--sp-16);
+  padding: var(--sp-32) var(--sp-24) var(--sp-24);
   width: 100%;
 }
 
 .profile-card-body > p {
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .profile-isolated .state p .tag {
-  margin-right: var(--space-1);
+  margin-right: var(--sp-4);
 }
 
 .matrix th[scope="row"] {
   min-width: 22ch;
-  font-family: var(--sans);
+  font-family: var(--font-prose);
   font-size: 0.875rem;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--fg);
-}
-
-.matrix th[scope="row"] code {
-  font-size: 0.8125rem;
+  color: var(--ink);
 }
 
 .matrix th[scope="row"] .note {
   display: inline-block;
-  margin-top: var(--space-1);
+  margin-top: var(--sp-4);
   font-weight: 400;
 }
 
-/* ==========================================================================
-   Named states: every refusal on this site renders through here (DV-F6)
-   ========================================================================== */
+/* Named states: every refusal on this site renders through here (DV-F6) */
 
 .state {
   position: relative;
   container-type: inline-size;
-  min-width: 0;
   overflow-wrap: anywhere;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  padding: var(--space-6);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-cast);
+  padding: var(--sp-24) var(--sp-24);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--sp-16);
 }
 
 .state h2,
 .state h3 {
-  font-family: var(--sans);
+  font-family: var(--font-prose);
   font-size: 1.0625rem;
   line-height: 1.35;
   letter-spacing: -0.005em;
   font-weight: 600;
-  color: var(--fg);
 }
 
 .state p {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .state-ok {
-  --tone: var(--ok);
+  --tone: var(--verified);
   border-color: var(--status-validated-line);
   background: var(--status-validated-bg);
 }
 
 .state-warn {
-  --tone: var(--accent);
+  --tone: var(--enamel);
   border-color: var(--status-needs-review-line);
   background: var(--status-needs-review-bg);
 }
 
 .state-deny {
-  --tone: var(--danger);
+  --tone: var(--refused-lamp);
   border-color: var(--status-refused-line);
   background: var(--status-refused-bg);
 }
@@ -1850,21 +1816,11 @@ h2.card-title {
   border-color: var(--status-isolated-line);
   background: var(--status-isolated-bg);
 }
-
-/*
- * The state header: status chip, name, and the machine key on one line.
- *
- * The key's track is `minmax(0, max-content)` with a bounded contribution (`.reason`
- * carries the `max-width`), never a bare `auto`: an `auto` track takes free space up to
- * its max-content size before a `1fr` track expands, which once starved the name's
- * track to 0px. The bound caps what the key can take; it wraps, it is never elided.
- */
 .state-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(0, max-content);
   align-items: center;
-  gap: var(--space-3) var(--space-3);
-  min-width: 0;
+  gap: var(--sp-12) var(--sp-12);
 }
 
 .state-head h2,
@@ -1872,15 +1828,13 @@ h2.card-title {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-
-/* Row 13: the tone underline draws once when a state arrives; colour never animates. */
 .state-head::after {
   content: "";
   grid-column: 1 / -1;
   width: 40px;
   height: 2px;
   border-radius: 1px;
-  background: var(--tone, var(--line-strong));
+  background: var(--tone, var(--hair));
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1888,52 +1842,30 @@ h2.card-title {
     animation: sx-draw var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
     animation-delay: var(--motion-duration-micro);
   }
-
-  .state-chip {
-    animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-}
-
-.state-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.state-body form {
-  margin-top: var(--space-2);
 }
 
 .state-evidence {
-  margin: var(--space-1) 0 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
+  margin: var(--sp-4) 0 0;
+  padding-top: var(--sp-12);
+  border-top: 1px solid var(--rule);
 }
 
 .reason {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--fg);
+  font-size: var(--t-floor);
+  color: var(--ink);
   display: inline-flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   justify-self: end;
-  min-width: 0;
   max-width: 14rem;
   overflow-wrap: anywhere;
 }
-
-/* The label is a word, so it takes a body-role colour, never `--fg-4`. */
 .reason-label {
-  color: var(--fg-2);
-  font-size: 0.6875rem;
+  color: var(--ink-2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
-
-/* A narrow panel (the 512px state pages) splits the head like the phone tier: chip and name, then the key. */
 @container (max-width: 40rem) {
   .state-head {
     grid-template-columns: auto minmax(0, 1fr);
@@ -1946,57 +1878,81 @@ h2.card-title {
   }
 }
 
-/* ==========================================================================
-   Commands, tables, definition lists
-   ========================================================================== */
+/* Compact density (admin ledger, DIRECTION §3): the site-kit density custom properties are emitted on one line the token-resolution pin cannot parse, so the two steps are written here on the shared spacing scale (site-kit request logged in lanes/umbrella.md). */
+.op[data-density="compact"] {
+  gap: var(--sp-16);
+  font-size: 0.875rem;
+}
+
+.op[data-density="compact"] h1 {
+  font-size: 1.5rem;
+}
+
+.op .lede,
+.pipeline-step h3,
+.op[data-density="compact"] h2 {
+  font-size: 1rem;
+}
+
+[data-density="compact"] :is(.state, .op-form, .op-rows pre) {
+  padding: var(--sp-12) var(--sp-16);
+  gap: var(--sp-8);
+}
+
+[data-density="compact"] :is(.op-rows > ul > li, .op-rows summary) {
+  min-height: 32px;
+  padding-inline: var(--sp-16);
+}
+
+[data-density="compact"] .field :is(input, select, textarea) {
+  min-height: 32px;
+}
+
+.panel .meta,
+[data-density="compact"] :is(.state p, .op-empty, .op-rows, .field label) {
+  font-size: 0.8125rem;
+}
+
+/* Commands, tables, definition lists */
 
 .command-label {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--fg);
 }
 
 .command {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--sp-12);
   min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-field);
-  border: 1px solid var(--line);
+  padding: var(--sp-8) var(--sp-12);
+  background: var(--well);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-md);
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  color: var(--fg);
-  min-width: 0;
 }
 
 .command::before {
   content: "$" / "";
-  color: var(--ok);
+  color: var(--verified);
   flex: none;
 }
-
-/*
- * A command is one unbreakable line, so the code is the scroller rather than its
- * frame; without `min-width: 0` the flex item refuses to shrink and paints past it.
- */
 .command code {
-  white-space: nowrap;
+  white-space: pre-wrap;
   flex: 1 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  font-size: inherit;
-  scrollbar-width: thin;
 }
 
+/* Bounded to the space under the masthead and scrolled clear of it, so a focused table region is never taller than what the viewport can show (focus not obscured). */
 .scroll-x {
   overflow-x: auto;
-  border: 1px solid var(--line);
+  overflow-y: auto;
+  max-height: calc(100dvh - var(--masthead-h) - 32px);
+  scroll-margin-block: calc(var(--masthead-h) + 16px) 16px;
+  border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  scrollbar-color: var(--line-strong) var(--bg-panel);
-  min-width: 0;
+  background: var(--iron);
+  scrollbar-color: var(--hair) var(--iron);
 }
 
 html .scroll-x:focus-visible {
@@ -2011,28 +1967,26 @@ table {
 }
 
 td {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--fg-2);
+  padding: var(--sp-12) var(--sp-16);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
   vertical-align: top;
   text-align: left;
 }
 
 th {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 0.6875rem;
+  padding: var(--sp-12) var(--sp-16);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-align: left;
   vertical-align: bottom;
   white-space: nowrap;
 }
-
-/* A status chip keeps one case everywhere, table heads included. */
 th .chip {
   text-transform: none;
 }
@@ -2042,14 +1996,8 @@ th.wrap {
   white-space: normal;
   min-width: 20ch;
 }
-
-/* /open's instance table: machine ids read whole, so the region scrolls instead. */
 .instance-table {
   min-width: 40rem;
-}
-
-td code {
-  color: var(--fg);
 }
 
 tbody tr:last-child td,
@@ -2057,81 +2005,50 @@ tbody tr:last-child th {
   border-bottom: 0;
 }
 
-@media (hover: hover) {
-  tbody tr:hover td,
-  tbody tr:hover th {
-    background: var(--bg-row);
-  }
-}
-
 .scroll-x tbody tr:focus-within td {
-  background: var(--bg-raised);
+  background: var(--iron-raised);
 }
 
 tr:target td {
   background: var(--status-needs-review-bg);
 }
 
-p code,
-li code,
-dd code {
-  color: var(--fg);
-}
-
 .dl {
   display: grid;
   grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
-  column-gap: var(--space-6);
+  column-gap: var(--sp-24);
   min-width: 0;
-}
-
-.dl > .dl-row,
-.dl > div {
-  display: contents;
 }
 
 .dl dt {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line-soft);
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--rule);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .dl dd {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--fg);
-  min-width: 0;
+  padding: var(--sp-8) 0;
+  border-bottom: 1px solid var(--rule);
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
 .dl dd p + p {
-  margin-top: var(--space-1);
-}
-
-.dl-machine dd {
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-}
-
-.dl-balance dd {
-  align-self: center;
+  margin-top: var(--sp-4);
 }
 
 .ledger-balance {
   display: inline-block;
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 2rem;
   line-height: 1.1;
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: var(--fg);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-
-/* Row 16: the balance arrives from below and settles; it never counts through fake values. */
 @media (prefers-reduced-motion: no-preference) {
   .ledger-balance {
     animation: sa-number-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
@@ -2139,107 +2056,84 @@ dd code {
   }
 }
 
-.op-chip {
-  font-family: var(--mono);
-  font-size: 0.75rem;
+/* Forms (§5 Field). Operate: one bordered iron card per form, density from the page. */
+
+.op-form {
+  display: grid;
+  justify-items: start;
+  gap: var(--sp-16);
+  padding: var(--sp-24) var(--sp-24);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-cast);
+  background: var(--iron);
+  min-width: 0;
 }
 
-/* ==========================================================================
-   Forms (§5 Field)
-   ========================================================================== */
-
-.form-card {
-  padding: var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
+.op-form > :is(.field, p, .op-row) {
+  justify-self: stretch;
 }
 
-.form-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.op-form > label {
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-.form-plain {
+.op-form p {
+  color: var(--ink-2);
+}
+
+.op-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.form-plain label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.form-plain p {
-  flex-basis: 100%;
-  color: var(--fg-2);
-}
-
-.form-inline {
-  margin-top: var(--space-2);
+  gap: var(--sp-16);
+  align-items: flex-end;
 }
 
 .field {
   position: relative;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   min-width: 0;
 }
 
 .field label {
-  font-family: var(--sans);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--ink);
 }
 
-.field input,
-.field select,
-.field textarea,
-.form-plain input:not([type="checkbox"]) {
+.field :is(input, select, textarea),
+.op-form > input {
   font: inherit;
-  font-size: 0.9375rem;
-  min-height: 38px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--line-strong);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--edge);
   border-radius: var(--radius-md);
-  background: var(--bg-field);
-  color: var(--fg);
+  background: var(--well);
+  color: var(--ink);
   min-width: 0;
+  max-width: 100%;
 }
 
 .field textarea {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--sp-8) var(--sp-12);
   line-height: 1.5;
+  resize: vertical;
 }
 
-.field input:hover,
-.field select:hover,
-.field textarea:hover,
-.form-plain input:hover {
-  border-color: var(--fg-4);
+:is(.field, .op-form) :is(input, select, textarea):hover {
+  border-color: var(--ink-2);
 }
 
-.field input:focus,
-.field select:focus,
-.field textarea:focus,
-.form-plain input:focus {
-  border-color: var(--accent);
+:is(.field, .op-form) :is(input, select, textarea):focus {
+  border-color: var(--enamel);
   outline-offset: 1px;
 }
 
-.field input::placeholder,
-.field textarea::placeholder {
-  color: var(--fg-2);
+.field ::placeholder {
+  color: var(--ink-2);
 }
 
-/* The focus line draws open under the field (micro, quart) and turns red when invalid. */
 .field::after {
   content: "";
   position: absolute;
@@ -2248,35 +2142,27 @@ dd code {
   bottom: 1px;
   height: 2px;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
-  background: var(--accent);
-  clip-path: inset(0 50% 0 50%);
-  pointer-events: none;
-  transition: clip-path var(--motion-base) var(--ease-standard);
-}
-
-.field:focus-within::after {
-  clip-path: inset(0);
+  background: var(--enamel);
+  clip-path: inset(0 50%);
 }
 
 .field:has(:user-invalid)::after {
-  background: var(--danger);
+  background: var(--refused-lamp);
   clip-path: inset(0);
 }
 
 .field :user-invalid,
 .field [aria-invalid="true"] {
-  border-color: var(--danger);
+  border-color: var(--refused-lamp);
 }
 
 .field:has(:user-invalid) label {
-  color: var(--danger);
+  color: var(--refused-lamp);
 }
 
-.field input:disabled,
-.field select:disabled,
-.field textarea:disabled {
+.field :disabled {
   border-style: dashed;
-  color: var(--fg-2);
+  color: var(--ink-2);
   cursor: not-allowed;
 }
 
@@ -2284,142 +2170,103 @@ dd code {
   overflow-wrap: anywhere;
 }
 
-.ledger-support textarea {
-  resize: vertical;
-}
+/* Operate rows: ledger entries, intents, purchase history. Numbers are tabular. */
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: flex-end;
-}
-
-/* The ledger: append-only rows; a row expands in place and its record rises in. */
-.ledger-rows {
+:is(ul, ol).op-rows,
+.op-rows > ul {
+  margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-cast);
+  background: var(--iron);
   overflow: hidden;
-}
-
-.ledger-rows > li + li {
-  border-top: 1px solid var(--line-soft);
-}
-
-.ledger-rows summary {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--fg);
+  font-family: var(--font-data);
+  font-size: 0.875rem;
+  line-height: 1.45;
   font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  list-style: none;
   overflow-wrap: anywhere;
 }
 
-.ledger-rows summary::-webkit-details-marker {
+.cr-row + .cr-row,
+.op-rows li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.op-rows > ul > li,
+.op-rows summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+  min-height: 44px;
+  padding: var(--sp-8) var(--sp-24);
+  color: var(--ink);
+}
+
+.op-meta {
+  color: var(--ink-2);
+}
+
+.op-rows summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.op-rows summary::-webkit-details-marker {
   display: none;
 }
 
-.ledger-rows summary::before {
+.op-rows summary::before {
   content: "";
   width: 6px;
   height: 6px;
-  border-style: solid;
-  border-color: var(--fg-2);
+  border: solid var(--ink-2);
   border-width: 1.5px 1.5px 0 0;
   transform: rotate(45deg);
   transition: transform var(--motion-base) var(--ease-standard);
   flex: none;
 }
 
-@media (hover: hover) {
-  .ledger-rows summary:hover {
-    background: var(--bg-row);
-  }
-
-  .ledger-rows summary:hover::before {
-    border-color: var(--fg);
-  }
-}
-
-.ledger-rows details[open] > summary::before {
+.op-rows details[open] > summary::before {
   transform: rotate(135deg);
 }
 
-.ledger-rows pre {
+@media (hover: hover) {
+  tbody tr:hover td,
+  tbody tr:hover th,
+.op-rows summary:hover {
+    background: var(--iron-raised);
+  }
+}
+
+.op-rows pre {
   margin: 0;
-  padding: var(--space-4);
-  border-top: 1px solid var(--line-soft);
-  background: var(--bg-field);
-  font-size: 0.75rem;
+  padding: var(--sp-24) var(--sp-24);
+  border-top: 1px solid var(--rule);
+  background: var(--well);
+  font-size: 0.875rem;
   line-height: 1.6;
-  color: var(--fg-2);
+  color: var(--ink-2);
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .ledger-rows details[open] > pre {
-    animation: sx-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
+/* The empty state names itself with a glyph and a sentence, never a blank box. */
+.op-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  color: var(--ink-2);
+  font-size: 0.875rem;
 }
 
-.history {
-  padding: var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  overflow-wrap: anywhere;
-}
-
-.history ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.history li {
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--fg-2);
-  font-size: 0.9375rem;
-}
-
-.history li > code {
-  display: block;
-  margin-bottom: var(--space-1);
-  font-size: 0.75rem;
-}
-
-.history time {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Live status lines arrive (row 10); old text is replaced, never stacked. */
-@media (prefers-reduced-motion: no-preference) {
-  main p[role="status"] {
-    animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-}
-
-/* ==========================================================================
-   Viewports: the frame is visible at once, the canvas opens its aperture (row 15)
-   ========================================================================== */
+/* Viewports: the frame is visible at once, the canvas opens its aperture (row 15) */
 
 .viewport {
   position: relative;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
+  background: var(--iron);
   aspect-ratio: 16 / 9;
   max-height: 70vh;
   overflow: hidden;
@@ -2429,7 +2276,6 @@ dd code {
   display: block;
   width: 100%;
   height: 100%;
-  /* The canvas is the input target for orbit and zoom. */
   touch-action: none;
   cursor: grab;
 }
@@ -2437,11 +2283,6 @@ dd code {
 .viewport-canvas:active {
   cursor: grabbing;
 }
-
-/*
- * A snapshot surface takes no camera input, so its canvas must not take the gestures
- * either: a swipe that starts on the marketing hero has to scroll the page.
- */
 .viewport-canvas-static,
 .viewport-canvas-static:active {
   touch-action: auto;
@@ -2453,10 +2294,6 @@ dd code {
     animation: sa-aperture var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
     animation-delay: var(--motion-duration-micro);
   }
-
-  .viewport-overlay {
-    animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
 }
 
 .viewport-overlay {
@@ -2466,56 +2303,31 @@ dd code {
   align-items: center;
   justify-content: center;
   margin: 0;
-  font-family: var(--mono);
-  font-size: 0.75rem;
+  font-family: var(--font-data);
+  font-size: var(--t-floor);
   letter-spacing: 0.04em;
-  color: var(--fg-2);
+  color: var(--ink-2);
   pointer-events: none;
 }
-
-/* /open: the live viewport leads; the core readout sits beside it from 1181px. */
 .live-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-6);
-  min-width: 0;
-}
-
-.live-stage-canvas {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
+  gap: var(--sp-24);
 }
 
 .live-stage-canvas .viewport {
   max-height: 72vh;
 }
 
-.live-readout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.live-readout h3 {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--fg-2);
-}
-
 .live-readout .dl {
   grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
 }
 
+.dl-machine dd,
 .live-readout .dl dd {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
 }
-
-/* Runtime report counters (row 16): a value that changes remounts its cell (keyed) and settles in. */
 @media (prefers-reduced-motion: no-preference) {
   .live-readout .dl dd {
     animation: sa-number-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
@@ -2523,13 +2335,11 @@ dd code {
 }
 
 .button[aria-pressed="true"] {
-  border-color: var(--accent);
+  border-color: var(--enamel);
   color: var(--accent-hi);
 }
 
-/* ==========================================================================
-   Docs (Read: static; only the rail indicator and control feedback move)
-   ========================================================================== */
+/* Docs (Read: static; only the rail indicator and control feedback move) */
 
 .docs-shell {
   max-width: var(--shell);
@@ -2547,25 +2357,18 @@ dd code {
   align-self: start;
   max-height: calc(100vh - var(--masthead-h));
   overflow-y: auto;
-  padding: var(--space-11) 0 var(--space-8);
+  padding: var(--space-11) 0 var(--sp-32);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--sp-24);
   scrollbar-width: thin;
-}
-
-.docs-rail-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .docs-rail-title,
 .toc-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--fg);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--sp-4);
 }
 
 .toc {
@@ -2578,23 +2381,14 @@ dd code {
   display: flex;
   align-items: center;
   min-height: 32px;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--sp-4) var(--sp-12);
   font-size: 0.875rem;
   line-height: 1.35;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: none;
   border-radius: var(--radius-md);
   transition: transform var(--motion-base) var(--ease-standard);
 }
-
-/* Press (row 2): the nav's 12% layer and press scale, so a rail link confirms like every
-   other link. */
-.docs-rail a:active,
-.toc a:active {
-  background-color: color-mix(in srgb, currentColor 12%, transparent);
-}
-
-/* Row 17: a 2px indicator that draws from its middle; current = the anchor in the URL. */
 .docs-rail a::before,
 .toc a::before {
   content: "";
@@ -2604,61 +2398,24 @@ dd code {
   bottom: 6px;
   width: 2px;
   border-radius: 1px;
-  background: var(--line-strong);
+  background: var(--hair);
   clip-path: inset(50% 0 50% 0);
   transition: clip-path var(--motion-base) var(--ease-standard);
 }
 
-.docs-rail a:hover,
-.toc a:hover {
-  color: var(--fg);
-}
-
+.nav a:hover::after,
+.field:focus-within::after,
 .docs-rail a:hover::before,
 .toc a:hover::before {
   clip-path: inset(0);
 }
 
-.docs-shell:has(#web-consumer:target) .docs-rail a[href="#web-consumer"],
-.docs-shell:has(#adr:target) .docs-rail a[href="#adr"],
-.docs-shell:has(#authoring-contracts:target) .docs-rail a[href="#authoring-contracts"],
-.docs-shell:has(#sculpt-quality:target) .docs-rail a[href="#sculpt-quality"],
-.docs-shell:has(#scene-composition:target) .docs-rail a[href="#scene-composition"],
-.docs-shell:has(#plugins:target) .docs-rail a[href="#plugins"],
-.docs-shell:has(#delivery-handoff:target) .docs-rail a[href="#delivery-handoff"],
-.docs-shell:has(#websites-deploy:target) .docs-rail a[href="#websites-deploy"],
-.docs-shell:has(#governing:target) .toc a[href="#governing"],
-.docs-shell:has(#free-path:target) .toc a[href="#free-path"],
-.docs-shell:has(#refusals:target) .toc a[href="#refusals"],
-.docs-shell:has(#assets:target) .toc a[href="#assets"],
-.docs-shell:has(#service-status:target) .toc a[href="#service-status"] {
-  color: var(--fg);
-}
-
-.docs-shell:has(#web-consumer:target) .docs-rail a[href="#web-consumer"]::before,
-.docs-shell:has(#adr:target) .docs-rail a[href="#adr"]::before,
-.docs-shell:has(#authoring-contracts:target) .docs-rail a[href="#authoring-contracts"]::before,
-.docs-shell:has(#sculpt-quality:target) .docs-rail a[href="#sculpt-quality"]::before,
-.docs-shell:has(#scene-composition:target) .docs-rail a[href="#scene-composition"]::before,
-.docs-shell:has(#plugins:target) .docs-rail a[href="#plugins"]::before,
-.docs-shell:has(#delivery-handoff:target) .docs-rail a[href="#delivery-handoff"]::before,
-.docs-shell:has(#websites-deploy:target) .docs-rail a[href="#websites-deploy"]::before,
-.docs-shell:has(#governing:target) .toc a[href="#governing"]::before,
-.docs-shell:has(#free-path:target) .toc a[href="#free-path"]::before,
-.docs-shell:has(#refusals:target) .toc a[href="#refusals"]::before,
-.docs-shell:has(#assets:target) .toc a[href="#assets"]::before,
-.docs-shell:has(#service-status:target) .toc a[href="#service-status"]::before {
-  background: var(--accent);
-  clip-path: inset(0);
-}
-
 .docs-main {
-  min-width: 0;
   max-width: 68ch;
-  padding: var(--space-11) 0 var(--space-18);
+  padding: var(--space-11) 0 var(--sp-72);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--sp-16);
 }
 
 main > .docs-main {
@@ -2668,24 +2425,17 @@ main > .docs-main {
 }
 
 .docs-main h1 {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--sp-8);
 }
 
 .docs-main h2 {
-  margin-top: var(--space-8);
+  margin-top: var(--sp-32);
 }
 
 .docs-main > p,
 .docs-section p {
   line-height: 1.65;
-  color: var(--fg-2);
-}
-
-.docs-main > section,
-.docs-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  color: var(--ink-2);
 }
 
 .docs-main td:first-child {
@@ -2695,59 +2445,43 @@ main > .docs-main {
 .crumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   padding: 0;
   list-style: none;
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .crumbs li + li::before {
   content: "/" / "";
-  margin-right: var(--space-2);
-  color: var(--fg-2);
-}
-
-.crumbs li:last-child {
-  color: var(--fg);
-}
-
-.crumbs a {
-  text-decoration: none;
+  margin-right: var(--sp-8);
+  color: var(--ink-2);
 }
 
 .crumbs a:hover {
-  color: var(--fg);
+  color: var(--ink);
   text-decoration: underline;
 }
-
-/* The rule note: a 1px hairline box with an Info chip (DV-F6, no side rail). */
 .rule-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
+  gap: var(--sp-12);
+  padding: var(--sp-16) var(--sp-24);
   border: 1px solid var(--status-experimental-line);
   border-radius: var(--radius-lg);
   background: var(--status-experimental-bg);
 }
-
-.rule-card p {
-  color: var(--fg);
-}
-
-/* A guide list: title, one-line summary, route, and a card-link arrow. */
 .guide-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  border-top: 1px solid var(--line);
-  margin-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  margin-top: var(--sp-8);
 }
 
 .guide-list-compact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--space-6);
+  column-gap: var(--sp-24);
 }
 
 .guide-link {
@@ -2756,24 +2490,21 @@ main > .docs-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: var(--space-4);
-  row-gap: var(--space-1);
-  padding: var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--line);
-  color: var(--fg);
-  text-decoration: none;
+  column-gap: var(--sp-16);
+  row-gap: var(--sp-4);
+  padding: var(--sp-16) var(--sp-12);
+  border-bottom: 1px solid var(--rule);
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
 .guide-link > * {
   grid-column: 1;
-  min-width: 0;
 }
 
 .guide-link::after {
   grid-column: 2;
   grid-row: 1 / span 3;
-  margin-right: var(--space-1);
+  margin-right: var(--sp-4);
 }
 
 .docs-main .guide-link h2,
@@ -2783,227 +2514,190 @@ main > .docs-main {
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.35;
-  letter-spacing: 0;
 }
 
+.launch-proof dd,
 .guide-link p {
   font-size: 0.9375rem;
-  color: var(--fg-2);
-}
-
-.guide-route {
-  font-size: 0.75rem;
-  color: var(--fg-2);
-}
-
-.contents {
-  display: contents;
+  color: var(--ink-2);
 }
 
 .code-defs {
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
-  column-gap: var(--space-6);
-  border-top: 1px solid var(--line);
+  column-gap: var(--sp-24);
+  border-top: 1px solid var(--rule);
 }
 
 .code-defs dt {
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-  font-family: var(--mono);
+  padding: var(--sp-12) 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  color: var(--fg);
   overflow-wrap: anywhere;
 }
 
 .code-defs dd {
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--fg-2);
+  padding: var(--sp-12) 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
   font-size: 0.9375rem;
 }
 
-/* ==========================================================================
-   Pricing: tiers, notes, questions
-   ========================================================================== */
+/* Pricing: tiers, notes, questions */
 
 .tier {
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  min-width: 0;
+  background: var(--iron);
   transition: transform var(--motion-base) var(--ease-standard);
 }
 
 @media (hover: hover) {
-  .tier:hover {
-    border-color: var(--line-strong);
+  .profile-card:hover,
+.tier:hover {
+    border-color: var(--hair);
   }
 }
-
-/* Selection: the pack whose purchase control holds focus takes the accent frame. */
+.cr-choice:hover,
 .tier:focus-within {
-  border-color: var(--accent);
+  border-color: var(--enamel);
 }
 
 .tier-featured {
-  border-color: var(--status-needs-review-line);
+  border-color: var(--hair);
+  box-shadow: var(--lift-1);
 }
 
 .tier-flag {
-  padding: var(--space-4) var(--space-6) 0;
+  font: 600 var(--t-small) / 1.3 var(--font-data);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
 }
 
 .tier-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6);
+  gap: var(--sp-16);
+  padding: var(--sp-24);
   flex: 1;
-}
-
-.tier h3 code {
-  font-size: 0.875rem;
-  color: var(--fg-2);
 }
 
 .tier-price {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--sp-8);
 }
 
 .tier-amount {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 2.5rem;
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.03em;
-  color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
 
+.hint,
+.guide-route,
 .tier-unit {
-  font-size: 0.75rem;
-  color: var(--fg-2);
+  font-size: var(--t-floor);
+  color: var(--ink-2);
 }
 
 .tier-rule {
   border: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--rule);
   margin: 0;
 }
 
+.panel-foot,
 .tier-status,
 .tier-purchase {
   margin-top: auto;
 }
-
-/* A tier's status names its deployment state and can run long, so it wraps inside the
-   card; table chips keep one line. */
 .tier-status .chip {
   white-space: normal;
   max-width: 100%;
-}
-
-/* The purchase block: a refused pack keeps its label, painted disabled, no hover motion. */
-.tier-purchase-blocked {
-  min-height: 46px;
 }
 
 .tier:has(.tier-purchase-blocked):hover {
   transform: none;
 }
 
-/* Row 9: the tiers settle in once, 40ms apart, capped at the stagger maximum. */
-@media (prefers-reduced-motion: no-preference) {
-  .tier-list > .tier {
-    animation: sx-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  .tier-list > .tier:nth-child(2) {
-    animation-delay: var(--motion-stagger-step);
-  }
-
-  .tier-list > .tier:nth-child(3) {
-    animation-delay: calc(2 * var(--motion-stagger-step));
-  }
-
-  .tier-list > .tier:nth-child(4) {
-    animation-delay: calc(3 * var(--motion-stagger-step));
-  }
-
-  .tier-list > .tier:nth-child(5) {
-    animation-delay: calc(4 * var(--motion-stagger-step));
-  }
-
-  .tier-list > .tier:nth-child(n + 6) {
-    animation-delay: var(--motion-stagger-max);
-  }
-}
-
 .faq {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--sp-24);
   max-width: 68ch;
 }
 
+.prose-note,
+.state-body,
 .faq-item {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--sp-8);
 }
 
 .faq dt {
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--fg);
 }
 
 .faq dd {
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
-/* ==========================================================================
-   Footer
-   ========================================================================== */
+/* Footer */
 
 footer {
-  border-top: 1px solid var(--line);
-  background: var(--bg-band);
+  border-top: 1px solid var(--rule);
+  background: var(--panel-band);
 }
 
 .footer-inner {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: var(--space-11) var(--gutter) var(--space-8);
+  padding: var(--space-11) var(--gutter) var(--sp-32);
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr));
-  gap: var(--space-8);
+  gap: var(--sp-32);
 }
 
+.section-title,
+.hero-stage,
+.release-heading,
+.live-stage-canvas,
+.live-readout,
+.docs-main > section,
+.docs-section,
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--sp-12);
 }
 
 .footer-brand p {
   font-size: 0.875rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
   max-width: 32ch;
 }
 
+.cr-doc,
+.cr-digest,
+.cr-route,
+.cr code,
 .footer-version {
-  font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-family: var(--font-data);
 }
 
+.docs-rail-group,
 .footer-col {
   display: flex;
   flex-direction: column;
@@ -3013,9 +2707,7 @@ footer {
 .footer-col h2 {
   font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0;
-  color: var(--fg);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--sp-8);
 }
 
 .footer-col a {
@@ -3023,18 +2715,18 @@ footer {
   align-items: center;
   min-height: 32px;
   font-size: 0.875rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: none;
 }
 
 .footer-col a:hover {
-  color: var(--fg);
+  color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 0.22em;
 }
 
 .footer-col a:active {
-  color: var(--fg);
+  color: var(--ink);
   background-color: color-mix(in srgb, currentColor 12%, transparent);
   border-radius: var(--radius-sm);
   text-decoration: underline;
@@ -3042,38 +2734,33 @@ footer {
   text-underline-offset: 0.22em;
 }
 
+.live-readout h3,
 .footer-note {
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .footer-base {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: var(--space-4) var(--gutter) var(--space-6);
+  padding: var(--sp-16) var(--gutter) var(--sp-24);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3) var(--space-6);
-  border-top: 1px solid var(--line-soft);
+  gap: var(--sp-12) var(--sp-24);
+  border-top: 1px solid var(--rule);
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .footer-iso {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--sp-8);
   margin-left: auto;
 }
 
-.footer-iso .dot {
-  background: var(--kids);
-}
-
-/* ==========================================================================
-   Responsive: 1180, 1024, 860, 620, and the short-laptop hero
-   ========================================================================== */
+/* Responsive: 1180, 1024, 860, 620, and the short-laptop hero */
 
 @media (min-width: 1181px) {
   .live-stage {
@@ -3083,10 +2770,6 @@ footer {
 }
 
 @media (max-width: 1180px) {
-  .docs-shell {
-    grid-template-columns: 12rem minmax(0, 1fr);
-    gap: var(--space-8);
-  }
 
   .toc {
     display: none;
@@ -3098,26 +2781,14 @@ footer {
     --gutter: 24px;
   }
 
-  /* The hero stacks claim-first; the artifact keeps a wide aspect under it. */
-  .hero-inner-split {
+  .hero-inner-split,
+.release-paths {
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-8);
+    gap: var(--sp-32);
   }
 
-  .release-hero .hero-stage .viewport {
-    aspect-ratio: 16 / 9;
-  }
-
-  .release-paths {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-8);
-  }
-
-  .grid-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .footer-inner {
+  .grid-3,
+.footer-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3134,31 +2805,38 @@ footer {
 
   .masthead-inner {
     flex-wrap: wrap;
-    gap: var(--space-2) var(--space-4);
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
+    gap: var(--sp-8) var(--sp-16);
+    padding-top: var(--sp-8);
+    padding-bottom: var(--sp-8);
   }
 
-  /* The nav takes its own row and wraps: every destination stays visible, no hidden edge. */
-  .nav {
-    order: 3;
-    width: 100%;
-    flex-wrap: wrap;
+  .menu .nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    padding: var(--sp-8) var(--gutter) var(--sp-16);
+    background: var(--panel);
+    border-bottom: 1px solid var(--rule);
     overflow-x: visible;
   }
 
-  .masthead-spacer,
-  .store-link,
-  .masthead-divider {
-    display: none;
+  .menu .nav a[href="/login"] {
+    margin: var(--sp-8) 0 0;
   }
 
-  .masthead-actions {
-    margin-left: auto;
+  .menu .nav a[href="/login"]::before {
+    left: var(--sp-12);
+    right: var(--sp-12);
+    top: calc(-1 * var(--sp-4));
+    bottom: auto;
+    width: auto;
+    height: 1px;
   }
 
   .hero-inner {
-    padding: var(--space-11) var(--gutter) var(--space-8);
+    padding: var(--space-11) var(--gutter) var(--sp-32);
   }
 
   .grid-3,
@@ -3169,7 +2847,7 @@ footer {
   .page {
     padding-top: var(--space-11);
     padding-bottom: var(--space-11);
-    gap: var(--space-8);
+    gap: var(--sp-32);
   }
 
   .docs-shell {
@@ -3178,24 +2856,12 @@ footer {
   }
 
   .docs-rail {
-    position: static;
-    max-height: none;
-    padding: var(--space-8) 0 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
   }
 
   .docs-main {
-    padding-top: var(--space-6);
-  }
-
-  .prose-notes-split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .code-defs {
-    grid-template-columns: minmax(0, 1fr);
+    padding-top: var(--sp-24);
   }
 
   .code-defs dt {
@@ -3203,35 +2869,30 @@ footer {
     padding-bottom: 0;
   }
 }
-
-/* Phone: one column; every target at least 44px. */
 @media (max-width: 620px) {
+  .cr {
+    gap: var(--sp-12);
+    padding: var(--sp-16);
+  }
+
+  .cr-row {
+    padding: var(--sp-8) var(--sp-12);
+  }
+
   html:root {
     --gutter: 16px;
   }
 
   .band-inner {
-    gap: var(--space-6);
-  }
-
-  .hero-inner {
-    padding: var(--space-8) var(--gutter);
-  }
-
-  .hero-inner-split {
-    gap: var(--space-6);
+    gap: var(--sp-24);
   }
 
   .hero-copy {
-    gap: var(--space-4);
+    gap: var(--sp-16);
   }
 
   .hero-copy .lede {
     font-size: 1rem;
-  }
-
-  .release-actions {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .download-primary,
@@ -3240,48 +2901,25 @@ footer {
     grid-row: auto;
     width: 100%;
   }
-
-  /* Download is the hero primary: the quiet action sits under it at its own width. */
   .release-actions > .button-quiet {
     width: auto;
     justify-self: start;
-  }
-
-  .launch-proof-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .matrix-note {
     align-items: stretch;
     flex-direction: column;
   }
-
-  .matrix-note .button {
-    width: 100%;
-  }
-
-  .path-links,
-  .guide-list-compact {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /*
-   * One scrolling row of 44px targets, so the masthead stays two rows tall (the
-   * overview pin: at most 104px at 390). The fade says there is more; it lifts while
-   * a link has focus, so a ring is never dimmed.
-   */
   .masthead-inner {
     row-gap: 0;
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
+    padding-top: var(--sp-4);
+    padding-bottom: var(--sp-4);
   }
 
   .nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
     gap: 2px;
     scroll-snap-type: x proximity;
-    mask-image: linear-gradient(to right, var(--bg-base) calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, var(--panel) calc(100% - 32px), transparent);
   }
 
   .nav:focus-within {
@@ -3294,46 +2932,26 @@ footer {
 
   .nav a {
     flex: none;
-    padding: 0 var(--space-3);
     font-size: 0.8125rem;
   }
 
   .nav a::after {
-    left: var(--space-3);
-    right: var(--space-3);
     bottom: 4px;
   }
 
-  .grid,
-  .grid-3,
-  .grid-2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .actions .button {
+  .matrix-note .button,
+.actions .button {
     width: 100%;
   }
 
   .page {
-    padding-top: var(--space-8);
-    gap: var(--space-8);
-  }
-
-  .dl,
-  .live-readout .dl {
-    grid-template-columns: minmax(0, 1fr);
+    padding-top: var(--sp-32);
   }
 
   .dl dt {
     border-bottom: 0;
     padding-bottom: 0;
   }
-
-  /*
-   * The state header stops being one line: chip and name above, the key below at full
-   * width. The key may not be shortened, hidden, or put behind a disclosure, so the
-   * row splits instead.
-   */
   .state-head {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -3345,37 +2963,18 @@ footer {
   }
 
   .state,
-  .form-card,
-  .history {
-    padding: var(--space-4);
-  }
-
-  .field input,
-  .field select,
-  .form-plain input:not([type="checkbox"]) {
-    min-height: 44px;
-  }
-
-  .tier-body {
-    padding: var(--space-4);
+  .op-form,
+.tier-body {
+    padding: var(--sp-16);
   }
 
   .tier-amount {
     font-size: 2.25rem;
   }
 
-  .docs-rail {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .docs-rail a,
-  .footer-col a {
-    min-height: 44px;
-  }
-
   .footer-inner {
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-6);
+    gap: var(--sp-24);
   }
 
   .footer-iso {
@@ -3384,97 +2983,94 @@ footer {
 
   th,
   td {
-    padding: var(--space-3);
+    padding: var(--sp-12);
   }
 }
+@media (max-width: 420px) {
+  .release-hero .hero-inner {
+    padding-top: var(--sp-16);
+  }
 
-/* A landscape laptop still shows the proposition, Download and the real artifact at once. */
+  .release-hero .hero-inner-split {
+    gap: var(--sp-12);
+  }
+
+  .release-hero :is(.hero-copy, .release-actions) {
+    display: contents;
+  }
+
+  .release-hero :is(.download-context, .platform-availability),
+  .cr-acts {
+    order: 1;
+  }
+
+  .cr-synthetic {
+    order: 2;
+  }
+
+  .cr-title {
+    font-size: 1.25rem;
+  }
+}
 @media (max-height: 720px) and (min-width: 1025px) {
   .release-hero .hero-inner {
-    padding-top: var(--space-6);
-    padding-bottom: var(--space-6);
+    padding-top: var(--sp-24);
+    padding-bottom: var(--sp-24);
   }
 
   .release-hero .hero-copy {
-    gap: var(--space-3);
+    gap: var(--sp-12);
   }
 
   .release-hero .hero-copy h1 {
     font-size: clamp(2.25rem, 1.45rem + 2.7vw, 3.25rem);
   }
 
-  .release-hero .hero-stage .viewport {
-    aspect-ratio: auto;
-    height: min(42vh, 300px);
-  }
-
   .launch-proof {
-    padding-top: var(--space-3);
-    padding-bottom: var(--space-3);
+    padding-top: var(--sp-12);
+    padding-bottom: var(--sp-12);
   }
 }
 
-/* ==========================================================================
-   Main-only surfaces, in the v5 vocabulary (DIRECTION v6 §7.2 and Port notes)
-   ========================================================================== */
-
-/* A link that leaves this origin says so, as a hidden glyph beside its words (D-7). */
+/* Main-only surfaces, in the v5 vocabulary (DIRECTION v6 §7.2 and Port notes) */
 main p a[href^="https://"]::after,
 main li a[href^="https://"]::after,
 main dd a[href^="https://"]::after {
   content: "\2197" / "";
   display: inline-block;
   margin-left: 0.2em;
-  text-decoration: none;
 }
-
-/* Account-backed routes sit after a hairline, so the grouping reads without a menu. */
 .nav a[href="/login"] {
-  margin-left: var(--space-3);
+  margin-left: var(--sp-12);
 }
 
 .nav a[href="/login"]::before {
   content: "";
   position: absolute;
-  left: calc(-1 * var(--space-2));
-  top: var(--space-3);
-  bottom: var(--space-3);
+  left: calc(-1 * var(--sp-8));
+  top: var(--sp-12);
+  bottom: var(--sp-12);
   width: 1px;
-  background: var(--line);
+  background: var(--rule);
   pointer-events: none;
 }
-
-/* Masthead actions: quiet buttons with every button state (DV-P2/DV-P3). */
-.masthead-actions .button {
-  min-height: 38px;
-  padding: 0 var(--space-4);
-  font-size: 0.8125rem;
+.masthead-primary {
+  min-height: 44px;
+  padding: 0 var(--sp-16);
+  font-size: 0.875rem;
+  flex: none;
 }
-
-.button-lg {
-  min-height: 46px;
-}
-
-/* Hero stage (Viewport frame, DV-P12): 1px strong line, radius 9, no shadow. */
-.hero-stage .viewport {
-  position: relative;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  box-shadow: none;
-  overflow: hidden;
-}
-
-/* DV-P10: the JS-off pending panel is a plain neutral fill at opacity 1, no grid lines. */
 .hero-stage .viewport::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(var(--bg-panel), var(--bg-raised));
+  background: linear-gradient(var(--iron), var(--iron-raised));
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
 }
 
+.button:focus-visible::after,
 .hero-stage[data-frame="pending"] .viewport::after {
   opacity: 1;
 }
@@ -3483,6 +3079,7 @@ main dd a[href^="https://"]::after {
   z-index: 1;
 }
 
+.page-head-center .title-row,
 .hero-stage > .state {
   justify-content: center;
 }
@@ -3490,37 +3087,22 @@ main dd a[href^="https://"]::after {
 .hero-stage-facts {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--sp-8);
 }
 
-.hero-stage-note .dot {
-  width: 6px;
-  height: 6px;
-}
-
-.release-hero .hero-copy h1 {
-  max-width: none;
-}
-
-.release-hero .hero-stage .viewport {
+.release-artifact .hero-stage .viewport {
   height: min(35vw, 504px);
   max-height: none;
   aspect-ratio: auto;
 }
 
-.release-hero .hero-stage > .state {
+.release-artifact .hero-stage > .state {
   min-height: min(35vw, 504px);
 }
-
-.proof-kids-isolation dt {
-  color: var(--status-isolated-fg);
-}
-
-/* ProofFigure: a capture is evidence, so it takes the Viewport frame; no card fill. */
 .proof-gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: var(--space-6);
+  column-gap: var(--sp-24);
   row-gap: 0;
 }
 
@@ -3536,17 +3118,12 @@ main dd a[href^="https://"]::after {
   grid-template-rows: subgrid;
 }
 
-.proof-figure {
-  margin: 0;
-  min-width: 0;
-}
-
 .proof-frame {
   overflow: hidden;
   aspect-ratio: 16 / 10;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--hair);
   border-radius: 9px;
-  background: var(--bg-panel);
+  background: var(--iron);
 }
 
 .proof-frame img {
@@ -3564,45 +3141,40 @@ main dd a[href^="https://"]::after {
 }
 
 .proof-caption {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
+.page > h2,
+.stack > h2,
 .proof-title {
-  margin-top: var(--space-4);
-  font-size: 1.0625rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--fg);
+  margin-top: var(--sp-16);
 }
 
 .proof-claim {
-  margin-top: var(--space-2);
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--fg-2);
+  margin-top: var(--sp-8);
+  color: var(--ink-2);
 }
 
 .proof-level {
-  margin-top: var(--space-3);
+  margin-top: var(--sp-12);
 }
 
 .proof-history {
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .proof-limits {
-  margin: var(--space-3) 0 0;
+  margin: var(--sp-12) 0 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: var(--space-2);
+  gap: var(--sp-8);
 }
 
 .proof-limits .chip {
@@ -3612,29 +3184,35 @@ main dd a[href^="https://"]::after {
 .proof-link {
   position: relative;
   align-self: start;
-  margin-top: var(--space-4);
+  margin-top: var(--sp-16);
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   width: fit-content;
   font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--fg);
-  text-decoration: none;
 }
 
 .proof-link-label {
   text-decoration: underline;
-  text-decoration-color: var(--fg-2);
+  text-decoration-color: var(--ink-2);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.22em;
 }
 
+main p a:hover,
+main li a:hover,
+main dd a:hover,
+main td a:hover,
 .proof-link:hover .proof-link-label {
   text-decoration-thickness: 2px;
   text-decoration-color: var(--accent-hi);
 }
 
+.menu-toggle:active,
+.nav a:active,
+.docs-rail a:active,
+.toc a:active,
 .proof-link:active .proof-link-label {
   background-color: color-mix(in srgb, currentColor 12%, transparent);
 }
@@ -3642,7 +3220,7 @@ main dd a[href^="https://"]::after {
 .proof-figure-wide {
   display: grid;
   grid-template-columns: minmax(0, 880px) minmax(0, 1fr);
-  gap: var(--space-6) var(--space-8);
+  gap: var(--sp-24) var(--sp-32);
   align-items: end;
 }
 
@@ -3650,146 +3228,139 @@ main dd a[href^="https://"]::after {
   margin-top: 0;
 }
 
-/* Wide evidence keeps its own labelled scroller. */
-.scroll-frame {
-  position: relative;
-  min-width: 0;
-}
-
 .comparison-table .source-label {
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
 }
-
-/* "Start without an account": a two-column link list with trailing arrows. */
 .path-links a {
   justify-content: flex-start;
-  gap: var(--space-4);
+  gap: var(--sp-16);
 }
 
 .path-route {
   flex: none;
   min-width: 5.5rem;
-  font-family: var(--mono);
+  font-family: var(--font-data);
   font-size: 0.8125rem;
-  color: var(--fg-2);
+  color: var(--ink-2);
 }
 
 .path-label {
   display: inline-flex;
   align-items: center;
-  font-size: 1rem;
   font-weight: 600;
   line-height: 1.35;
 }
-
-/* /login: main's auth layout, restyled as the v5 28rem state column. */
-.auth-layout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  min-width: 0;
-}
-
-.page-narrow .auth-layout .lede {
-  font-size: 1rem;
-}
-
-.auth-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.auth-card .note {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
-}
-
-/* /open: the stage leads; its readout is the instrument dl. */
+.stack,
 .open-stage {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-.open-stage > h3 {
-  margin-top: var(--space-2);
+  gap: var(--sp-16);
 }
 
 .page-head .platform-availability {
   max-width: 30rem;
 }
-
-/* Help documents: rail and reading column, no on-this-page column. */
 .docs-shell-doc {
   grid-template-columns: 13rem minmax(0, 1fr);
 }
 
+.wordmark:hover,
+.nav a:hover,
+.nav a[aria-current="page"],
+.store-link:hover,
+a.button-quiet:hover,
+.op-readout dd,
+.comparison-table th[scope="row"] > a:hover,
+td code,
+p code,
+li code,
+dd code,
+.docs-rail a:hover,
+.toc a:hover,
+.docs-shell:has(#web-consumer:target) .docs-rail a[href="#web-consumer"],
+.docs-shell:has(#adr:target) .docs-rail a[href="#adr"],
+.docs-shell:has(#authoring-contracts:target) .docs-rail a[href="#authoring-contracts"],
+.docs-shell:has(#sculpt-quality:target) .docs-rail a[href="#sculpt-quality"],
+.docs-shell:has(#scene-composition:target) .docs-rail a[href="#scene-composition"],
+.docs-shell:has(#plugins:target) .docs-rail a[href="#plugins"],
+.docs-shell:has(#delivery-handoff:target) .docs-rail a[href="#delivery-handoff"],
+.docs-shell:has(#websites-deploy:target) .docs-rail a[href="#websites-deploy"],
+.docs-shell:has(#governing:target) .toc a[href="#governing"],
+.docs-shell:has(#free-path:target) .toc a[href="#free-path"],
+.docs-shell:has(#refusals:target) .toc a[href="#refusals"],
+.docs-shell:has(#assets:target) .toc a[href="#assets"],
+.docs-shell:has(#service-status:target) .toc a[href="#service-status"],
+.crumbs li:last-child,
 .docs-rail a[aria-current="page"] {
-  color: var(--fg);
+  color: var(--ink);
 }
 
+.nav a[aria-current="page"]::after,
+.docs-shell:has(#web-consumer:target) .docs-rail a[href="#web-consumer"]::before,
+.docs-shell:has(#adr:target) .docs-rail a[href="#adr"]::before,
+.docs-shell:has(#authoring-contracts:target) .docs-rail a[href="#authoring-contracts"]::before,
+.docs-shell:has(#sculpt-quality:target) .docs-rail a[href="#sculpt-quality"]::before,
+.docs-shell:has(#scene-composition:target) .docs-rail a[href="#scene-composition"]::before,
+.docs-shell:has(#plugins:target) .docs-rail a[href="#plugins"]::before,
+.docs-shell:has(#delivery-handoff:target) .docs-rail a[href="#delivery-handoff"]::before,
+.docs-shell:has(#websites-deploy:target) .docs-rail a[href="#websites-deploy"]::before,
+.docs-shell:has(#governing:target) .toc a[href="#governing"]::before,
+.docs-shell:has(#free-path:target) .toc a[href="#free-path"]::before,
+.docs-shell:has(#refusals:target) .toc a[href="#refusals"]::before,
+.docs-shell:has(#assets:target) .toc a[href="#assets"]::before,
+.docs-shell:has(#service-status:target) .toc a[href="#service-status"]::before,
 .docs-rail a[aria-current="page"]::before {
-  background: var(--accent);
+  background: var(--enamel);
   clip-path: inset(0);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .docs-rail a[aria-current="page"]::before {
-    animation: sa-draw-y var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-}
-
+.state-body form,
+.open-stage > h3,
 .docs-article .crumbs + h1,
 .docs-main nav + h1 {
-  margin-top: var(--space-2);
+  margin-top: var(--sp-8);
 }
-
-/* Related links at the foot of a help document: the guide list. */
 .doc-links .guide-title {
   display: inline-flex;
   align-items: center;
 }
-
-/* /pricing tiers: head, body, foot. */
 .tier-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--sp-12);
   min-height: 24px;
 }
 
 .tier h3 code {
   font-size: 1em;
-  color: var(--fg);
+  color: var(--ink);
 }
 
 .tier-foot {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--sp-12);
   margin-top: auto;
 }
 
 .tier-head .tier-flag {
   padding: 0;
 }
-
-/* §2.2: one accent fill per viewport. Only the featured pack's checkout is primary. */
+.button-quiet,
 .tier:not(.tier-featured) .tier-purchase .button {
   background: transparent;
-  color: var(--fg);
-  border-color: var(--line-strong);
+  color: var(--ink);
+  border-color: var(--hair);
 }
-
-/* §5 Field: 44px on phones. */
 @media (max-width: 620px) {
-  .field input,
+  .field :is(input, select, textarea),
+  .op-form > input,
+.docs-rail a,
+  .footer-col a,
+.field input,
   .field select {
     min-height: 44px;
   }
@@ -3802,12 +3373,12 @@ main dd a[href^="https://"]::after {
 }
 
 @media (max-width: 1024px) {
-  .release-hero .hero-stage .viewport {
+  .release-artifact .hero-stage .viewport {
     height: auto;
     aspect-ratio: 16 / 9;
   }
 
-  .release-hero .hero-stage > .state {
+  .release-artifact .hero-stage > .state {
     min-height: 0;
   }
 
@@ -3820,7 +3391,7 @@ main dd a[href^="https://"]::after {
     grid-row: auto;
     grid-template-rows: none;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    column-gap: var(--space-6);
+    column-gap: var(--sp-24);
     align-items: start;
   }
 
@@ -3839,7 +3410,7 @@ main dd a[href^="https://"]::after {
   .docs-rail {
     position: static;
     max-height: none;
-    padding: var(--space-6) 0 0;
+    padding: var(--sp-24) 0 0;
     flex-direction: row;
     gap: 0;
   }
@@ -3848,10 +3419,11 @@ main dd a[href^="https://"]::after {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0 var(--space-1);
+    gap: 0 var(--sp-4);
   }
 
-  .docs-rail-group + .docs-rail-group,
+  .store-link,
+.docs-rail-group + .docs-rail-group,
   .docs-rail-title {
     display: none;
   }
@@ -3861,40 +3433,48 @@ main dd a[href^="https://"]::after {
     white-space: nowrap;
   }
 
-  .docs-shell-doc {
+  .prose-notes-split,
+.code-defs,
+.docs-shell-doc {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 620px) {
-  .hero-stage-sep {
-    display: none;
-  }
 
   .hero-stage-facts {
     flex-basis: 100%;
   }
 
   .proof-gallery {
-    row-gap: var(--space-8);
+    row-gap: var(--sp-32);
   }
 
-  .proof-gallery > .proof-figure {
+  .release-actions,
+.launch-proof-grid,
+.path-links,
+  .guide-list-compact,
+.grid,
+  .grid-3,
+  .grid-2,
+.dl,
+  .live-readout .dl,
+.docs-rail,
+.proof-gallery > .proof-figure {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .path-route {
+  .hero-stage-sep,
+.path-route {
     display: none;
   }
 }
-
-/* A short landscape laptop (1280×640) keeps H1, Download and the stage above the fold. */
 @media (max-height: 720px) and (min-width: 1025px) {
-  .release-hero .hero-stage .viewport {
+  .release-artifact .hero-stage .viewport {
     height: min(42vh, 300px);
   }
 
-  .release-hero .hero-stage > .state {
+  .release-artifact .hero-stage > .state {
     min-height: min(42vh, 300px);
   }
 }
@@ -3913,22 +3493,7 @@ main dd a[href^="https://"]::after {
   }
 }
 
-/* ==========================================================================
-   Engine Desktop editor shell (/editor) — sceneaxi issue 184.
-
-   The chrome of `Engine Desktop.dc.html` drawn over the shared Foundations v2
-   tokens: title bar 36, mode rail 56, left dock 274, inspector 326, assistant
-   344, view tabs 32, dock 228, status bar 27 — the same structural metrics the
-   shared editor-shell model carries (`EDITOR_SHELL_METRICS`). No colour is
-   declared here; every value below references a Foundations token, exactly as
-   the rest of this sheet does.
-
-   Responsive behaviour derives from the shared window tiers: at compact
-   (below 1440×720) the assistant undocks to an overlay, at narrow (below
-   1180×660) the side panels reflow under the viewport, and below the shared
-   900×600 minimum the chrome refuses by name rather than rendering an
-   unusable layout.
-   ========================================================================== */
+/* Engine Desktop editor shell (/editor) — sceneaxi issue 184. */
 
 .edshell {
   position: fixed;
@@ -3941,11 +3506,6 @@ main dd a[href^="https://"]::after {
   z-index: 30;
   overflow: hidden;
 }
-
-/* The document's name for the route. The chrome depicts an application and the
-   archive draws no page title, so it is carried for assistive technology only —
-   clipped rather than `display: none`, which would take it out of the
-   accessibility tree along with the pixels. */
 .ed-shell-title {
   position: absolute;
   width: 1px;
@@ -3969,12 +3529,6 @@ main dd a[href^="https://"]::after {
   background: var(--ok);
   flex: none;
 }
-
-/*
- * Zero-specificity reset (`:where`), so every `.ed-*` component rule below —
- * equal single-class specificity, later in source — wins over it. A plain
- * `.edshell button` selector would be (0,1,1) and silently outrank them.
- */
 .edshell :where(button, a[data-kind]) {
   font: inherit;
   color: inherit;
@@ -3983,19 +3537,10 @@ main dd a[href^="https://"]::after {
   cursor: pointer;
   text-decoration: none;
 }
-
-.edshell [data-kind].is-inert {
-  color: var(--fg-2);
-  cursor: default;
-}
-
-/* Inset rings survive the editor's intentionally clipped panel scrollports. */
 html .edshell :focus-visible {
   outline: 2px solid var(--accent-hi);
   outline-offset: -2px;
 }
-
-/* ------------------------------------------------------------ minimum --- */
 
 .ed-minimum {
   display: none;
@@ -4011,12 +3556,6 @@ html .edshell :focus-visible {
   .ed-minimum {
     display: block;
   }
-
-  /*
-    The palette is script-owned and cannot see this tier, so the tier withdraws
-    it the same way it withdraws every other region: below the shared minimum
-    the refusal is the whole surface, and nothing paints over it.
-  */
   .ed-titlebar,
   .ed-body,
   .ed-status,
@@ -4024,8 +3563,6 @@ html .edshell :focus-visible {
     display: none !important;
   }
 }
-
-/* ---------------------------------------------------------- title bar --- */
 
 .ed-titlebar {
   height: 36px;
@@ -4100,20 +3637,14 @@ html .edshell :focus-visible {
   background: var(--fg-4);
 }
 
-.ed-profile-game[aria-pressed="true"] .dot {
-  background: var(--accent);
-}
-
 .ed-profile-web[aria-pressed="true"] .dot {
   background: var(--store-web);
 }
 
+.footer-iso .dot,
 .ed-profile-kids[aria-pressed="true"] .dot {
   background: var(--kids);
 }
-
-/* `safe center`: when the row is short the pill shrinks and overflows to its end,
-   never back over the profile switch beside it. */
 .ed-project {
   flex: 1;
   display: flex;
@@ -4151,9 +3682,6 @@ html .edshell :focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* The save status wraps to a second line inside the 36px title bar instead of
- * ellipsizing its document name where the bar is tight (1280-1440 wide). */
 .ed-project-save {
   flex: 0 1 auto;
   min-width: 0;
@@ -4215,20 +3743,12 @@ html .edshell :focus-visible {
   border-color: var(--accent);
 }
 
-.ed-assistant-toggle .dot {
-  background: var(--accent);
-}
-
-/* --------------------------------------------------------------- body --- */
-
 .ed-body {
   flex: 1;
   display: flex;
   min-height: 0;
   position: relative;
 }
-
-/* ---------------------------------------------------------- mode rail --- */
 
 .ed-rail {
   width: 56px;
@@ -4261,9 +3781,6 @@ html .edshell :focus-visible {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.05em;
   color: var(--fg-2);
   position: relative;
 }
@@ -4315,8 +3832,6 @@ html .edshell :focus-visible {
   border-radius: 3px;
 }
 
-/* ----------------------------------------------------------- kids lock -- */
-
 .ed-kids-lock {
   flex: 1;
   display: grid;
@@ -4347,8 +3862,6 @@ html .edshell :focus-visible {
 .ed-kids-exit {
   font-size: 11.5px;
 }
-
-/* ---------------------------------------------------------- left dock --- */
 
 .ed-left {
   width: 274px;
@@ -4391,16 +3904,6 @@ html .edshell :focus-visible {
   color: var(--fg-2);
 }
 
-.ed-tree,
-.ed-layers,
-.ed-library,
-.ed-bodies,
-.ed-registry {
-  list-style: none;
-  margin: 0;
-  padding: 4px 0;
-}
-
 .ed-tree li {
   display: flex;
   align-items: center;
@@ -4420,19 +3923,14 @@ html .edshell :focus-visible {
   text-decoration: none;
 }
 
+.launch-proof dt a:hover,
+.prose-note-accent h3,
 a.ed-tree-label:hover {
   color: var(--accent-hi);
 }
 
 .ed-tree li.is-selected {
   background: color-mix(in srgb, var(--accent) 16%, var(--bg-panel));
-}
-
-.ed-tree-kind {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--fg-2);
 }
 
 .ed-layers li,
@@ -4468,14 +3966,13 @@ a.ed-tree-label:hover {
   font-family: var(--mono);
   font-size: 11px;
 }
-
-/* Run mode's own transport: both controls are links back to /editor. */
 .ed-run-controls {
   display: flex;
   gap: 8px;
   padding: 8px var(--space-2);
 }
 
+.crumbs a,
 .ed-run-controls > * {
   text-decoration: none;
 }
@@ -4501,23 +3998,27 @@ a.ed-tree-label:hover {
   gap: var(--space-2) var(--space-2);
 }
 
-.ed-facts dt {
-  color: var(--fg-2);
-}
-
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul,
+figure,
 .ed-facts dd {
   margin: 0;
 }
 
-.ed-facts .ok {
-  color: var(--ok);
-}
-
+.op-readout > div,
+.download-cta,
+.dl > .dl-row,
+.dl > div,
+.contents,
 .ed-fact-row {
   display: contents;
 }
-
-/* ----------------------------------------------------- viewport column -- */
 
 .ed-viewport-col {
   flex: 1;
@@ -4544,11 +4045,6 @@ a.ed-tree-label:hover {
   font-size: 11.5px;
   color: var(--fg-2);
   border-radius: 4px 4px 0 0;
-}
-
-.ed-viewtab[aria-selected="true"] {
-  color: var(--fg);
-  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .ed-canvas {
@@ -4602,12 +4098,6 @@ a.ed-tree-label:hover {
   flex: 1;
   min-height: 0;
 }
-
-/*
- * The live-frame report and viewport actions render inside the canvas column;
- * the archive keeps that band minimal, so the report is a compact mono strip
- * rather than a prose panel.
- */
 .ed-canvas .actions {
   display: flex;
   gap: 8px;
@@ -4664,12 +4154,6 @@ a.ed-tree-label:hover {
   color: var(--fg);
   white-space: nowrap;
 }
-
-/*
- * The viewport's own copy band. It rides with the canvas in every mode rather
- * than living in one mode's inspector, and it is capped and scrollable so a
- * short window loses viewport pixels rather than the statement.
- */
 .ed-viewport-note {
   flex: none;
   max-height: 92px;
@@ -4683,16 +4167,6 @@ a.ed-tree-label:hover {
   display: grid;
   gap: 4px;
 }
-
-.ed-viewport-lede {
-  color: var(--fg);
-}
-
-.ed-viewport-deeplink .mono {
-  color: var(--fg);
-}
-
-/* ---------------------------------------------------------------- dock -- */
 
 .ed-dock {
   height: 228px;
@@ -4717,9 +4191,6 @@ a.ed-tree-label:hover {
   padding: 0 var(--space-1) 0 8px;
   gap: var(--space-1);
 }
-
-/* At the narrowest docked column the tabs scroll inside their strip rather than run
-   under the bulk actions and the inspector beside it. */
 .ed-dock-tabs {
   display: flex;
   gap: 2px;
@@ -4764,8 +4235,6 @@ a.ed-tree-label:hover {
   display: flex;
   gap: var(--space-1);
 }
-
-/* Compact bulk actions, so the four tabs and both actions share the narrowest docked column. */
 .edshell .ed-dock-bulk :is(.ed-ghost, .ed-primary) {
   padding-inline: var(--space-2);
 }
@@ -4815,8 +4284,6 @@ a.ed-tree-label:hover {
   vertical-align: top;
   line-height: 1.5;
 }
-
-/* Full machine values remain selectable, without one JSON cell widening the dock. */
 .ed-changes td.mono,
 .ed-evidence td.mono {
   max-width: 56ch;
@@ -4836,10 +4303,12 @@ a.ed-tree-label:hover {
   margin-right: var(--space-2);
 }
 
-.ed-cr-path {
-  color: var(--fg-2);
-}
+/* On the selected plate --fg-2 measured 4.03:1, so the kind label takes primary ink. */
 
+.ed-tree li.is-selected .ed-tree-kind,
+.ed-viewtab[aria-selected="true"],
+.ed-viewport-lede,
+.ed-viewport-deeplink .mono,
 .ed-cr-leaf {
   color: var(--fg);
 }
@@ -4877,15 +4346,9 @@ a.ed-tree-label:hover {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-
-/* Strike-through, not low contrast, distinguishes the previous value. */
 .ed-cr-current {
   color: var(--fg-2);
   text-decoration: line-through;
-}
-
-.ed-cr-proposed {
-  color: var(--ok);
 }
 
 .ed-console {
@@ -4911,6 +4374,8 @@ a.ed-tree-label:hover {
   color: var(--info);
 }
 
+.ed-facts .ok,
+.ed-cr-proposed,
 .ed-console-ok .ed-console-level {
   color: var(--ok);
 }
@@ -4936,13 +4401,6 @@ a.ed-tree-label:hover {
   border-bottom: 1px solid var(--line-soft);
   flex-wrap: wrap;
 }
-
-.ed-asset-digest,
-.ed-socket-node {
-  color: var(--fg-2);
-}
-
-/* ----------------------------------------------------------- inspector -- */
 
 .ed-inspector {
   width: 326px;
@@ -5006,6 +4464,7 @@ a.ed-tree-label:hover {
   flex: none;
 }
 
+.ed-tree-kind,
 .ed-pass-n {
   margin-left: auto;
   font-family: var(--mono);
@@ -5028,10 +4487,11 @@ a.ed-tree-label:hover {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.ed-compose-parent {
-  color: var(--fg-2);
-}
-
+.ed-tree,
+.ed-layers,
+.ed-library,
+.ed-bodies,
+.ed-registry,
 .ed-targets {
   list-style: none;
   margin: 0;
@@ -5082,8 +4542,6 @@ a.ed-tree-label:hover {
   padding: 0 8px;
 }
 
-/* --------------------------------------------------------- assistant ---- */
-
 .ed-assistant {
   width: 344px;
   flex: none;
@@ -5110,6 +4568,8 @@ a.ed-tree-label:hover {
   font-size: 12.5px;
 }
 
+.ed-profile-game[aria-pressed="true"] .dot,
+.ed-assistant-toggle .dot,
 .ed-assistant-head .dot {
   background: var(--accent);
 }
@@ -5185,8 +4645,6 @@ a.ed-tree-label:hover {
   margin-left: auto;
 }
 
-/* ----------------------------------------------------------- buttons ---- */
-
 .edshell .ed-primary {
   display: inline-flex;
   align-items: center;
@@ -5206,6 +4664,8 @@ a.ed-tree-label:hover {
 
 .edshell .ed-primary.is-inert,
 .edshell .ed-primary.is-inert:hover {
+  padding-inline: calc(var(--space-3) - 1px);
+  border: 1px dashed var(--fg-2);
   background: var(--bg-control);
   color: var(--fg-2);
 }
@@ -5229,10 +4689,9 @@ a.ed-tree-label:hover {
 .edshell .ed-ghost.is-inert,
 .edshell .ed-ghost.is-inert:hover {
   color: var(--fg-2);
-  border-color: var(--line);
+  border-style: dashed;
+  border-color: var(--fg-2);
 }
-
-/* --------------------------------------------------------- status bar --- */
 
 .ed-status {
   height: 27px;
@@ -5258,11 +4717,10 @@ a.ed-tree-label:hover {
   color: var(--fg);
 }
 
+.panel-grow,
 .ed-status-spacer {
   flex: 1;
 }
-
-/* ------------------------------------------------------------ palette --- */
 
 .ed-palette-scrim {
   position: fixed;
@@ -5331,10 +4789,6 @@ a.ed-tree-label:hover {
   background: var(--bg-row);
 }
 
-.ed-palette-action.is-inert {
-  color: var(--fg-2);
-}
-
 .ed-palette-verb {
   font-size: 11px;
   color: var(--fg-2);
@@ -5362,8 +4816,6 @@ a.ed-tree-label:hover {
   margin-left: var(--space-2);
 }
 
-/* ----------------------------------------- Web Experience projection --- */
-
 .webxp-editor {
   flex: 1;
   min-width: 0;
@@ -5387,11 +4839,6 @@ a.ed-tree-label:hover {
   font-size: 24px;
 }
 
-.webxp-head p:not(.eyebrow),
-.webxp-side p {
-  color: var(--fg-2);
-}
-
 .webxp-session {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -5401,6 +4848,15 @@ a.ed-tree-label:hover {
   font-size: 11px;
 }
 
+.edshell [data-kind].is-inert,
+.ed-facts dt,
+.ed-cr-path,
+.ed-asset-digest,
+.ed-socket-node,
+.ed-compose-parent,
+.ed-palette-action.is-inert,
+.webxp-head p:not(.eyebrow),
+.webxp-side p,
 .webxp-session dt {
   color: var(--fg-2);
 }
@@ -5584,17 +5040,16 @@ a.ed-tree-label:hover {
   flex-direction: column;
   gap: var(--space-1);
 }
-
-.webxp-refusals button {
+.webxp-refusals button[aria-disabled="true"] {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--line) !important;
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: var(--bg-field) !important;
+  background: var(--bg-field);
   text-align: left;
 }
 
@@ -5603,22 +5058,6 @@ a.ed-tree-label:hover {
   color: var(--danger);
   overflow-wrap: anywhere;
 }
-
-/* ------------------------------------------------------ notice rail ----- */
-
-/*
- * The route's notices, beside the shell rather than behind or over it.
- *
- * `.edshell` is fixed and opaque on a page that does not scroll, so a notice left in
- * normal flow is painted underneath it and can be reached at no viewport; and a rail
- * floated over the shell covered live controls (the dock tabs, Accept all) and the
- * viewport lede at every desktop width. So at every supported window the rail owns a
- * band at the top of the window and the shell starts below it: nothing overlaps. The
- * rail is a **column** — each notice takes its own row, so a second one can never land
- * on top of the first — and it scrolls internally at a height bounded by the window,
- * so every notice stays reachable down to the shared 900×600 minimum while the shell
- * keeps at least 528px. Below the minimum both regroup into document flow (later).
- */
 .ed-overlay-notes {
   display: flex;
   flex-direction: column;
@@ -5630,8 +5069,6 @@ a.ed-tree-label:hover {
 }
 
 @media (min-width: 900px) and (min-height: 600px) {
-  /* The band height, written out at each use (no new custom property):
-     clamp(72px, calc(100vh - 640px), 168px). */
   .ed-overlay-notes {
     position: fixed;
     top: 0;
@@ -5648,8 +5085,6 @@ a.ed-tree-label:hover {
     scrollbar-width: thin;
     scrollbar-color: var(--line-strong) var(--bg-panel);
   }
-
-  /* Each notice lands on its own top when the band scrolls. */
   .ed-overlay-notes {
     scroll-snap-type: y proximity;
     scroll-padding-block: var(--space-2);
@@ -5658,9 +5093,6 @@ a.ed-tree-label:hover {
   .ed-overlay-notes > * {
     scroll-snap-align: start;
   }
-
-  /* A state in the band takes the chrome's density, and its evidence sits beside its
-     text rather than under it, so the band holds it in about half the height. */
   .ed-overlay-notes .state {
     padding: var(--space-3) var(--space-4);
     gap: var(--space-2);
@@ -5694,14 +5126,8 @@ a.ed-tree-label:hover {
     font-size: 12px;
     line-height: 1.5;
   }
-
-  body:has(.ed-overlay-notes) .edshell {
-    top: clamp(72px, calc(100vh - 640px), 168px);
-  }
-
-  /* The palette scrim is fixed too: it covers the shell, not the band, and the palette
-     stays inside what is left of the window. */
-  body:has(.ed-overlay-notes) .ed-palette-scrim {
+  body:has(.ed-overlay-notes) .edshell,
+body:has(.ed-overlay-notes) .ed-palette-scrim {
     top: clamp(72px, calc(100vh - 640px), 168px);
   }
 
@@ -5718,17 +5144,9 @@ a.ed-tree-label:hover {
   font-size: 11px;
   padding: var(--space-2) 12px;
 }
-
-/* The one control on this route that writes: an explicit POST, never a render. */
 .ed-intake-form {
   margin-top: 4px;
 }
-
-/* ------------------------------------------------- shared window tiers -- */
-
-/* compact (below 1440×720): every seated assistant state — `open` and the Kids
-   `denied` lock alike — undocks to an overlay drawer, so the seat never
-   auto-places itself into the narrow tier's grid. */
 @media (max-width: 1439px), (max-height: 719px) {
   .ed-assistant:not([data-assistant="closed"]) {
     position: absolute;
@@ -5739,11 +5157,6 @@ a.ed-tree-label:hover {
     border-left: 1px solid var(--line-strong);
     box-shadow: -10px 0 14px -6px color-mix(in srgb, var(--bg-base) 90%, transparent);
   }
-
-  /* The drawer (344) is wider than the inspector it covers (326), so it overhangs the
-     viewport column by 18px: the whole column stops short of it, not only the dock's
-     bulk actions. A Kids lock has no inspector under the drawer, so it keeps clear of
-     all of it. */
   .edshell:has(.ed-assistant:not([data-assistant="closed"])) .ed-viewport-col {
     margin-right: calc(344px - 326px);
   }
@@ -5751,34 +5164,18 @@ a.ed-tree-label:hover {
   .edshell:has(.ed-assistant:not([data-assistant="closed"])) .ed-kids-lock {
     margin-right: 344px;
   }
-
-  /* The pill keeps the project name; the path, which would ellipsize to a lone mark here,
-     steps out. */
   .ed-project-doc {
     display: none;
   }
 }
-
-/* narrow (below 1180×660): side panels reflow under the viewport. */
 @media (max-width: 1179px), (max-height: 659px) {
   .ed-menus,
   .ed-project-save {
     display: none;
   }
-
-  /*
-   * The reflowed viewport row keeps a floor rather than only a share. A bare
-   * `1.6fr` is 330px at the shared 900×600 minimum, which the view tabs, the
-   * copy band, and the dock consume whole — the canvas then draws nothing while
-   * the tier still claims to be supported. The floor is those three plus a real
-   * drawing surface, so the canvas keeps pixels everywhere above the minimum,
-   * and the panels below it take what is left (125px at the minimum, scrolled).
-   */
   .ed-body {
-    /* The dock and the copy band both give ground here; the canvas does not. */
     --ed-narrow-dock: 124px;
     --ed-narrow-note: 44px;
-    /* 89px of this is the canvas column's actions strip and frame report. */
     --ed-narrow-canvas: 212px;
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
@@ -5826,12 +5223,8 @@ a.ed-tree-label:hover {
     border-left: 1px solid var(--line);
   }
 
-  .ed-kids-lock {
-    grid-column: 2 / 4;
-    grid-row: 1 / 3;
-  }
-
-  .webxp-editor {
+  .ed-kids-lock,
+.webxp-editor {
     grid-column: 2 / 4;
     grid-row: 1 / 3;
   }
@@ -5843,20 +5236,10 @@ a.ed-tree-label:hover {
   .webxp-side {
     grid-column: 1 / 3;
   }
-
-  /*
-   * Both dock heights shrink here. The wide `animate` rule outranks a bare
-   * `.ed-dock` on specificity — a media query adds none — so the timeline dock
-   * has to be named or it keeps 252px and takes the canvas back.
-   */
   .ed-dock,
   .edshell[data-mode="animate"] .ed-dock {
     height: var(--ed-narrow-dock);
   }
-
-  /* The drawer now spans both rows. The viewport column above keeps clear of all of
-     it, and the inspector below, which it cuts, reads as behind the drawer's scrim
-     (row 7). The scrim takes no pointer: the drawer is not modal. */
   .edshell:has(.ed-assistant:not([data-assistant="closed"])) .ed-viewport-col {
     margin-right: 344px;
   }
@@ -5881,8 +5264,6 @@ a.ed-tree-label:hover {
     transition: none !important;
   }
 }
-
-/* Browser-owned checkpoints are explicit, keyboard-accessible and never under Kids. */
 .ed-local-project { position: relative; font-size: 12px; }
 .ed-local-project summary { cursor: pointer; padding: var(--space-2); }
 .ed-local-project-panel { position: absolute; right: 0; top: 100%; z-index: 100;
@@ -5894,14 +5275,6 @@ a.ed-tree-label:hover {
 .ed-local-project summary {
   border-radius: var(--radius-md);
 }
-
-.ed-local-project summary:hover,
-.ed-local-project-panel button:hover:not(:disabled) {
-  background: var(--bg-control);
-}
-
-/* Below the existing minimum, regroup the refusal and notice rail into document
- * flow instead of stacking a fixed notice over the only readable editor message. */
 @media (max-width: 899px), (max-height: 599px) {
   main:has(.edshell) {
     display: flex;
@@ -5938,8 +5311,8 @@ a.ed-tree-label:hover {
     box-shadow: none;
   }
 }
-
-/* SAFETY: post-PR interaction paint only; disabled controls stay visibly inert. */
+.ed-local-project summary:hover,
+.ed-local-project-panel button:hover:not(:disabled),
 .edshell [data-kind]:hover:not(.is-inert):not(:disabled):not([aria-disabled="true"]) {
   background: var(--bg-control);
 }
@@ -5967,11 +5340,11 @@ a.ed-tree-label:hover {
 
 .ed-local-project-panel button:disabled {
   color: var(--fg-2);
+  border-style: dashed;
+  border-color: var(--fg-2);
   background: var(--bg-raised);
   cursor: not-allowed;
 }
-
-/* Stable message space covers existing pending, empty and refused checkpoint text. */
 .ed-local-project-panel [role="status"] {
   min-height: 3lh;
   padding: 8px;
@@ -5979,32 +5352,12 @@ a.ed-tree-label:hover {
   overflow-wrap: anywhere;
 }
 
-/* ==========================================================================
-   Editor motion (redesign 2026-10). Operate surface: motion confirms the control
-   the reader just touched and never choreographs a load. Paint changes stay
-   instant; only transform, opacity and clip-path move, on the shared tokens.
-   The block above makes every one of these static under reduced motion.
-   ========================================================================== */
-
-/*
- * Mode rail (tool selection), row 17: on a mode switch the needle glides from the
- * previous mode (translateY + clip-path, Web Animations in editor-shell.tsx on the
- * panel/expo tokens); on first paint it draws from its middle.
- */
+/* Editor motion (redesign 2026-10). Operate surface: motion confirms the control */
 .ed-rail-mode {
   font-family: var(--sans);
   font-size: 11px;
   font-stretch: 75%;
   letter-spacing: 0;
-}
-
-/*
- * View and dock tabs, row 17: the 2px underline glides from the previously selected
- * tab (translateX + clip-path, Web Animations in editor-shell.tsx); with no previous
- * tab it draws from the centre. Reduced motion: it appears in place.
- */
-.ed-viewtab {
-  position: relative;
 }
 
 .ed-viewtab[aria-selected="true"] {
@@ -6022,6 +5375,8 @@ a.ed-tree-label:hover {
   background: var(--accent);
 }
 
+.scroll-frame,
+.ed-viewtab,
 .ed-dock-tab {
   position: relative;
 }
@@ -6038,34 +5393,21 @@ a.ed-tree-label:hover {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .ed-rail-mode[aria-pressed="true"]::before {
+  .docs-rail a[aria-current="page"]::before,
+.ed-rail-mode[aria-pressed="true"]::before {
     animation: sa-draw-y var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
 
-  .ed-viewtab[aria-selected="true"]::after,
+  .nav a[aria-current="page"]::after,
+.ed-viewtab[aria-selected="true"]::after,
   .ed-dock-tab[aria-selected="true"]::after {
     animation: sa-draw-center var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
-
-  /* Panel open (row 6): a panel's content settles in when its tab or mode shows it. */
-  .ed-dock-body > *,
-  .ed-inspector > .ed-insp-section,
-  .webxp-side > * {
-    animation: sx-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  /* The assistant drawer opens from its own edge (row 7); closing is instant. */
   .ed-assistant:not([data-assistant="closed"]) > * {
     animation: sa-drawer-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
-
-  /* Its scrim fades in with it. */
-  .ed-body::after {
-    animation: sx-fade var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  /* The command palette (row 8): scrim fades, card rises and unclips; rows stagger to 6. */
-  .ed-palette-scrim {
+  .ed-body::after,
+.ed-palette-scrim {
     animation: sx-fade var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
 
@@ -6073,35 +5415,51 @@ a.ed-tree-label:hover {
     animation: sa-dialog-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
 
-  .ed-palette-row {
-    animation: sx-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  .ed-palette-row:nth-child(2) {
+  .page-persuade > .page-head > :nth-child(2),
+  .release-hero .hero-copy > :nth-child(2),
+.tier-list > .tier:nth-child(2),
+.ed-palette-row:nth-child(2) {
     animation-delay: var(--motion-stagger-step);
   }
 
-  .ed-palette-row:nth-child(3) {
+  .page-persuade > .page-head > :nth-child(n + 3),
+  .release-hero .hero-copy > :nth-child(n + 3),
+.tier-list > .tier:nth-child(3),
+.ed-palette-row:nth-child(3) {
     animation-delay: calc(2 * var(--motion-stagger-step));
   }
 
-  .ed-palette-row:nth-child(4) {
+  .tier-list > .tier:nth-child(4),
+.ed-palette-row:nth-child(4) {
     animation-delay: calc(3 * var(--motion-stagger-step));
   }
 
-  .ed-palette-row:nth-child(5) {
+  .tier-list > .tier:nth-child(5),
+.ed-palette-row:nth-child(5) {
     animation-delay: calc(4 * var(--motion-stagger-step));
   }
 
-  .ed-palette-row:nth-child(n + 6) {
+  .tier-list > .tier:nth-child(n + 6),
+.ed-palette-row:nth-child(n + 6) {
     animation-delay: var(--motion-stagger-max);
   }
 
-  .ed-local-project[open] > .ed-local-project-panel {
+  .tier-list > .tier,
+.ed-dock-body > *,
+  .ed-inspector > .ed-insp-section,
+  .webxp-side > *,
+.ed-palette-row,
+.ed-local-project[open] > .ed-local-project-panel {
     animation: sx-rise-sm var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
   }
 
-  .ed-overlay-notes > * {
+  .hero-stage-note,
+.download-context,
+.state-chip,
+.op-rows details[open] > pre,
+  main p[role="status"],
+.viewport-overlay,
+.ed-overlay-notes > * {
     animation: sx-rise-sm var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
   }
 }
@@ -6123,8 +5481,6 @@ a.ed-tree-label:hover {
     clip-path: inset(0 round 9px);
   }
 }
-
-/* Live controls: hover is an instant paint; press confirms by the inset line, glyphs stay put. */
 .edshell :where(button, a[data-kind]):not(.is-inert):not(:disabled):not([aria-disabled="true"]) {
   transition: transform var(--motion-base) var(--ease-standard);
 }
@@ -6134,7 +5490,11 @@ a.ed-tree-label:hover {
   cursor: not-allowed;
 }
 
-/* The site's prose `code` step (0.875em) would drop chrome mono below the 11px floor. */
+/* Disabled boxed controls: dashed boundary at >=3:1 (the family's disabled mark), never a dimmed --line. */
+.edshell :is(.ed-cr-decide, .ed-search, .ed-assistant-mode, .button, select):is(.is-inert, :disabled, [aria-disabled="true"]) {
+  border-style: dashed;
+  border-color: var(--fg-2);
+}
 .edshell code {
   font-size: inherit;
 }

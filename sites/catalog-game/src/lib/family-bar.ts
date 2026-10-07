@@ -4,10 +4,13 @@
  * The accepted Asset Storefronts design holds both catalogs in one file and flips
  * between them with a runtime `state.store` switch. ADR 0018 makes each site its own
  * install root and its own deployed origin, so that switch cannot ship as drawn: what
- * survives is the *bar*, rebuilt here as ordinary cross-origin links. The current store
- * is marked rather than linked, a sibling whose origin this deployment has not
- * configured renders as plain text instead of a broken link, and the origin rule itself
- * is `@sceneaxi/site-kit`'s — this module owns no URL parsing of its own.
+ * survives is the *bar*, which names the family and marks the current store but holds
+ * no links. The same entries feed the cross-origin links in the footer (every width) and
+ * the masthead Menu (≤860px), so a link never sits between the skip link and a listing's
+ * primary action (RULINGS, release fix round 2: that action is Tab stop 5 at 1440px).
+ * The current store is never given an `href`, a sibling whose origin this deployment has
+ * not configured gets none either, and the origin rule itself is `@sceneaxi/site-kit`'s —
+ * this module owns no URL parsing of its own.
  *
  * There is no Kids key in `FAMILY_KEYS`, so no configuration and no future edit to the
  * env can make this bar emit a link into Kids. That is a structural denial, not a
@@ -38,9 +41,11 @@ export type FamilyKey = (typeof FAMILY_KEYS)[number];
  */
 function surfaceDot(surface: FoundationSurfaceAccentId): string {
   const accent = resolveSurfaceAccent(surface);
+
   if (!accent.ok) {
     throw new Error(`Foundations accent unresolved for "${surface}": ${accent.reason}`);
   }
+
   return accent.value.accent;
 }
 
@@ -60,7 +65,10 @@ export type FamilyEntry = {
   readonly key: FamilyKey;
   readonly label: string;
   readonly dot: string;
-  /** `null` when this deployment has no https origin configured for that surface. */
+  /**
+   * `null` when this deployment has no https origin configured for that surface. Read by
+   * the footer and the ≤860px Menu only; the family bar itself renders no links.
+   */
   readonly href: string | null;
   /** True for the store the visitor is already on; rendered as text, never a link. */
   readonly current: boolean;
@@ -78,14 +86,17 @@ export function resolveFamilyBar(
 ): readonly FamilyEntry[] {
   const siblings = resolveFamilyLinks(env);
   const umbrella = resolveUmbrellaEditorOrigin(env);
+
   const origins: Readonly<Record<FamilyKey, string | null>> = {
     engine: umbrella.ok ? umbrella.value : null,
     "catalog-game": siblings.gameCatalog,
     "catalog-web": siblings.webCatalog,
   };
+
   return Object.freeze(
     FAMILY_KEYS.map((key) => {
       const current = key === surface;
+
       return Object.freeze({
         key,
         label: FAMILY_LABELS[key],
@@ -111,5 +122,6 @@ export function resolveStoreDomain(
 ): string | null {
   const entry = resolveFamilyLinks(env);
   const origin = surface === "catalog-game" ? entry.gameCatalog : entry.webCatalog;
+
   return origin === null ? null : new URL(origin).host;
 }

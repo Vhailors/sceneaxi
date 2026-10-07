@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SITE_REFUSALS, SITE_REFUSAL_REASONS, type SiteRefusalReason } from "@sceneaxi/site-kit";
 import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { readSessionToken } from "../../_session.js";
+import { SignalIcon } from "../../_components/signal-icon.js";
 import { StatePanel } from "../../_components/state-panel.js";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +30,15 @@ export default async function LedgerSupportPage({ searchParams }: {
 
   if (!result.ok) {
     return (
-      <div className="page page-narrow page-state">
+      <div className="page page-narrow op" data-density="compact">
         <div className="page-head">
           <h1>Ledger support</h1>
         </div>
-        <StatePanel tone="deny" title="Ledger support refused" reason={result.reason}>
+        <StatePanel tone="deny" level={2} density="compact" title="Ledger support refused" reason={result.reason}>
           <p>{result.message}</p>
+          <p><a href="/login?next=%2Fadmin%2Fledger">Manage this session</a></p>
+          <p><a href="/admin/ledger">Return to lookup</a></p>
         </StatePanel>
-        <p><a href="/login?next=%2Fadmin%2Fledger">Manage this session</a></p>
-        <p><a href="/admin/ledger">Return to lookup</a></p>
       </div>
     );
   }
@@ -45,18 +46,18 @@ export default async function LedgerSupportPage({ searchParams }: {
   const view = result.value;
 
   return (
-    <div className="page page-state ledger-support">
+    <div className="page op ledger-support" data-density="compact">
       <div className="page-head">
         <h1>Ledger support</h1>
         <p className="lede">Administrator only. Read a member&apos;s history or append one support adjustment. Existing entries cannot be changed.</p>
       </div>
       {refused === undefined ? null : (
-        <StatePanel tone="deny" title="Adjustment refused" reason={refused}>
+        <StatePanel tone="deny" level={2} density="compact" title="Adjustment refused" reason={refused}>
           <p>{SITE_REFUSALS[refused]}</p>
         </StatePanel>
       )}
-      <form method="get" action="/admin/ledger" className="stack form-card">
-        <div className="row">
+      <form method="get" action="/admin/ledger" className="op-form" aria-label="Ledger lookup">
+        <div className="op-row">
           <div className="field">
             <label htmlFor="lookup-kind">Look up by</label>
             <select id="lookup-kind" name="kind" defaultValue={kind}>
@@ -72,18 +73,18 @@ export default async function LedgerSupportPage({ searchParams }: {
         </div>
       </form>
       {view === null ? (
-        <p className="note">Enter a member&apos;s exact email or user id. Lookup does not grant starter credits.</p>
+        <p className="op-empty" role="status"><SignalIcon name="limit" />Enter a member&apos;s exact email or user id. Lookup does not grant starter credits.</p>
       ) : (
         <>
           <h2>{view.user.email}</h2>
-          <dl className="dl dl-machine">
-            <div className="dl-row"><dt>User id</dt><dd>{view.user.userId}</dd></div>
-            <div className="dl-row"><dt>Account</dt><dd>{view.state.account.accountId}</dd></div>
-            <div className="dl-row"><dt>Derived balance</dt><dd>{view.state.balance} credits</dd></div>
+          <dl className="op-readout">
+            <div><dt>User id</dt><dd><code>{view.user.userId}</code></dd></div>
+            <div><dt>Account</dt><dd><code>{view.state.account.accountId}</code></dd></div>
+            <div><dt>Derived balance</dt><dd><span className="ledger-balance">{view.state.balance}</span> credits</dd></div>
           </dl>
           <h2>Append adjustment</h2>
           <p>Positive credits add to the balance. Negative credits subtract from it. A debit below zero refuses. This does not issue a money refund or resolve a dispute.</p>
-          <form method="post" action="/api/admin/ledger" className="stack form-card">
+          <form method="post" action="/api/admin/ledger" className="op-form" aria-label="Append adjustment">
             <input type="hidden" name="userId" value={view.user.userId} />
               <div className="field">
                 <label htmlFor="admin-password">Confirm administrator password</label>
@@ -105,8 +106,8 @@ export default async function LedgerSupportPage({ searchParams }: {
             <div><button className="button" type="submit">Append adjustment</button></div>
           </form>
           <h2>Ledger entries</h2>
-          {view.state.entries.length === 0 ? <p>No ledger entries.</p> : (
-            <ol className="ledger-rows" aria-label="Ledger entries, append-only">
+          {view.state.entries.length === 0 ? <p className="op-empty" role="status"><SignalIcon name="limit" />No ledger entries.</p> : (
+            <ol className="op-rows" aria-label="Ledger entries, append-only">
               {view.state.entries.map((entry) => (
                 <li key={entry.entryId}>
                   <details>
@@ -118,8 +119,8 @@ export default async function LedgerSupportPage({ searchParams }: {
             </ol>
           )}
           <h2>Checkout intents</h2>
-          {view.checkoutIntents.length === 0 ? <p>No checkout intents.</p> : (
-            <ul className="ledger-rows" aria-label="Checkout intents">
+          {view.checkoutIntents.length === 0 ? <p className="op-empty" role="status"><SignalIcon name="limit" />No checkout intents.</p> : (
+            <ul className="op-rows" aria-label="Checkout intents">
               {view.checkoutIntents.map((intent) => (
                 <li key={intent.intentId}>
                   <details>
@@ -132,8 +133,8 @@ export default async function LedgerSupportPage({ searchParams }: {
           )}
           <h2>Reconciliation records</h2>
           <p className="note">Read-only provider evidence. A support adjustment does not mark a reconciliation record resolved. Refund and dispute decisions remain with the operator.</p>
-          {view.reconciliations.length === 0 ? <p>No reconciliation records.</p> : (
-            <ul className="ledger-rows" aria-label="Reconciliation records">
+          {view.reconciliations.length === 0 ? <p className="op-empty" role="status"><SignalIcon name="limit" />No reconciliation records.</p> : (
+            <ul className="op-rows" aria-label="Reconciliation records">
               {view.reconciliations.map((record) => (
                 <li key={`${record.mode}:${record.eventId}`}>
                   <details>

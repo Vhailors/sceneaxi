@@ -76,6 +76,28 @@ export function iconSprite(): string {
   ).join("")}</defs></svg>`;
 }
 
+/**
+ * State glyphs for plates, outside the 16px tool sprite (its symbol set is pinned). Mirrors
+ * site-kit `SIGNAL_ICONS` (packages/site-kit/src/design-tokens.ts) path for path on its 24px
+ * grid; desktop may not import site-kit at runtime, so a drift check belongs beside the token
+ * snapshot test (requested, not added: lanes add no test files).
+ */
+const STATE_PATHS = Object.freeze({
+  pending: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z", "M12 7v5l3 2"],
+  verified: ["M4 12.5l5 5L20 6.5"],
+  refused: ["M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z", "M8 12h8"],
+  stale: ["M4 12a8 8 0 1 0 2.4-5.7", "M4 4v4h4", "M9 15l6-6"],
+  test: ["M9 3h6", "M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3", "M7.5 15h9"],
+  empty: ["M4 4h16v16H4z"],
+} satisfies Record<string, readonly string[]>);
+
+export type StateIconId = keyof typeof STATE_PATHS;
+
+/** Inline, decorative: the plate's visible word is the label. 2px stroke on the 24px grid. */
+export function stateIcon(id: StateIconId): string {
+  return `<svg class="icon" aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${STATE_PATHS[id].map((d) => `<path d="${d}"/>`).join("")}</svg>`;
+}
+
 /** Decorative mark only. Its owning control supplies the label and binding tooltip. */
 export function icon(id: IconId): string {
   return `<svg class="icon" aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16"><use href="#i-${id}"/></svg>`;

@@ -1,123 +1,2269 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T19:00:00Z",
+  "generatedAt": "2026-10-06T20:11:44.203Z",
   "title": "Design System: SceneAxi",
   "extensions": {
     "colorMeta": {
-      "accent": { "role": "primary", "displayName": "Signal Orange", "canonical": "#FF6B2C", "tonalRamp": ["#3A1405", "#5C210A", "#8A3210", "#B84418", "#E35A22", "#FF6B2C", "#FF8A54", "#FFC2A3"] },
-      "ok": { "role": "secondary", "displayName": "Verified Mint", "canonical": "#5EEAD4", "tonalRamp": ["#0D2422", "#14403B", "#1E5F57", "#2C8378", "#3FA99B", "#5EEAD4", "#93F1E3", "#CCF8F1"] },
-      "danger": { "role": "secondary", "displayName": "Refusal Red", "canonical": "#FF4D5E", "tonalRamp": ["#1A1113", "#3A2126", "#6B2530", "#A3303F", "#D63C4E", "#FF4D5E", "#FF8590", "#FFC4C9"] },
-      "stale": { "role": "tertiary", "displayName": "Stale Bronze", "canonical": "#7A6448", "tonalRamp": ["#1E1912", "#30281D", "#45392A", "#5C4C38", "#7A6448", "#9A835F", "#BBA683", "#DDD0B8"] },
-      "kids": { "role": "tertiary", "displayName": "Kids Violet", "canonical": "#A78BFA", "tonalRamp": ["#160F22", "#2E2542", "#4A3B73", "#6A55A8", "#8A6FD6", "#A78BFA", "#C4B2FC", "#E3DAFE"] },
-      "bg-base": { "role": "neutral", "displayName": "Bench Black", "canonical": "#07080A", "tonalRamp": ["#07080A", "#0D0F12", "#12151A", "#191D23", "#2C323B", "#3F464F", "#8A929C", "#EDEFF2"] },
-      "desktop-accent": { "role": "primary", "displayName": "Desktop Cyan", "canonical": "#46D8EC", "tonalRamp": ["#05121A", "#10242C", "#1E5A66", "#2B8EA0", "#38B6CB", "#46D8EC", "#74E3F2", "#B9F1F8"] },
-      "desktop-canvas": { "role": "neutral", "displayName": "Graphite Canvas", "canonical": "#0A0F1A", "tonalRamp": ["#05080E", "#070B13", "#0A0F1A", "#0F1624", "#131B2C", "#182236", "#243044", "#3D5274"] }
+      "panel": {
+        "role": "neutral",
+        "displayName": "Track-Diagram Slate",
+        "canonical": "#2F4A44",
+        "oklch": "oklch(38.5% 0.034 178.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.034 178.9)",
+          "oklch(26.0% 0.034 178.9)",
+          "oklch(38.0% 0.034 178.9)",
+          "oklch(50.0% 0.034 178.9)",
+          "oklch(62.0% 0.034 178.9)",
+          "oklch(74.0% 0.034 178.9)",
+          "oklch(85.0% 0.034 178.9)",
+          "oklch(95.0% 0.034 178.9)"
+        ],
+        "cssVar": "--panel",
+        "scheme": "dark (default)",
+        "onColor": "ink"
+      },
+      "panel-band": {
+        "role": "neutral",
+        "displayName": "Panel Band",
+        "canonical": "#27403A",
+        "oklch": "oklch(34.9% 0.033 177.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.033 177.5)",
+          "oklch(26.0% 0.033 177.5)",
+          "oklch(38.0% 0.033 177.5)",
+          "oklch(50.0% 0.033 177.5)",
+          "oklch(62.0% 0.033 177.5)",
+          "oklch(74.0% 0.033 177.5)",
+          "oklch(85.0% 0.033 177.5)",
+          "oklch(95.0% 0.033 177.5)"
+        ],
+        "cssVar": "--panel-band",
+        "scheme": "dark (default)",
+        "onColor": "ink"
+      },
+      "iron": {
+        "role": "neutral",
+        "displayName": "Cast Iron",
+        "canonical": "#1E2B28",
+        "oklch": "oklch(27.6% 0.019 179.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 179.1)",
+          "oklch(26.0% 0.019 179.1)",
+          "oklch(38.0% 0.019 179.1)",
+          "oklch(50.0% 0.019 179.1)",
+          "oklch(62.0% 0.019 179.1)",
+          "oklch(74.0% 0.019 179.1)",
+          "oklch(85.0% 0.019 179.1)",
+          "oklch(95.0% 0.019 179.1)"
+        ],
+        "cssVar": "--iron",
+        "scheme": "dark (default)",
+        "onColor": "ink"
+      },
+      "iron-raised": {
+        "role": "neutral",
+        "displayName": "Raised Iron",
+        "canonical": "#263632",
+        "oklch": "oklch(31.7% 0.022 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.022 177.7)",
+          "oklch(26.0% 0.022 177.7)",
+          "oklch(38.0% 0.022 177.7)",
+          "oklch(50.0% 0.022 177.7)",
+          "oklch(62.0% 0.022 177.7)",
+          "oklch(74.0% 0.022 177.7)",
+          "oklch(85.0% 0.022 177.7)",
+          "oklch(95.0% 0.022 177.7)"
+        ],
+        "cssVar": "--iron-raised",
+        "scheme": "dark (default)",
+        "onColor": "ink"
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Quadrant Well",
+        "canonical": "#182320",
+        "oklch": "oklch(24.5% 0.017 176.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.3)",
+          "oklch(26.0% 0.017 176.3)",
+          "oklch(38.0% 0.017 176.3)",
+          "oklch(50.0% 0.017 176.3)",
+          "oklch(62.0% 0.017 176.3)",
+          "oklch(74.0% 0.017 176.3)",
+          "oklch(85.0% 0.017 176.3)",
+          "oklch(95.0% 0.017 176.3)"
+        ],
+        "cssVar": "--well",
+        "scheme": "dark (default)",
+        "onColor": "ink"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Plate Cream",
+        "canonical": "#F1EEE4",
+        "oklch": "oklch(94.9% 0.014 93.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.014 93.0)",
+          "oklch(26.0% 0.014 93.0)",
+          "oklch(38.0% 0.014 93.0)",
+          "oklch(50.0% 0.014 93.0)",
+          "oklch(62.0% 0.014 93.0)",
+          "oklch(74.0% 0.014 93.0)",
+          "oklch(85.0% 0.014 93.0)",
+          "oklch(95.0% 0.014 93.0)"
+        ],
+        "cssVar": "--ink",
+        "scheme": "dark (default)"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Lichen",
+        "canonical": "#BCD0C9",
+        "oklch": "oklch(84.1% 0.024 172.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.024 172.7)",
+          "oklch(26.0% 0.024 172.7)",
+          "oklch(38.0% 0.024 172.7)",
+          "oklch(50.0% 0.024 172.7)",
+          "oklch(62.0% 0.024 172.7)",
+          "oklch(74.0% 0.024 172.7)",
+          "oklch(85.0% 0.024 172.7)",
+          "oklch(95.0% 0.024 172.7)"
+        ],
+        "cssVar": "--ink-2",
+        "scheme": "dark (default)"
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Boundary Sage",
+        "canonical": "#86A39B",
+        "oklch": "oklch(69.1% 0.034 176.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.034 176.7)",
+          "oklch(26.0% 0.034 176.7)",
+          "oklch(38.0% 0.034 176.7)",
+          "oklch(50.0% 0.034 176.7)",
+          "oklch(62.0% 0.034 176.7)",
+          "oklch(74.0% 0.034 176.7)",
+          "oklch(85.0% 0.034 176.7)",
+          "oklch(95.0% 0.034 176.7)"
+        ],
+        "cssVar": "--edge",
+        "scheme": "dark (default)"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#4E6B64",
+        "oklch": "oklch(50.3% 0.036 178.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.036 178.2)",
+          "oklch(26.0% 0.036 178.2)",
+          "oklch(38.0% 0.036 178.2)",
+          "oklch(50.0% 0.036 178.2)",
+          "oklch(62.0% 0.036 178.2)",
+          "oklch(74.0% 0.036 178.2)",
+          "oklch(85.0% 0.036 178.2)",
+          "oklch(95.0% 0.036 178.2)"
+        ],
+        "cssVar": "--rule",
+        "scheme": "dark (default)"
+      },
+      "siding": {
+        "role": "neutral",
+        "displayName": "Siding Grey",
+        "canonical": "#7F9A93",
+        "oklch": "oklch(66.3% 0.032 177.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.032 177.8)",
+          "oklch(26.0% 0.032 177.8)",
+          "oklch(38.0% 0.032 177.8)",
+          "oklch(50.0% 0.032 177.8)",
+          "oklch(62.0% 0.032 177.8)",
+          "oklch(74.0% 0.032 177.8)",
+          "oklch(85.0% 0.032 177.8)",
+          "oklch(95.0% 0.032 177.8)"
+        ],
+        "cssVar": "--siding",
+        "scheme": "dark (default)"
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Track Cream",
+        "canonical": "#E9E6DC",
+        "oklch": "oklch(92.5% 0.014 93.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.014 93.0)",
+          "oklch(26.0% 0.014 93.0)",
+          "oklch(38.0% 0.014 93.0)",
+          "oklch(50.0% 0.014 93.0)",
+          "oklch(62.0% 0.014 93.0)",
+          "oklch(74.0% 0.014 93.0)",
+          "oklch(85.0% 0.014 93.0)",
+          "oklch(95.0% 0.014 93.0)"
+        ],
+        "cssVar": "--track",
+        "scheme": "dark (default)"
+      },
+      "enamel": {
+        "role": "primary",
+        "displayName": "Cream Enamel",
+        "canonical": "#F1EEE4",
+        "oklch": "oklch(94.9% 0.014 93.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.014 93.0)",
+          "oklch(26.0% 0.014 93.0)",
+          "oklch(38.0% 0.014 93.0)",
+          "oklch(50.0% 0.014 93.0)",
+          "oklch(62.0% 0.014 93.0)",
+          "oklch(74.0% 0.014 93.0)",
+          "oklch(85.0% 0.014 93.0)",
+          "oklch(95.0% 0.014 93.0)"
+        ],
+        "cssVar": "--enamel",
+        "scheme": "dark (default)",
+        "onColor": "on-enamel"
+      },
+      "enamel-hi": {
+        "role": "primary",
+        "displayName": "Bare White",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--enamel-hi",
+        "scheme": "dark (default)",
+        "onColor": "on-enamel"
+      },
+      "on-enamel": {
+        "role": "primary",
+        "displayName": "Signal-Box Black-Green",
+        "canonical": "#1A2623",
+        "oklch": "oklch(25.6% 0.018 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 177.7)",
+          "oklch(26.0% 0.018 177.7)",
+          "oklch(38.0% 0.018 177.7)",
+          "oklch(50.0% 0.018 177.7)",
+          "oklch(62.0% 0.018 177.7)",
+          "oklch(74.0% 0.018 177.7)",
+          "oklch(85.0% 0.018 177.7)",
+          "oklch(95.0% 0.018 177.7)"
+        ],
+        "cssVar": "--on-enamel",
+        "scheme": "dark (default)"
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Enamel",
+        "canonical": "#F1EEE4",
+        "oklch": "oklch(94.9% 0.014 93.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.014 93.0)",
+          "oklch(26.0% 0.014 93.0)",
+          "oklch(38.0% 0.014 93.0)",
+          "oklch(50.0% 0.014 93.0)",
+          "oklch(62.0% 0.014 93.0)",
+          "oklch(74.0% 0.014 93.0)",
+          "oklch(85.0% 0.014 93.0)",
+          "oklch(95.0% 0.014 93.0)"
+        ],
+        "cssVar": "--focus",
+        "scheme": "dark (default)"
+      },
+      "disabled-ink": {
+        "role": "neutral",
+        "displayName": "Disabled Lichen",
+        "canonical": "#BCD0C9",
+        "oklch": "oklch(84.1% 0.024 172.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.024 172.7)",
+          "oklch(26.0% 0.024 172.7)",
+          "oklch(38.0% 0.024 172.7)",
+          "oklch(50.0% 0.024 172.7)",
+          "oklch(62.0% 0.024 172.7)",
+          "oklch(74.0% 0.024 172.7)",
+          "oklch(85.0% 0.024 172.7)",
+          "oklch(95.0% 0.024 172.7)"
+        ],
+        "cssVar": "--disabled-ink",
+        "scheme": "dark (default)"
+      },
+      "pending": {
+        "role": "secondary",
+        "displayName": "Caution Yellow",
+        "canonical": "#F2C230",
+        "oklch": "oklch(83.4% 0.158 89.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 89.0)",
+          "oklch(26.0% 0.158 89.0)",
+          "oklch(38.0% 0.158 89.0)",
+          "oklch(50.0% 0.158 89.0)",
+          "oklch(62.0% 0.158 89.0)",
+          "oklch(74.0% 0.158 89.0)",
+          "oklch(85.0% 0.158 89.0)",
+          "oklch(95.0% 0.158 89.0)"
+        ],
+        "cssVar": "--pending",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-pending"
+      },
+      "on-pending": {
+        "role": "secondary",
+        "displayName": "On Caution",
+        "canonical": "#1A2623",
+        "oklch": "oklch(25.6% 0.018 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 177.7)",
+          "oklch(26.0% 0.018 177.7)",
+          "oklch(38.0% 0.018 177.7)",
+          "oklch(50.0% 0.018 177.7)",
+          "oklch(62.0% 0.018 177.7)",
+          "oklch(74.0% 0.018 177.7)",
+          "oklch(85.0% 0.018 177.7)",
+          "oklch(95.0% 0.018 177.7)"
+        ],
+        "cssVar": "--on-pending",
+        "scheme": "both (dark default and Operate light; value unchanged)"
+      },
+      "pending-ink": {
+        "role": "secondary",
+        "displayName": "Caution Ink",
+        "canonical": "#F2C230",
+        "oklch": "oklch(83.4% 0.158 89.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 89.0)",
+          "oklch(26.0% 0.158 89.0)",
+          "oklch(38.0% 0.158 89.0)",
+          "oklch(50.0% 0.158 89.0)",
+          "oklch(62.0% 0.158 89.0)",
+          "oklch(74.0% 0.158 89.0)",
+          "oklch(85.0% 0.158 89.0)",
+          "oklch(95.0% 0.158 89.0)"
+        ],
+        "cssVar": "--pending-ink",
+        "scheme": "dark (default)"
+      },
+      "route": {
+        "role": "secondary",
+        "displayName": "Set Route",
+        "canonical": "#F2C230",
+        "oklch": "oklch(83.4% 0.158 89.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 89.0)",
+          "oklch(26.0% 0.158 89.0)",
+          "oklch(38.0% 0.158 89.0)",
+          "oklch(50.0% 0.158 89.0)",
+          "oklch(62.0% 0.158 89.0)",
+          "oklch(74.0% 0.158 89.0)",
+          "oklch(85.0% 0.158 89.0)",
+          "oklch(95.0% 0.158 89.0)"
+        ],
+        "cssVar": "--route",
+        "scheme": "dark (default)"
+      },
+      "verified": {
+        "role": "secondary",
+        "displayName": "Clear Mint",
+        "canonical": "#7BDDB0",
+        "oklch": "oklch(82.5% 0.114 162.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.114 162.6)",
+          "oklch(26.0% 0.114 162.6)",
+          "oklch(38.0% 0.114 162.6)",
+          "oklch(50.0% 0.114 162.6)",
+          "oklch(62.0% 0.114 162.6)",
+          "oklch(74.0% 0.114 162.6)",
+          "oklch(85.0% 0.114 162.6)",
+          "oklch(95.0% 0.114 162.6)"
+        ],
+        "cssVar": "--verified",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-verified"
+      },
+      "on-verified": {
+        "role": "secondary",
+        "displayName": "On Mint",
+        "canonical": "#12241E",
+        "oklch": "oklch(24.2% 0.027 170.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 170.8)",
+          "oklch(26.0% 0.027 170.8)",
+          "oklch(38.0% 0.027 170.8)",
+          "oklch(50.0% 0.027 170.8)",
+          "oklch(62.0% 0.027 170.8)",
+          "oklch(74.0% 0.027 170.8)",
+          "oklch(85.0% 0.027 170.8)",
+          "oklch(95.0% 0.027 170.8)"
+        ],
+        "cssVar": "--on-verified",
+        "scheme": "both (dark default and Operate light; value unchanged)"
+      },
+      "verified-route": {
+        "role": "secondary",
+        "displayName": "Verified Route",
+        "canonical": "#7BDDB0",
+        "oklch": "oklch(82.5% 0.114 162.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.114 162.6)",
+          "oklch(26.0% 0.114 162.6)",
+          "oklch(38.0% 0.114 162.6)",
+          "oklch(50.0% 0.114 162.6)",
+          "oklch(62.0% 0.114 162.6)",
+          "oklch(74.0% 0.114 162.6)",
+          "oklch(85.0% 0.114 162.6)",
+          "oklch(95.0% 0.114 162.6)"
+        ],
+        "cssVar": "--verified-route",
+        "scheme": "dark (default)"
+      },
+      "refused": {
+        "role": "secondary",
+        "displayName": "Stop Red",
+        "canonical": "#C4362C",
+        "oklch": "oklch(54.7% 0.181 28.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.181 28.6)",
+          "oklch(26.0% 0.181 28.6)",
+          "oklch(38.0% 0.181 28.6)",
+          "oklch(50.0% 0.181 28.6)",
+          "oklch(62.0% 0.181 28.6)",
+          "oklch(74.0% 0.181 28.6)",
+          "oklch(85.0% 0.181 28.6)",
+          "oklch(95.0% 0.181 28.6)"
+        ],
+        "cssVar": "--refused",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-refused"
+      },
+      "on-refused": {
+        "role": "secondary",
+        "displayName": "On Stop",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--on-refused",
+        "scheme": "both (dark default and Operate light; value unchanged)"
+      },
+      "refused-lamp": {
+        "role": "secondary",
+        "displayName": "Signal Lamp",
+        "canonical": "#FF9A8C",
+        "oklch": "oklch(78.7% 0.124 28.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.124 28.6)",
+          "oklch(26.0% 0.124 28.6)",
+          "oklch(38.0% 0.124 28.6)",
+          "oklch(50.0% 0.124 28.6)",
+          "oklch(62.0% 0.124 28.6)",
+          "oklch(74.0% 0.124 28.6)",
+          "oklch(85.0% 0.124 28.6)",
+          "oklch(95.0% 0.124 28.6)"
+        ],
+        "cssVar": "--refused-lamp",
+        "scheme": "dark (default)"
+      },
+      "refused-lamp-hi": {
+        "role": "secondary",
+        "displayName": "Bright Lamp",
+        "canonical": "#FFB3A8",
+        "oklch": "oklch(83.6% 0.091 28.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.091 28.3)",
+          "oklch(26.0% 0.091 28.3)",
+          "oklch(38.0% 0.091 28.3)",
+          "oklch(50.0% 0.091 28.3)",
+          "oklch(62.0% 0.091 28.3)",
+          "oklch(74.0% 0.091 28.3)",
+          "oklch(85.0% 0.091 28.3)",
+          "oklch(95.0% 0.091 28.3)"
+        ],
+        "cssVar": "--refused-lamp-hi",
+        "scheme": "dark (default)"
+      },
+      "stale": {
+        "role": "secondary",
+        "displayName": "Unpainted Iron",
+        "canonical": "#A3A9A4",
+        "oklch": "oklch(72.8% 0.010 150.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.010 150.6)",
+          "oklch(26.0% 0.010 150.6)",
+          "oklch(38.0% 0.010 150.6)",
+          "oklch(50.0% 0.010 150.6)",
+          "oklch(62.0% 0.010 150.6)",
+          "oklch(74.0% 0.010 150.6)",
+          "oklch(85.0% 0.010 150.6)",
+          "oklch(95.0% 0.010 150.6)"
+        ],
+        "cssVar": "--stale",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-stale"
+      },
+      "on-stale": {
+        "role": "secondary",
+        "displayName": "On Unpainted",
+        "canonical": "#1A2623",
+        "oklch": "oklch(25.6% 0.018 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 177.7)",
+          "oklch(26.0% 0.018 177.7)",
+          "oklch(38.0% 0.018 177.7)",
+          "oklch(50.0% 0.018 177.7)",
+          "oklch(62.0% 0.018 177.7)",
+          "oklch(74.0% 0.018 177.7)",
+          "oklch(85.0% 0.018 177.7)",
+          "oklch(95.0% 0.018 177.7)"
+        ],
+        "cssVar": "--on-stale",
+        "scheme": "both (dark default and Operate light; value unchanged)"
+      },
+      "panel-light": {
+        "role": "neutral",
+        "displayName": "Track-Diagram Slate (light scheme)",
+        "canonical": "#E7E9E3",
+        "oklch": "oklch(93.1% 0.008 121.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 121.6)",
+          "oklch(26.0% 0.008 121.6)",
+          "oklch(38.0% 0.008 121.6)",
+          "oklch(50.0% 0.008 121.6)",
+          "oklch(62.0% 0.008 121.6)",
+          "oklch(74.0% 0.008 121.6)",
+          "oklch(85.0% 0.008 121.6)",
+          "oklch(95.0% 0.008 121.6)"
+        ],
+        "cssVar": "--panel",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "ink-light"
+      },
+      "panel-band-light": {
+        "role": "neutral",
+        "displayName": "Panel Band (light scheme)",
+        "canonical": "#F4F4EF",
+        "oklch": "oklch(96.6% 0.007 106.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.007 106.5)",
+          "oklch(26.0% 0.007 106.5)",
+          "oklch(38.0% 0.007 106.5)",
+          "oklch(50.0% 0.007 106.5)",
+          "oklch(62.0% 0.007 106.5)",
+          "oklch(74.0% 0.007 106.5)",
+          "oklch(85.0% 0.007 106.5)",
+          "oklch(95.0% 0.007 106.5)"
+        ],
+        "cssVar": "--panel-band",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "ink-light"
+      },
+      "iron-light": {
+        "role": "neutral",
+        "displayName": "Cast Iron (light scheme)",
+        "canonical": "#FBFBF8",
+        "oklch": "oklch(98.7% 0.004 106.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.004 106.5)",
+          "oklch(26.0% 0.004 106.5)",
+          "oklch(38.0% 0.004 106.5)",
+          "oklch(50.0% 0.004 106.5)",
+          "oklch(62.0% 0.004 106.5)",
+          "oklch(74.0% 0.004 106.5)",
+          "oklch(85.0% 0.004 106.5)",
+          "oklch(95.0% 0.004 106.5)"
+        ],
+        "cssVar": "--iron",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "ink-light"
+      },
+      "iron-raised-light": {
+        "role": "neutral",
+        "displayName": "Raised Iron (light scheme)",
+        "canonical": "#EEEFEA",
+        "oklch": "oklch(95.0% 0.007 115.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.007 115.7)",
+          "oklch(26.0% 0.007 115.7)",
+          "oklch(38.0% 0.007 115.7)",
+          "oklch(50.0% 0.007 115.7)",
+          "oklch(62.0% 0.007 115.7)",
+          "oklch(74.0% 0.007 115.7)",
+          "oklch(85.0% 0.007 115.7)",
+          "oklch(95.0% 0.007 115.7)"
+        ],
+        "cssVar": "--iron-raised",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "ink-light"
+      },
+      "well-light": {
+        "role": "neutral",
+        "displayName": "Quadrant Well (light scheme)",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--well",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "ink-light"
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Plate Cream (light scheme)",
+        "canonical": "#17221F",
+        "oklch": "oklch(24.0% 0.017 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.2)",
+          "oklch(26.0% 0.017 176.2)",
+          "oklch(38.0% 0.017 176.2)",
+          "oklch(50.0% 0.017 176.2)",
+          "oklch(62.0% 0.017 176.2)",
+          "oklch(74.0% 0.017 176.2)",
+          "oklch(85.0% 0.017 176.2)",
+          "oklch(95.0% 0.017 176.2)"
+        ],
+        "cssVar": "--ink",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "ink-2-light": {
+        "role": "neutral",
+        "displayName": "Lichen (light scheme)",
+        "canonical": "#3F5550",
+        "oklch": "oklch(43.0% 0.028 179.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 179.4)",
+          "oklch(26.0% 0.028 179.4)",
+          "oklch(38.0% 0.028 179.4)",
+          "oklch(50.0% 0.028 179.4)",
+          "oklch(62.0% 0.028 179.4)",
+          "oklch(74.0% 0.028 179.4)",
+          "oklch(85.0% 0.028 179.4)",
+          "oklch(95.0% 0.028 179.4)"
+        ],
+        "cssVar": "--ink-2",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "edge-light": {
+        "role": "neutral",
+        "displayName": "Boundary Sage (light scheme)",
+        "canonical": "#6B807A",
+        "oklch": "oklch(58.1% 0.026 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 176.2)",
+          "oklch(26.0% 0.026 176.2)",
+          "oklch(38.0% 0.026 176.2)",
+          "oklch(50.0% 0.026 176.2)",
+          "oklch(62.0% 0.026 176.2)",
+          "oklch(74.0% 0.026 176.2)",
+          "oklch(85.0% 0.026 176.2)",
+          "oklch(95.0% 0.026 176.2)"
+        ],
+        "cssVar": "--edge",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "rule-light": {
+        "role": "neutral",
+        "displayName": "Hairline (light scheme)",
+        "canonical": "#C4CDC8",
+        "oklch": "oklch(84.0% 0.012 162.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 162.0)",
+          "oklch(26.0% 0.012 162.0)",
+          "oklch(38.0% 0.012 162.0)",
+          "oklch(50.0% 0.012 162.0)",
+          "oklch(62.0% 0.012 162.0)",
+          "oklch(74.0% 0.012 162.0)",
+          "oklch(85.0% 0.012 162.0)",
+          "oklch(95.0% 0.012 162.0)"
+        ],
+        "cssVar": "--rule",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "siding-light": {
+        "role": "neutral",
+        "displayName": "Siding Grey (light scheme)",
+        "canonical": "#6B807A",
+        "oklch": "oklch(58.1% 0.026 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 176.2)",
+          "oklch(26.0% 0.026 176.2)",
+          "oklch(38.0% 0.026 176.2)",
+          "oklch(50.0% 0.026 176.2)",
+          "oklch(62.0% 0.026 176.2)",
+          "oklch(74.0% 0.026 176.2)",
+          "oklch(85.0% 0.026 176.2)",
+          "oklch(95.0% 0.026 176.2)"
+        ],
+        "cssVar": "--siding",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "track-light": {
+        "role": "neutral",
+        "displayName": "Track Cream (light scheme)",
+        "canonical": "#17221F",
+        "oklch": "oklch(24.0% 0.017 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.2)",
+          "oklch(26.0% 0.017 176.2)",
+          "oklch(38.0% 0.017 176.2)",
+          "oklch(50.0% 0.017 176.2)",
+          "oklch(62.0% 0.017 176.2)",
+          "oklch(74.0% 0.017 176.2)",
+          "oklch(85.0% 0.017 176.2)",
+          "oklch(95.0% 0.017 176.2)"
+        ],
+        "cssVar": "--track",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "enamel-light": {
+        "role": "primary",
+        "displayName": "Cream Enamel (light scheme)",
+        "canonical": "#17221F",
+        "oklch": "oklch(24.0% 0.017 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.2)",
+          "oklch(26.0% 0.017 176.2)",
+          "oklch(38.0% 0.017 176.2)",
+          "oklch(50.0% 0.017 176.2)",
+          "oklch(62.0% 0.017 176.2)",
+          "oklch(74.0% 0.017 176.2)",
+          "oklch(85.0% 0.017 176.2)",
+          "oklch(95.0% 0.017 176.2)"
+        ],
+        "cssVar": "--enamel",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "on-enamel-light"
+      },
+      "enamel-hi-light": {
+        "role": "primary",
+        "displayName": "Bare White (light scheme)",
+        "canonical": "#000000",
+        "oklch": "oklch(0.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--enamel-hi",
+        "scheme": "light (prefers-color-scheme: light, Operate only)",
+        "onColor": "on-enamel-light"
+      },
+      "on-enamel-light": {
+        "role": "primary",
+        "displayName": "Signal-Box Black-Green (light scheme)",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--on-enamel",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "focus-light": {
+        "role": "primary",
+        "displayName": "Focus Enamel (light scheme)",
+        "canonical": "#17221F",
+        "oklch": "oklch(24.0% 0.017 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.2)",
+          "oklch(26.0% 0.017 176.2)",
+          "oklch(38.0% 0.017 176.2)",
+          "oklch(50.0% 0.017 176.2)",
+          "oklch(62.0% 0.017 176.2)",
+          "oklch(74.0% 0.017 176.2)",
+          "oklch(85.0% 0.017 176.2)",
+          "oklch(95.0% 0.017 176.2)"
+        ],
+        "cssVar": "--focus",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "disabled-ink-light": {
+        "role": "neutral",
+        "displayName": "Disabled Lichen (light scheme)",
+        "canonical": "#3F5550",
+        "oklch": "oklch(43.0% 0.028 179.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 179.4)",
+          "oklch(26.0% 0.028 179.4)",
+          "oklch(38.0% 0.028 179.4)",
+          "oklch(50.0% 0.028 179.4)",
+          "oklch(62.0% 0.028 179.4)",
+          "oklch(74.0% 0.028 179.4)",
+          "oklch(85.0% 0.028 179.4)",
+          "oklch(95.0% 0.028 179.4)"
+        ],
+        "cssVar": "--disabled-ink",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "pending-ink-light": {
+        "role": "secondary",
+        "displayName": "Caution Ink (light scheme)",
+        "canonical": "#6B5000",
+        "oklch": "oklch(44.7% 0.092 86.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.092 86.1)",
+          "oklch(26.0% 0.092 86.1)",
+          "oklch(38.0% 0.092 86.1)",
+          "oklch(50.0% 0.092 86.1)",
+          "oklch(62.0% 0.092 86.1)",
+          "oklch(74.0% 0.092 86.1)",
+          "oklch(85.0% 0.092 86.1)",
+          "oklch(95.0% 0.092 86.1)"
+        ],
+        "cssVar": "--pending-ink",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "route-light": {
+        "role": "secondary",
+        "displayName": "Set Route (light scheme)",
+        "canonical": "#9A7400",
+        "oklch": "oklch(58.1% 0.119 85.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.119 85.6)",
+          "oklch(26.0% 0.119 85.6)",
+          "oklch(38.0% 0.119 85.6)",
+          "oklch(50.0% 0.119 85.6)",
+          "oklch(62.0% 0.119 85.6)",
+          "oklch(74.0% 0.119 85.6)",
+          "oklch(85.0% 0.119 85.6)",
+          "oklch(95.0% 0.119 85.6)"
+        ],
+        "cssVar": "--route",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "verified-route-light": {
+        "role": "secondary",
+        "displayName": "Verified Route (light scheme)",
+        "canonical": "#1F8A5A",
+        "oklch": "oklch(56.3% 0.120 158.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.120 158.4)",
+          "oklch(26.0% 0.120 158.4)",
+          "oklch(38.0% 0.120 158.4)",
+          "oklch(50.0% 0.120 158.4)",
+          "oklch(62.0% 0.120 158.4)",
+          "oklch(74.0% 0.120 158.4)",
+          "oklch(85.0% 0.120 158.4)",
+          "oklch(95.0% 0.120 158.4)"
+        ],
+        "cssVar": "--verified-route",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "refused-lamp-light": {
+        "role": "secondary",
+        "displayName": "Signal Lamp (light scheme)",
+        "canonical": "#A62A21",
+        "oklch": "oklch(48.1% 0.162 28.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.162 28.8)",
+          "oklch(26.0% 0.162 28.8)",
+          "oklch(38.0% 0.162 28.8)",
+          "oklch(50.0% 0.162 28.8)",
+          "oklch(62.0% 0.162 28.8)",
+          "oklch(74.0% 0.162 28.8)",
+          "oklch(85.0% 0.162 28.8)",
+          "oklch(95.0% 0.162 28.8)"
+        ],
+        "cssVar": "--refused-lamp",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "refused-lamp-hi-light": {
+        "role": "secondary",
+        "displayName": "Bright Lamp (light scheme)",
+        "canonical": "#A62A21",
+        "oklch": "oklch(48.1% 0.162 28.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.162 28.8)",
+          "oklch(26.0% 0.162 28.8)",
+          "oklch(38.0% 0.162 28.8)",
+          "oklch(50.0% 0.162 28.8)",
+          "oklch(62.0% 0.162 28.8)",
+          "oklch(74.0% 0.162 28.8)",
+          "oklch(85.0% 0.162 28.8)",
+          "oklch(95.0% 0.162 28.8)"
+        ],
+        "cssVar": "--refused-lamp-hi",
+        "scheme": "light (prefers-color-scheme: light, Operate only)"
+      },
+      "kids-sky": {
+        "role": "neutral",
+        "displayName": "Kids Sky",
+        "canonical": "#D6ECF4",
+        "oklch": "oklch(92.9% 0.026 221.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 221.6)",
+          "oklch(26.0% 0.026 221.6)",
+          "oklch(38.0% 0.026 221.6)",
+          "oklch(50.0% 0.026 221.6)",
+          "oklch(62.0% 0.026 221.6)",
+          "oklch(74.0% 0.026 221.6)",
+          "oklch(85.0% 0.026 221.6)",
+          "oklch(95.0% 0.026 221.6)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)",
+        "onColor": "kids-ink"
+      },
+      "kids-ink": {
+        "role": "neutral",
+        "displayName": "Kids Ink",
+        "canonical": "#13302A",
+        "oklch": "oklch(28.5% 0.037 178.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.037 178.2)",
+          "oklch(26.0% 0.037 178.2)",
+          "oklch(38.0% 0.037 178.2)",
+          "oklch(50.0% 0.037 178.2)",
+          "oklch(62.0% 0.037 178.2)",
+          "oklch(74.0% 0.037 178.2)",
+          "oklch(85.0% 0.037 178.2)",
+          "oklch(95.0% 0.037 178.2)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)"
+      },
+      "kids-ink-2": {
+        "role": "neutral",
+        "displayName": "Kids Ink 2",
+        "canonical": "#2F4D46",
+        "oklch": "oklch(39.4% 0.038 177.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.038 177.8)",
+          "oklch(26.0% 0.038 177.8)",
+          "oklch(38.0% 0.038 177.8)",
+          "oklch(50.0% 0.038 177.8)",
+          "oklch(62.0% 0.038 177.8)",
+          "oklch(74.0% 0.038 177.8)",
+          "oklch(85.0% 0.038 177.8)",
+          "oklch(95.0% 0.038 177.8)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)"
+      },
+      "kids-play": {
+        "role": "primary",
+        "displayName": "Play Blue",
+        "canonical": "#1E4FBF",
+        "oklch": "oklch(46.8% 0.184 263.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.184 263.2)",
+          "oklch(26.0% 0.184 263.2)",
+          "oklch(38.0% 0.184 263.2)",
+          "oklch(50.0% 0.184 263.2)",
+          "oklch(62.0% 0.184 263.2)",
+          "oklch(74.0% 0.184 263.2)",
+          "oklch(85.0% 0.184 263.2)",
+          "oklch(95.0% 0.184 263.2)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)",
+        "onColor": "kids-on-play"
+      },
+      "kids-play-hi": {
+        "role": "primary",
+        "displayName": "Play Blue Deep",
+        "canonical": "#173F9C",
+        "oklch": "oklch(40.3% 0.158 263.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 263.4)",
+          "oklch(26.0% 0.158 263.4)",
+          "oklch(38.0% 0.158 263.4)",
+          "oklch(50.0% 0.158 263.4)",
+          "oklch(62.0% 0.158 263.4)",
+          "oklch(74.0% 0.158 263.4)",
+          "oklch(85.0% 0.158 263.4)",
+          "oklch(95.0% 0.158 263.4)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)",
+        "onColor": "kids-on-play"
+      },
+      "kids-on-play": {
+        "role": "primary",
+        "displayName": "On Play",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)"
+      },
+      "kids-disabled-bg": {
+        "role": "neutral",
+        "displayName": "Kids Disabled Field",
+        "canonical": "#E9F3F6",
+        "oklch": "oklch(95.8% 0.011 217.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 217.5)",
+          "oklch(26.0% 0.011 217.5)",
+          "oklch(38.0% 0.011 217.5)",
+          "oklch(50.0% 0.011 217.5)",
+          "oklch(62.0% 0.011 217.5)",
+          "oklch(74.0% 0.011 217.5)",
+          "oklch(85.0% 0.011 217.5)",
+          "oklch(95.0% 0.011 217.5)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)",
+        "onColor": "kids-disabled-ink"
+      },
+      "kids-disabled-ink": {
+        "role": "neutral",
+        "displayName": "Kids Disabled Ink",
+        "canonical": "#4A625C",
+        "oklch": "oklch(47.5% 0.030 177.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.030 177.9)",
+          "oklch(26.0% 0.030 177.9)",
+          "oklch(38.0% 0.030 177.9)",
+          "oklch(50.0% 0.030 177.9)",
+          "oklch(62.0% 0.030 177.9)",
+          "oklch(74.0% 0.030 177.9)",
+          "oklch(85.0% 0.030 177.9)",
+          "oklch(95.0% 0.030 177.9)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)"
+      },
+      "kids-refused-ink": {
+        "role": "neutral",
+        "displayName": "Kids Refusal Ink",
+        "canonical": "#8F241C",
+        "oklch": "oklch(43.3% 0.144 28.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.144 28.8)",
+          "oklch(26.0% 0.144 28.8)",
+          "oklch(38.0% 0.144 28.8)",
+          "oklch(50.0% 0.144 28.8)",
+          "oklch(62.0% 0.144 28.8)",
+          "oklch(74.0% 0.144 28.8)",
+          "oklch(85.0% 0.144 28.8)",
+          "oklch(95.0% 0.144 28.8)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)"
+      },
+      "kids-board": {
+        "role": "neutral",
+        "displayName": "Grass Board",
+        "canonical": "#6FAF55",
+        "oklch": "oklch(69.0% 0.140 137.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.140 137.4)",
+          "oklch(26.0% 0.140 137.4)",
+          "oklch(38.0% 0.140 137.4)",
+          "oklch(50.0% 0.140 137.4)",
+          "oklch(62.0% 0.140 137.4)",
+          "oklch(74.0% 0.140 137.4)",
+          "oklch(85.0% 0.140 137.4)",
+          "oklch(95.0% 0.140 137.4)"
+        ],
+        "source": "copy in sites/kids (not emitted by site-kit)",
+        "onColor": "kids-ink"
+      },
+      "store-plate-forge": {
+        "role": "tertiary",
+        "displayName": "Forge Brass",
+        "canonical": "#D9A066",
+        "oklch": "oklch(74.7% 0.101 65.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.101 65.7)",
+          "oklch(26.0% 0.101 65.7)",
+          "oklch(38.0% 0.101 65.7)",
+          "oklch(50.0% 0.101 65.7)",
+          "oklch(62.0% 0.101 65.7)",
+          "oklch(74.0% 0.101 65.7)",
+          "oklch(85.0% 0.101 65.7)",
+          "oklch(95.0% 0.101 65.7)"
+        ],
+        "cssVar": "--store-plate",
+        "selector": "[data-store=\"forge\"]"
+      },
+      "store-plate-vitrine": {
+        "role": "tertiary",
+        "displayName": "Vitrine Glass Blue",
+        "canonical": "#9DBBF2",
+        "oklch": "oklch(79.0% 0.085 262.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.085 262.3)",
+          "oklch(26.0% 0.085 262.3)",
+          "oklch(38.0% 0.085 262.3)",
+          "oklch(50.0% 0.085 262.3)",
+          "oklch(62.0% 0.085 262.3)",
+          "oklch(74.0% 0.085 262.3)",
+          "oklch(85.0% 0.085 262.3)",
+          "oklch(95.0% 0.085 262.3)"
+        ],
+        "cssVar": "--store-plate",
+        "selector": "[data-store=\"vitrine\"]"
+      },
+      "lunar": {
+        "role": "accent-inspect",
+        "displayName": "Lunar",
+        "canonical": "#C4B4FF",
+        "oklch": "oklch(81.0% 0.106 293.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.106 293.7)",
+          "oklch(26.0% 0.106 293.7)",
+          "oklch(38.0% 0.106 293.7)",
+          "oklch(50.0% 0.106 293.7)",
+          "oklch(62.0% 0.106 293.7)",
+          "oklch(74.0% 0.106 293.7)",
+          "oklch(85.0% 0.106 293.7)",
+          "oklch(95.0% 0.106 293.7)"
+        ],
+        "cssVar": "--lunar",
+        "scheme": "dark (default)",
+        "onColor": "on-lunar",
+        "note": "Exclusive INSPECT role. Text on panel/band/iron/raised/well/bed; on --plate in dark 4.10:1 = UI and large text only (uiOnly in SIGNAL_PAIRS)."
+      },
+      "lunar-light": {
+        "role": "accent-inspect",
+        "displayName": "Lunar (light scheme)",
+        "canonical": "#5B3FD0",
+        "oklch": "oklch(49.1% 0.210 284.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.210 284.4)",
+          "oklch(26.0% 0.210 284.4)",
+          "oklch(38.0% 0.210 284.4)",
+          "oklch(50.0% 0.210 284.4)",
+          "oklch(62.0% 0.210 284.4)",
+          "oklch(74.0% 0.210 284.4)",
+          "oklch(85.0% 0.210 284.4)",
+          "oklch(95.0% 0.210 284.4)"
+        ],
+        "cssVar": "--lunar",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": "on-lunar",
+        "note": "Exclusive INSPECT role. Text on panel/band/iron/raised/well/bed; on --plate in dark 4.10:1 = UI and large text only (uiOnly in SIGNAL_PAIRS)."
+      },
+      "on-lunar": {
+        "role": "accent-inspect",
+        "displayName": "On Lunar",
+        "canonical": "#16112E",
+        "oklch": "oklch(20.2% 0.056 288.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.056 288.3)",
+          "oklch(26.0% 0.056 288.3)",
+          "oklch(38.0% 0.056 288.3)",
+          "oklch(50.0% 0.056 288.3)",
+          "oklch(62.0% 0.056 288.3)",
+          "oklch(74.0% 0.056 288.3)",
+          "oklch(85.0% 0.056 288.3)",
+          "oklch(95.0% 0.056 288.3)"
+        ],
+        "cssVar": "--on-lunar",
+        "scheme": "dark (default)",
+        "onColor": null
+      },
+      "on-lunar-light": {
+        "role": "accent-inspect",
+        "displayName": "On Lunar (light scheme)",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--on-lunar",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null
+      },
+      "lunar-deep": {
+        "role": "accent-inspect",
+        "displayName": "Lunar Deep",
+        "canonical": "#5D4FA8",
+        "oklch": "oklch(48.7% 0.138 287.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.138 287.4)",
+          "oklch(26.0% 0.138 287.4)",
+          "oklch(38.0% 0.138 287.4)",
+          "oklch(50.0% 0.138 287.4)",
+          "oklch(62.0% 0.138 287.4)",
+          "oklch(74.0% 0.138 287.4)",
+          "oklch(85.0% 0.138 287.4)",
+          "oklch(95.0% 0.138 287.4)"
+        ],
+        "cssVar": "--lunar-deep",
+        "scheme": "dark (default)",
+        "onColor": "enamel",
+        "note": "lunar as ink on the enamel plaque"
+      },
+      "lunar-deep-light": {
+        "role": "accent-inspect",
+        "displayName": "Lunar Deep (light scheme)",
+        "canonical": "#C4B4FF",
+        "oklch": "oklch(81.0% 0.106 293.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.106 293.7)",
+          "oklch(26.0% 0.106 293.7)",
+          "oklch(38.0% 0.106 293.7)",
+          "oklch(50.0% 0.106 293.7)",
+          "oklch(62.0% 0.106 293.7)",
+          "oklch(74.0% 0.106 293.7)",
+          "oklch(85.0% 0.106 293.7)",
+          "oklch(95.0% 0.106 293.7)"
+        ],
+        "cssVar": "--lunar-deep",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": "enamel",
+        "note": "lunar as ink on the enamel plaque"
+      },
+      "lunar-mark": {
+        "role": "accent-inspect",
+        "displayName": "Lunar Mark",
+        "canonical": "#C4B4FF",
+        "oklch": "oklch(81.0% 0.106 293.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.106 293.7)",
+          "oklch(26.0% 0.106 293.7)",
+          "oklch(38.0% 0.106 293.7)",
+          "oklch(50.0% 0.106 293.7)",
+          "oklch(62.0% 0.106 293.7)",
+          "oklch(74.0% 0.106 293.7)",
+          "oklch(85.0% 0.106 293.7)",
+          "oklch(95.0% 0.106 293.7)"
+        ],
+        "cssVar": "--lunar-mark",
+        "scheme": "dark (default)",
+        "onColor": "on-lunar-mark",
+        "note": "Change Review diff <mark> fill"
+      },
+      "lunar-mark-light": {
+        "role": "accent-inspect",
+        "displayName": "Lunar Mark (light scheme)",
+        "canonical": "#E4DCFF",
+        "oklch": "oklch(91.2% 0.048 295.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.048 295.9)",
+          "oklch(26.0% 0.048 295.9)",
+          "oklch(38.0% 0.048 295.9)",
+          "oklch(50.0% 0.048 295.9)",
+          "oklch(62.0% 0.048 295.9)",
+          "oklch(74.0% 0.048 295.9)",
+          "oklch(85.0% 0.048 295.9)",
+          "oklch(95.0% 0.048 295.9)"
+        ],
+        "cssVar": "--lunar-mark",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": "on-lunar-mark",
+        "note": "Change Review diff <mark> fill"
+      },
+      "on-lunar-mark": {
+        "role": "accent-inspect",
+        "displayName": "On Lunar Mark",
+        "canonical": "#16112E",
+        "oklch": "oklch(20.2% 0.056 288.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.056 288.3)",
+          "oklch(26.0% 0.056 288.3)",
+          "oklch(38.0% 0.056 288.3)",
+          "oklch(50.0% 0.056 288.3)",
+          "oklch(62.0% 0.056 288.3)",
+          "oklch(74.0% 0.056 288.3)",
+          "oklch(85.0% 0.056 288.3)",
+          "oklch(95.0% 0.056 288.3)"
+        ],
+        "cssVar": "--on-lunar-mark",
+        "scheme": "dark (default)",
+        "onColor": null
+      },
+      "on-lunar-mark-light": {
+        "role": "accent-inspect",
+        "displayName": "On Lunar Mark (light scheme)",
+        "canonical": "#17221F",
+        "oklch": "oklch(24.0% 0.017 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 176.2)",
+          "oklch(26.0% 0.017 176.2)",
+          "oklch(38.0% 0.017 176.2)",
+          "oklch(50.0% 0.017 176.2)",
+          "oklch(62.0% 0.017 176.2)",
+          "oklch(74.0% 0.017 176.2)",
+          "oklch(85.0% 0.017 176.2)",
+          "oklch(95.0% 0.017 176.2)"
+        ],
+        "cssVar": "--on-lunar-mark",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null
+      },
+      "commit": {
+        "role": "secondary",
+        "displayName": "Commit (Accept)",
+        "canonical": "#F2C230",
+        "oklch": "oklch(83.4% 0.158 89.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 89.0)",
+          "oklch(26.0% 0.158 89.0)",
+          "oklch(38.0% 0.158 89.0)",
+          "oklch(50.0% 0.158 89.0)",
+          "oklch(62.0% 0.158 89.0)",
+          "oklch(74.0% 0.158 89.0)",
+          "oklch(85.0% 0.158 89.0)",
+          "oklch(95.0% 0.158 89.0)"
+        ],
+        "cssVar": "--commit",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-commit",
+        "note": "same paint as --pending; yellow stays the COMMIT signal"
+      },
+      "on-commit": {
+        "role": "secondary",
+        "displayName": "On Commit",
+        "canonical": "#1A2623",
+        "oklch": "oklch(25.6% 0.018 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 177.7)",
+          "oklch(26.0% 0.018 177.7)",
+          "oklch(38.0% 0.018 177.7)",
+          "oklch(50.0% 0.018 177.7)",
+          "oklch(62.0% 0.018 177.7)",
+          "oklch(74.0% 0.018 177.7)",
+          "oklch(85.0% 0.018 177.7)",
+          "oklch(95.0% 0.018 177.7)"
+        ],
+        "cssVar": "--on-commit",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": null
+      },
+      "commit-hi": {
+        "role": "secondary",
+        "displayName": "Commit Hover",
+        "canonical": "#FFD45A",
+        "oklch": "oklch(88.5% 0.146 89.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.146 89.5)",
+          "oklch(26.0% 0.146 89.5)",
+          "oklch(38.0% 0.146 89.5)",
+          "oklch(50.0% 0.146 89.5)",
+          "oklch(62.0% 0.146 89.5)",
+          "oklch(74.0% 0.146 89.5)",
+          "oklch(85.0% 0.146 89.5)",
+          "oklch(95.0% 0.146 89.5)"
+        ],
+        "cssVar": "--commit-hi",
+        "scheme": "both (dark default and Operate light; value unchanged)",
+        "onColor": "on-commit"
+      },
+      "commit-edge": {
+        "role": "secondary",
+        "displayName": "Commit Edge",
+        "canonical": "#F2C230",
+        "oklch": "oklch(83.4% 0.158 89.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.158 89.0)",
+          "oklch(26.0% 0.158 89.0)",
+          "oklch(38.0% 0.158 89.0)",
+          "oklch(50.0% 0.158 89.0)",
+          "oklch(62.0% 0.158 89.0)",
+          "oklch(74.0% 0.158 89.0)",
+          "oklch(85.0% 0.158 89.0)",
+          "oklch(95.0% 0.158 89.0)"
+        ],
+        "cssVar": "--commit-edge",
+        "scheme": "dark (default)",
+        "onColor": null,
+        "note": "Accept 2px boundary and the 1px line of .sx-plate--pending, >= 3:1 on every plane"
+      },
+      "commit-edge-light": {
+        "role": "secondary",
+        "displayName": "Commit Edge (light scheme)",
+        "canonical": "#7A5C00",
+        "oklch": "oklch(49.2% 0.101 86.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.101 86.4)",
+          "oklch(26.0% 0.101 86.4)",
+          "oklch(38.0% 0.101 86.4)",
+          "oklch(50.0% 0.101 86.4)",
+          "oklch(62.0% 0.101 86.4)",
+          "oklch(74.0% 0.101 86.4)",
+          "oklch(85.0% 0.101 86.4)",
+          "oklch(95.0% 0.101 86.4)"
+        ],
+        "cssVar": "--commit-edge",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null,
+        "note": "Accept 2px boundary and the 1px line of .sx-plate--pending, >= 3:1 on every plane"
+      },
+      "bed": {
+        "role": "neutral",
+        "displayName": "Recessed Bed",
+        "canonical": "#141C1A",
+        "oklch": "oklch(21.8% 0.012 178.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 178.1)",
+          "oklch(26.0% 0.012 178.1)",
+          "oklch(38.0% 0.012 178.1)",
+          "oklch(50.0% 0.012 178.1)",
+          "oklch(62.0% 0.012 178.1)",
+          "oklch(74.0% 0.012 178.1)",
+          "oklch(85.0% 0.012 178.1)",
+          "oklch(95.0% 0.012 178.1)"
+        ],
+        "cssVar": "--bed",
+        "scheme": "dark (default)",
+        "onColor": "ink",
+        "elevationLevel": -1
+      },
+      "bed-light": {
+        "role": "neutral",
+        "displayName": "Recessed Bed (light scheme)",
+        "canonical": "#DFE3DC",
+        "oklch": "oklch(91.1% 0.010 131.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.010 131.4)",
+          "oklch(26.0% 0.010 131.4)",
+          "oklch(38.0% 0.010 131.4)",
+          "oklch(50.0% 0.010 131.4)",
+          "oklch(62.0% 0.010 131.4)",
+          "oklch(74.0% 0.010 131.4)",
+          "oklch(85.0% 0.010 131.4)",
+          "oklch(95.0% 0.010 131.4)"
+        ],
+        "cssVar": "--bed",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": "ink",
+        "elevationLevel": -1
+      },
+      "plate": {
+        "role": "neutral",
+        "displayName": "Raised Plate",
+        "canonical": "#395A53",
+        "oklch": "oklch(44.0% 0.040 179.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.040 179.5)",
+          "oklch(26.0% 0.040 179.5)",
+          "oklch(38.0% 0.040 179.5)",
+          "oklch(50.0% 0.040 179.5)",
+          "oklch(62.0% 0.040 179.5)",
+          "oklch(74.0% 0.040 179.5)",
+          "oklch(85.0% 0.040 179.5)",
+          "oklch(95.0% 0.040 179.5)"
+        ],
+        "cssVar": "--plate",
+        "scheme": "dark (default)",
+        "onColor": "ink",
+        "elevationLevel": 1
+      },
+      "plate-light": {
+        "role": "neutral",
+        "displayName": "Raised Plate (light scheme)",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--plate",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": "ink",
+        "elevationLevel": 1
+      },
+      "hair": {
+        "role": "line-text",
+        "displayName": "Plane Hairline",
+        "canonical": "#9AB8B0",
+        "oklch": "oklch(75.8% 0.035 177.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.035 177.4)",
+          "oklch(26.0% 0.035 177.4)",
+          "oklch(38.0% 0.035 177.4)",
+          "oklch(50.0% 0.035 177.4)",
+          "oklch(62.0% 0.035 177.4)",
+          "oklch(74.0% 0.035 177.4)",
+          "oklch(85.0% 0.035 177.4)",
+          "oklch(95.0% 0.035 177.4)"
+        ],
+        "cssVar": "--hair",
+        "scheme": "dark (default)",
+        "onColor": null,
+        "note": "bounds a plane; >= 3:1 on every plane"
+      },
+      "hair-light": {
+        "role": "line-text",
+        "displayName": "Plane Hairline (light scheme)",
+        "canonical": "#6B807A",
+        "oklch": "oklch(58.1% 0.026 176.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 176.2)",
+          "oklch(26.0% 0.026 176.2)",
+          "oklch(38.0% 0.026 176.2)",
+          "oklch(50.0% 0.026 176.2)",
+          "oklch(62.0% 0.026 176.2)",
+          "oklch(74.0% 0.026 176.2)",
+          "oklch(85.0% 0.026 176.2)",
+          "oklch(95.0% 0.026 176.2)"
+        ],
+        "cssVar": "--hair",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null,
+        "note": "bounds a plane; >= 3:1 on every plane"
+      },
+      "ink-2-plate": {
+        "role": "line-text",
+        "displayName": "Plate Lichen",
+        "canonical": "#D2E2DC",
+        "oklch": "oklch(89.9% 0.019 171.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 171.5)",
+          "oklch(26.0% 0.019 171.5)",
+          "oklch(38.0% 0.019 171.5)",
+          "oklch(50.0% 0.019 171.5)",
+          "oklch(62.0% 0.019 171.5)",
+          "oklch(74.0% 0.019 171.5)",
+          "oklch(85.0% 0.019 171.5)",
+          "oklch(95.0% 0.019 171.5)"
+        ],
+        "cssVar": "--ink-2-plate",
+        "scheme": "dark (default)",
+        "onColor": null
+      },
+      "ink-2-plate-light": {
+        "role": "line-text",
+        "displayName": "Plate Lichen (light scheme)",
+        "canonical": "#3F5550",
+        "oklch": "oklch(43.0% 0.028 179.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 179.4)",
+          "oklch(26.0% 0.028 179.4)",
+          "oklch(38.0% 0.028 179.4)",
+          "oklch(50.0% 0.028 179.4)",
+          "oklch(62.0% 0.028 179.4)",
+          "oklch(74.0% 0.028 179.4)",
+          "oklch(85.0% 0.028 179.4)",
+          "oklch(95.0% 0.028 179.4)"
+        ],
+        "cssVar": "--ink-2-plate",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null
+      },
+      "enamel-ink-2": {
+        "role": "line-text",
+        "displayName": "Enamel Lichen",
+        "canonical": "#3F5550",
+        "oklch": "oklch(43.0% 0.028 179.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 179.4)",
+          "oklch(26.0% 0.028 179.4)",
+          "oklch(38.0% 0.028 179.4)",
+          "oklch(50.0% 0.028 179.4)",
+          "oklch(62.0% 0.028 179.4)",
+          "oklch(74.0% 0.028 179.4)",
+          "oklch(85.0% 0.028 179.4)",
+          "oklch(95.0% 0.028 179.4)"
+        ],
+        "cssVar": "--enamel-ink-2",
+        "scheme": "dark (default)",
+        "onColor": null
+      },
+      "enamel-ink-2-light": {
+        "role": "line-text",
+        "displayName": "Enamel Lichen (light scheme)",
+        "canonical": "#BCD0C9",
+        "oklch": "oklch(84.1% 0.024 172.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.024 172.7)",
+          "oklch(26.0% 0.024 172.7)",
+          "oklch(38.0% 0.024 172.7)",
+          "oklch(50.0% 0.024 172.7)",
+          "oklch(62.0% 0.024 172.7)",
+          "oklch(74.0% 0.024 172.7)",
+          "oklch(85.0% 0.024 172.7)",
+          "oklch(95.0% 0.024 172.7)"
+        ],
+        "cssVar": "--enamel-ink-2",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null
+      },
+      "enamel-rule": {
+        "role": "line-text",
+        "displayName": "Enamel Rule",
+        "canonical": "#4E6B64",
+        "oklch": "oklch(50.3% 0.036 178.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.036 178.2)",
+          "oklch(26.0% 0.036 178.2)",
+          "oklch(38.0% 0.036 178.2)",
+          "oklch(50.0% 0.036 178.2)",
+          "oklch(62.0% 0.036 178.2)",
+          "oklch(74.0% 0.036 178.2)",
+          "oklch(85.0% 0.036 178.2)",
+          "oklch(95.0% 0.036 178.2)"
+        ],
+        "cssVar": "--enamel-rule",
+        "scheme": "dark (default)",
+        "onColor": null
+      },
+      "enamel-rule-light": {
+        "role": "line-text",
+        "displayName": "Enamel Rule (light scheme)",
+        "canonical": "#86A39B",
+        "oklch": "oklch(69.1% 0.034 176.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.034 176.7)",
+          "oklch(26.0% 0.034 176.7)",
+          "oklch(38.0% 0.034 176.7)",
+          "oklch(50.0% 0.034 176.7)",
+          "oklch(62.0% 0.034 176.7)",
+          "oklch(74.0% 0.034 176.7)",
+          "oklch(85.0% 0.034 176.7)",
+          "oklch(95.0% 0.034 176.7)"
+        ],
+        "cssVar": "--enamel-rule",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null
+      },
+      "enamel-focus": {
+        "role": "semantic",
+        "displayName": "Enamel Focus",
+        "canonical": "#1A2623",
+        "oklch": "oklch(25.6% 0.018 177.7)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 177.7)",
+          "oklch(26.0% 0.018 177.7)",
+          "oklch(38.0% 0.018 177.7)",
+          "oklch(50.0% 0.018 177.7)",
+          "oklch(62.0% 0.018 177.7)",
+          "oklch(74.0% 0.018 177.7)",
+          "oklch(85.0% 0.018 177.7)",
+          "oklch(95.0% 0.018 177.7)"
+        ],
+        "cssVar": "--enamel-focus",
+        "scheme": "dark (default)",
+        "onColor": null,
+        "note": "focus ring on the enamel plaque"
+      },
+      "enamel-focus-light": {
+        "role": "semantic",
+        "displayName": "Enamel Focus (light scheme)",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 0.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0.0)",
+          "oklch(26.0% 0.000 0.0)",
+          "oklch(38.0% 0.000 0.0)",
+          "oklch(50.0% 0.000 0.0)",
+          "oklch(62.0% 0.000 0.0)",
+          "oklch(74.0% 0.000 0.0)",
+          "oklch(85.0% 0.000 0.0)",
+          "oklch(95.0% 0.000 0.0)"
+        ],
+        "cssVar": "--enamel-focus",
+        "scheme": "Operate light (prefers-color-scheme: light)",
+        "onColor": null,
+        "note": "focus ring on the enamel plaque"
+      }
     },
     "typographyMeta": {
-      "display-xl": { "displayName": "Display XL", "purpose": "Umbrella home and storefront home H1 only." },
-      "display-l": { "displayName": "Display L", "purpose": "Interior route H1; section H2 on landing pages." },
-      "heading": { "displayName": "Heading", "purpose": "Section H2 on interior, docs and state routes." },
-      "subhead": { "displayName": "Subhead", "purpose": "H3, card and state-panel titles." },
-      "body": { "displayName": "Body", "purpose": "Prose at 65-72ch; 16px on sites, 13-14px in editor chrome." },
-      "label": { "displayName": "Label", "purpose": "Mono micro labels and status chips; 11px is the text floor (pending DV-F1)." },
-      "mono": { "displayName": "Mono", "purpose": "Machine output only: digests, pointers, ids, credits, exit codes." }
+      "t-display": {
+        "displayName": "Display",
+        "purpose": "Persuade h1 only. Sizes are the `--t-display`, `--t-h2`, `--t-h3`, `--t-lede`, `--t-body`, `--t-plate` and `--t-small` tokens; faces are `--font-plate`, `--font-prose`, `--font-data`.",
+        "cssVar": "--t-display"
+      },
+      "t-h2": {
+        "displayName": "H2",
+        "purpose": "section heads.",
+        "cssVar": "--t-h2"
+      },
+      "t-h3": {
+        "displayName": "H3",
+        "purpose": "the comfortable interlock title (`--density-title`). Compact interlocks set a 16px title in the prose face, inline with the plate.",
+        "cssVar": "--t-h3"
+      },
+      "t-plate": {
+        "displayName": "Plate",
+        "purpose": "state plates and the TEST plate. Never smaller.",
+        "cssVar": "--t-plate"
+      },
+      "t-lede": {
+        "displayName": "Lede",
+        "purpose": "the lede, max 34ch; the umbrella mobile LCP element.",
+        "cssVar": "--t-lede"
+      },
+      "t-body": {
+        "displayName": "Body",
+        "purpose": "prose at 60–68ch, docs 65–75ch. Set through `--density-body`.",
+        "cssVar": "--t-body"
+      },
+      "body-compact": {
+        "displayName": "Body Compact",
+        "purpose": "prose at 60–68ch, docs 65–75ch. Set through `--density-body`.",
+        "cssVar": "--density-body (compact)",
+        "derived": "not an emitted property: --font-prose at --density-body"
+      },
+      "body-kids": {
+        "displayName": "Body Kids",
+        "purpose": "prose at 60–68ch, docs 65–75ch. Set through `--density-body`.",
+        "cssVar": "sites/kids copy",
+        "derived": "not an emitted property: --font-prose at --density-body"
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "button labels, always the prose face.",
+        "cssVar": "--density-body (comfortable)",
+        "derived": "not an emitted property: --font-prose at --density-body"
+      },
+      "button-compact": {
+        "displayName": "Button Compact",
+        "purpose": "button labels, always the prose face.",
+        "cssVar": "--density-body (compact)",
+        "derived": "not an emitted property: --font-prose at --density-body"
+      },
+      "font-data": {
+        "displayName": "Data",
+        "purpose": "values and the route leaf (never truncated).",
+        "cssVar": "--font-data"
+      },
+      "t-small": {
+        "displayName": "Small",
+        "purpose": "digests, path segments, compact evidence. The smallest text in the system (13px floor).",
+        "cssVar": "--t-small"
+      },
+      "t-floor": {
+        "displayName": "Text floor",
+        "purpose": "13px (SIGNAL_TEXT_FLOOR_PX), emitted as --t-floor = 0.8125rem; design-tokens.ts throws at load if a --t-* step or density text size is under it; <small> is pinned to max(var(--t-floor), 0.8em).",
+        "cssVar": "--t-floor",
+        "value": "0.8125rem"
+      }
     },
     "shadows": [
-      { "name": "float", "value": "0 24px 60px -16px rgba(0,0,0,.9)", "purpose": "Dialogs, menus, palette. Pending DV-F3: 0 10px 14px -6px at the same ink, 1px strong edge kept." },
-      { "name": "raised-inset", "value": "inset 0 1px 0 rgba(255,255,255,.03)", "purpose": "Headers and toolbars." },
-      { "name": "control-inset", "value": "inset 0 1px 0 rgba(255,255,255,.05)", "purpose": "Buttons and chips at rest." }
+      {
+        "name": "sink",
+        "cssVar": "--sink",
+        "value": "inset 0 2px 0 #00000066, inset 0 0 0 1px #00000040",
+        "valueLight": "inset 0 2px 0 #17221F1F",
+        "purpose": "level -1: bed and well are pressed in (SIGNAL_SHADOWS)."
+      },
+      {
+        "name": "lift-1",
+        "cssVar": "--lift-1",
+        "value": "0 1px 0 #FFFFFF14 inset, 0 14px 24px -14px #000000B3",
+        "valueLight": "0 1px 0 #FFFFFF inset, 0 10px 20px -14px #17221F66",
+        "purpose": "level +1: raised plate and cast iron frame (SIGNAL_SHADOWS)."
+      },
+      {
+        "name": "lift-2",
+        "cssVar": "--lift-2",
+        "value": "0 1px 0 #FFFFFF inset, 0 28px 48px -24px #000000CC, 0 4px 10px -6px #00000080",
+        "valueLight": "0 1px 0 #FFFFFF inset, 0 28px 48px -24px #000000CC, 0 4px 10px -6px #00000080",
+        "purpose": "level +2: enamel plaque; the acquire block on iron (SIGNAL_SHADOWS)."
+      },
+      {
+        "name": "lever-contact",
+        "value": "0 6px 10px -6px #1E2B28",
+        "purpose": "Lever arm contact shadow in the Persuade hero and comfortable interlock (component-level, not a SIGNAL_SHADOWS token)."
+      }
     ],
     "motion": [
-      { "name": "duration-press", "value": "120ms", "purpose": "Press-in and focus halo (pending DV-F7)." },
-      { "name": "duration-micro", "value": "160ms", "purpose": "Hover state layers, press release." },
-      { "name": "duration-state", "value": "200ms", "purpose": "Chip, status line and number changes." },
-      { "name": "duration-panel", "value": "280ms", "purpose": "Panels, drawers, dialogs opening." },
-      { "name": "duration-panel-exit", "value": "200ms", "purpose": "Every close and exit." },
-      { "name": "duration-route", "value": "320ms", "purpose": "Route entrance, hero aperture, focal resolution." },
-      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Micro feedback and exits." },
-      { "name": "ease-out-quint", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "State and number changes." },
-      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Panels, routes, focal moments." }
+      {
+        "name": "catch",
+        "cssVar": "--catch",
+        "value": "90ms",
+        "reduced": "0ms",
+        "purpose": "the hold before commitment (linear)"
+      },
+      {
+        "name": "throw",
+        "cssVar": "--throw",
+        "value": "260ms",
+        "reduced": "0ms",
+        "purpose": "lever travel, stops dead"
+      },
+      {
+        "name": "ease-throw",
+        "cssVar": "--ease-throw",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "reduced": "linear",
+        "purpose": "no overshoot, no bounce"
+      },
+      {
+        "name": "lamp",
+        "cssVar": "--lamp",
+        "value": "360ms",
+        "reduced": "0ms",
+        "purpose": "lamps light station by station"
+      },
+      {
+        "name": "lamp-steps",
+        "cssVar": "--lamp-steps",
+        "value": "steps(6)",
+        "reduced": "steps(1)",
+        "purpose": "the lamp timing function"
+      },
+      {
+        "name": "settle",
+        "cssVar": "--settle",
+        "value": "420ms",
+        "reduced": "0ms",
+        "purpose": "clip-reveal of the after-value (ease-out)"
+      },
+      {
+        "name": "state",
+        "cssVar": "--state",
+        "value": "0ms",
+        "reduced": "0ms",
+        "purpose": "plate and colour switches are instant everywhere"
+      },
+      {
+        "name": "seq-propose-delay",
+        "cssVar": "--seq-propose-delay",
+        "value": "0ms",
+        "reduced": "0ms",
+        "purpose": "propose act starts (yellow phase bar) (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-propose-duration",
+        "cssVar": "--seq-propose-duration",
+        "value": "900ms",
+        "reduced": "0ms",
+        "purpose": "propose act (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-inspect-delay",
+        "cssVar": "--seq-inspect-delay",
+        "value": "1150ms",
+        "reduced": "0ms",
+        "purpose": "inspect act starts (lunar scan gate) (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-inspect-duration",
+        "cssVar": "--seq-inspect-duration",
+        "value": "750ms",
+        "reduced": "0ms",
+        "purpose": "inspect act: scan, leaf ring to lunar, Differs tag (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-commit-delay",
+        "cssVar": "--seq-commit-delay",
+        "value": "2250ms",
+        "reduced": "0ms",
+        "purpose": "commit act starts (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-commit-duration",
+        "cssVar": "--seq-commit-duration",
+        "value": "550ms",
+        "reduced": "0ms",
+        "purpose": "commit act, ending ARMED, never committed (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-bar",
+        "cssVar": "--seq-bar",
+        "value": "280ms",
+        "reduced": "0ms",
+        "purpose": "phase bar scaleX in each act (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-scan",
+        "cssVar": "--seq-scan",
+        "value": "760ms",
+        "reduced": "0ms",
+        "purpose": "lunar scan gate crosses the readout once (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-stagger",
+        "cssVar": "--seq-stagger",
+        "value": "80ms",
+        "reduced": "0ms",
+        "purpose": "step between diff marks or rows revealed in turn (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "seq-ease",
+        "cssVar": "--seq-ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "reduced": "linear",
+        "purpose": "every sequence move; no overshoot (SIGNAL_SEQUENCE; autoplay ends armed (SIGNAL_SEQUENCE_END); reduced motion = three labelled stills)"
+      },
+      {
+        "name": "kids-train",
+        "value": "14s linear infinite",
+        "reduced": "paused (parked)",
+        "purpose": "Kids train lap, only while Play is on; a sites/kids copy."
+      }
     ],
     "breakpoints": [
-      { "name": "phone", "value": "620px" },
-      { "name": "tablet", "value": "860px" },
-      { "name": "laptop", "value": "1024px" },
-      { "name": "desktop", "value": "1180px" }
-    ]
+      {
+        "name": "phone",
+        "value": "390px",
+        "purpose": "Above-the-fold Change Review test (390x844)."
+      },
+      {
+        "name": "route-vertical",
+        "value": "760px",
+        "purpose": "Below this the route track runs vertically."
+      },
+      {
+        "name": "review-side",
+        "value": "960px",
+        "purpose": "Digests may sit beside rows if DOM order still matches reading order."
+      },
+      {
+        "name": "wrap",
+        "value": "1320px",
+        "purpose": "Persuade max wrap."
+      },
+      {
+        "name": "mast-menu",
+        "value": "em-based (lane decides)",
+        "purpose": "Below it the mast shows wordmark + Download + Menu disclosure."
+      }
+    ],
+    "density": {
+      "comfortable": {
+        "--density-control": "44px",
+        "--density-body": "16px",
+        "--density-pad-block": "24px",
+        "--density-pad-inline": "32px",
+        "--density-gap": "16px",
+        "--density-title": "24px",
+        "--density-evidence": "14px",
+        "--density-button-pad": "22px",
+        "targetMin": "24px",
+        "emittedBySiteKit": true,
+        "selector": ":root, [data-density=\"comfortable\"]"
+      },
+      "compact": {
+        "--density-control": "28px",
+        "--density-body": "14px",
+        "--density-pad-block": "12px",
+        "--density-pad-inline": "14px",
+        "--density-gap": "8px",
+        "--density-title": "16px",
+        "--density-evidence": "13px",
+        "--density-button-pad": "12px",
+        "targetMin": "24px",
+        "emittedBySiteKit": true,
+        "selector": "[data-density=\"compact\"]"
+      },
+      "kids": {
+        "--density-control": "56px",
+        "--density-body": "18px",
+        "--density-pad-block": "24px",
+        "--density-pad-inline": "32px",
+        "--density-gap": "24px",
+        "--density-title": "24px",
+        "--density-evidence": "18px",
+        "--density-button-pad": "28px",
+        "targetMin": "44px",
+        "emittedBySiteKit": false,
+        "selector": "sites/kids copy"
+      }
+    },
+    "dialects": {
+      "persuade": ".impeccable/surfaces/persuade.md",
+      "operate": ".impeccable/surfaces/operate.md",
+      "kids": ".impeccable/surfaces/kids.md"
+    },
+    "browserSurfaces": {
+      "selection": "pending on on-pending",
+      "focusRing": "3px solid enamel (light: ink), offset 3px, 2px radius",
+      "scrollbar": "siding on iron",
+      "underlineOffset": "0.24em",
+      "numerals": "tabular-nums",
+      "hidden": ".<world-root> [hidden] { display:none !important } scoped, never global"
+    },
+    "forcedColors": "plates/rows/decision 1px solid CanvasText on Canvas; AFTER mark Mark/MarkText; track CanvasText; icons currentColor",
+    "tokenSource": {
+      "emitter": "packages/site-kit/src/design-tokens.ts signalCss() / signalStoreBlockCss() (SIGNAL_VERSION v6-interlocking)",
+      "checkedAgainstCode": "2026-10-06 A-rich amendment (design-tokens.ts imported; see ~/Documents/Reports/sceneaxi-redesign-v6/a5a/arich-crosscheck.md)",
+      "keyConvention": "frontmatter key = CSS property minus \"--\" (colors.*, typography.t-*, typography.font-data, rounded.radius-*, spacing.sp-*); \"-light\" = value under prefers-color-scheme: light (signalCss({scheme:\"system\"})); density-<prop>-<id> = --density-<prop> under [data-density=<id>]; store-plate-<id> / store-mark-radius-<id> = --store-plate / --store-mark-radius in [data-store=<id>]; kids-* = sites/kids copy (never emitted); body-compact/body-kids/button/button-compact = derived roles; wrap/mast-*/kids-play/kids-tile = lane layout constants",
+      "copies": [
+        "apps/desktop-shell/src/visual-tokens.ts (INTERLOCKING, INTERLOCKING_SHADOWS, INTERLOCKING_ELEVATION, INTERLOCKING_SEQUENCE, INTERLOCKING_TYPE_SCALE mirror, no import)",
+        "sites/kids (copy, never imported)"
+      ],
+      "legacyNotPartOfSystem": "foundationsCss() and its --accent/--bg-*/--fg-* properties in the same file are the v5 world, pending removal by the token lane",
+      "crossCheckReport": "~/Documents/Reports/sceneaxi-redesign-v6/a5a/token-crosscheck.md"
+    },
+    "elevation": {
+      "source": "packages/site-kit/src/design-tokens.ts SIGNAL_ELEVATION (desktop mirror INTERLOCKING_ELEVATION)",
+      "levels": [
+        {
+          "level": -1,
+          "plane": "--bed",
+          "shadow": "--sink",
+          "boundary": "--hair",
+          "ink2": "--ink-2",
+          "focus": "--focus",
+          "use": "capture band, image mats, docks, route strip"
+        },
+        {
+          "level": -1,
+          "plane": "--well",
+          "shadow": "--sink",
+          "boundary": "--edge",
+          "ink2": "--ink-2",
+          "focus": "--focus",
+          "use": "inputs, code wells"
+        },
+        {
+          "level": 0,
+          "plane": "--panel",
+          "shadow": null,
+          "boundary": null,
+          "ink2": "--ink-2",
+          "focus": "--focus",
+          "use": "the page field (--panel-band alternates)"
+        },
+        {
+          "level": 1,
+          "plane": "--plate",
+          "shadow": "--lift-1",
+          "boundary": "--hair",
+          "ink2": "--ink-2-plate",
+          "focus": "--focus",
+          "use": "spec rows, legend, decision, record"
+        },
+        {
+          "level": 1,
+          "plane": "--iron",
+          "shadow": "--lift-1",
+          "boundary": "--edge",
+          "ink2": "--ink-2",
+          "focus": "--focus",
+          "use": "frames, hero diagram, interlocks, controls (--iron-raised inner step)"
+        },
+        {
+          "level": 2,
+          "plane": "--enamel",
+          "shadow": "--lift-2",
+          "boundary": "--enamel-rule",
+          "ink2": "--enamel-ink-2",
+          "focus": "--enamel-focus",
+          "use": "editorial pull plaque"
+        }
+      ]
+    }
   },
   "components": [
     {
       "name": "Primary Button",
       "kind": "button",
-      "refersTo": "button-primary",
-      "description": "The one accent fill per viewport: the action that resolves pending work.",
-      "html": "<button class=\"ds-btn-primary\">Download</button>",
-      "css": ".ds-btn-primary { position: relative; display: inline-flex; align-items: center; height: 46px; padding: 0 24px; border-radius: 5px; border: 1px solid var(--accent, #FF6B2C); background: var(--accent, #FF6B2C); color: var(--bg-base, #07080A); font: 600 15px/1 'Archivo', system-ui, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: var(--accent-hi, #FF8A54); border-color: var(--accent-hi, #FF8A54); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); }"
+      "refersTo": "sx-btn",
+      "description": "Enamel lever plate; ink declared per state via --b-ink, never by a global a:hover.",
+      "html": "<div class=\"ds-wrap\" style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\"><button class=\"ds-btn\" type=\"button\">Download</button></div>",
+      "css": ".ds-btn{--b-bg:var(--enamel, #F1EEE4);--b-ink:var(--on-enamel, #1A2623);--b-edge:var(--enamel, #F1EEE4);display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;font:700 1rem/1 'Atkinson Hyperlegible Next',system-ui,sans-serif;color:var(--b-ink);background:var(--b-bg);border:2px solid var(--b-edge);border-radius:2px;cursor:pointer;transition:background-color 90ms linear,transform 90ms linear}.ds-btn:hover{--b-bg:var(--enamel-hi, #FFFFFF);--b-edge:var(--enamel-hi, #FFFFFF);color:var(--b-ink)}.ds-btn:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}.ds-btn:active{transform:translateY(2px)}.ds-btn:disabled{--b-bg:var(--iron-raised, #263632);--b-ink:var(--disabled-ink, #BCD0C9);--b-edge:var(--edge, #86A39B);border-style:dashed;cursor:not-allowed;transform:none}@media (prefers-reduced-motion:reduce){.ds-btn{transition:none}}"
     },
     {
       "name": "Quiet Button",
       "kind": "button",
-      "refersTo": "button-quiet",
-      "description": "Secondary action on the bench: transparent with a strong hairline.",
-      "html": "<button class=\"ds-btn-quiet\">Open the proof</button>",
-      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; height: 46px; padding: 0 24px; border-radius: 5px; border: 1px solid var(--line-strong, #2C323B); background: transparent; color: var(--fg, #EDEFF2); font: 500 15px/1 'Archivo', system-ui, sans-serif; cursor: pointer; transition: transform 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-quiet:hover { background: var(--bg-control, #191D23); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; } .ds-btn-quiet:active { transform: scale(0.97); }"
+      "refersTo": "sx-btn-quiet",
+      "description": "Transparent with an edge boundary; hover fills iron and the border turns enamel.",
+      "html": "<div style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\"><button class=\"ds-btn ds-btn--quiet\" type=\"button\">Open a scene</button></div>",
+      "css": ".ds-btn{--b-bg:var(--enamel, #F1EEE4);--b-ink:var(--on-enamel, #1A2623);--b-edge:var(--enamel, #F1EEE4);display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;font:700 1rem/1 'Atkinson Hyperlegible Next',system-ui,sans-serif;color:var(--b-ink);background:var(--b-bg);border:2px solid var(--b-edge);border-radius:2px;cursor:pointer;transition:background-color 90ms linear,transform 90ms linear}.ds-btn:hover{--b-bg:var(--enamel-hi, #FFFFFF);--b-edge:var(--enamel-hi, #FFFFFF);color:var(--b-ink)}.ds-btn:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}.ds-btn:active{transform:translateY(2px)}.ds-btn:disabled{--b-bg:var(--iron-raised, #263632);--b-ink:var(--disabled-ink, #BCD0C9);--b-edge:var(--edge, #86A39B);border-style:dashed;cursor:not-allowed;transform:none}@media (prefers-reduced-motion:reduce){.ds-btn{transition:none}}.ds-btn--quiet{--b-bg:transparent;--b-ink:var(--ink, #F1EEE4);--b-edge:var(--edge, #86A39B)}.ds-btn--quiet:hover{--b-bg:var(--iron, #1E2B28);--b-edge:var(--enamel, #F1EEE4)}"
     },
     {
-      "name": "Status Chip",
+      "name": "Disabled Button",
+      "kind": "button",
+      "refersTo": "sx-btn-disabled",
+      "description": "Dashed edge border, not-allowed cursor, ink-2 text at 5.95:1; never fade alone.",
+      "html": "<div style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\"><button class=\"ds-btn\" type=\"button\" disabled>Accept</button></div>",
+      "css": ".ds-btn{--b-bg:var(--enamel, #F1EEE4);--b-ink:var(--on-enamel, #1A2623);--b-edge:var(--enamel, #F1EEE4);display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;font:700 1rem/1 'Atkinson Hyperlegible Next',system-ui,sans-serif;color:var(--b-ink);background:var(--b-bg);border:2px solid var(--b-edge);border-radius:2px;cursor:pointer;transition:background-color 90ms linear,transform 90ms linear}.ds-btn:hover{--b-bg:var(--enamel-hi, #FFFFFF);--b-edge:var(--enamel-hi, #FFFFFF);color:var(--b-ink)}.ds-btn:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}.ds-btn:active{transform:translateY(2px)}.ds-btn:disabled{--b-bg:var(--iron-raised, #263632);--b-ink:var(--disabled-ink, #BCD0C9);--b-edge:var(--edge, #86A39B);border-style:dashed;cursor:not-allowed;transform:none}@media (prefers-reduced-motion:reduce){.ds-btn{transition:none}}"
+    },
+    {
+      "name": "State Plates",
       "kind": "chip",
-      "refersTo": "chip-status",
-      "description": "One of the six published statuses; names a state the contract entitles the surface to show.",
-      "html": "<span class=\"ds-chip ds-chip-review\"><span class=\"ds-chip-dot\"></span>Needs review</span>",
-      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 3px; font: 500 11px/1.4 'JetBrains Mono', ui-monospace, monospace; } .ds-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; } .ds-chip-review { color: #FF6B2C; background: #191207; border: 1px solid #4A3820; }"
+      "refersTo": "sx-plate-pending",
+      "description": "The four laws: label + icon + paint, each fill on its on-colour. Pending is one site-kit class, .sx-plate--pending: commit fill + on-commit ink + 1px inset --commit-edge line (light #7A5C00, 5.11:1 on panel; the fill alone is 1.37:1), never the fill alone.",
+      "html": "<div style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:12px\"><span class=\"ds-plate ds-plate--pending\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/></svg>Pending review · unwritten</span><span class=\"ds-plate ds-plate--verified\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>Verified · written</span><span class=\"ds-plate ds-plate--refused\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8.3 3h7.4L21 8.3v7.4L15.7 21H8.3L3 15.7V8.3z\"/><path d=\"M8 12h8\"/></svg>Rejected · nothing written</span><span class=\"ds-plate ds-plate--stale\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M11 7l-6 5 6 5zM19 7l-6 5 6 5z\"/><path d=\"M4 20L20 4\"/></svg>Superseded · not actionable</span></div>",
+      "css": ".ds-ico{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ds-plate{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:2px;font:800 .9375rem/1.2 'Big Shoulders Display','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase}.ds-plate--pending{background:var(--commit, #F2C230);color:var(--on-commit, #1A2623);box-shadow:inset 0 0 0 1px var(--commit-edge, #F2C230)}.ds-plate--verified{background:var(--verified, #7BDDB0);color:var(--on-verified, #12241E)}.ds-plate--refused{background:var(--refused, #C4362C);color:var(--on-refused, #FFFFFF)}.ds-plate--stale{background:var(--stale, #A3A9A4);color:var(--on-stale, #1A2623)}@media (forced-colors:active){.ds-plate{border:1px solid CanvasText}}"
     },
     {
-      "name": "Field",
+      "name": "Pointer Input",
       "kind": "input",
-      "refersTo": "input-field",
-      "description": "Inset field on the bench; errors name the problem in text.",
-      "html": "<label class=\"ds-field\"><span>JSON Pointer</span><input value=\"/data/entities/0/x\"></label>",
-      "css": ".ds-field { display: grid; gap: 8px; font: 500 13px/1.4 'Archivo', system-ui, sans-serif; color: var(--fg-2, #8A929C); } .ds-field input { height: 38px; padding: 0 12px; border-radius: 3px; border: 1px solid var(--line, #1C2129); background: var(--bg-field, #08090B); color: var(--fg, #EDEFF2); font: 400 13px/1 'JetBrains Mono', ui-monospace, monospace; } .ds-field input:hover { border-color: var(--line-strong, #2C323B); } .ds-field input:focus-visible { outline: 2px solid var(--accent-hi, #FF8A54); outline-offset: 2px; }"
+      "refersTo": "input",
+      "description": "Well fill, edge boundary, data face; 3px enamel focus ring.",
+      "html": "<div style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\"><label class=\"ds-label\" for=\"ds-jp\">JSON Pointer</label><input class=\"ds-input\" id=\"ds-jp\" value=\"/nodes/3/transform/position/1\"></div>",
+      "css": ".ds-label{display:block;margin-bottom:8px;font-weight:700}.ds-input{width:100%;max-width:28rem;min-height:44px;padding:0 12px;background:var(--well, #182320);color:var(--ink, #F1EEE4);border:1px solid var(--edge, #86A39B);border-radius:2px;font:400 1rem/1.4 'Atkinson Hyperlegible Mono',ui-monospace,monospace}.ds-input:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}.ds-input:user-invalid{border-color:var(--refused-lamp, #FF9A8C)}"
     },
     {
-      "name": "Named State Panel",
+      "name": "Masthead",
+      "kind": "nav",
+      "refersTo": "mast",
+      "description": "Iron mast; links change underline only; Download always visible, the rest behind Menu at narrow widths.",
+      "html": "<header class=\"ds-mast\"><a class=\"ds-word\" href=\"#\"><span class=\"ds-word-mark\"></span>SceneAxi</a><nav class=\"ds-nav\" aria-label=\"Primary\"><a href=\"#\">Open a scene</a><a href=\"#\">Profiles</a><a href=\"#\" aria-current=\"page\">Engine SDK</a><a href=\"#\">Docs</a><a href=\"#\">Pricing</a><a href=\"#\">Account</a></nav></header>",
+      "css": ".ds-mast{display:flex;align-items:center;gap:8px 32px;padding:0 24px;min-height:72px;background:var(--iron, #1E2B28);color:var(--ink, #F1EEE4);border-bottom:1px solid var(--rule, #4E6B64);font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif}.ds-word{display:inline-flex;align-items:center;gap:10px;color:inherit;text-decoration:none;font:800 1.75rem/1 'Big Shoulders Display','Arial Narrow',sans-serif}.ds-word-mark{width:14px;height:14px;background:var(--enamel, #F1EEE4);border-radius:1px}.ds-nav{display:flex;flex-wrap:wrap;margin-left:auto}.ds-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;color:inherit;text-decoration:none;font-weight:500;box-shadow:inset 0 -3px 0 transparent}.ds-nav a:hover{color:inherit;box-shadow:inset 0 -3px 0 var(--siding, #7F9A93)}.ds-nav a[aria-current=page]{font-weight:700;box-shadow:inset 0 -3px 0 var(--enamel, #F1EEE4)}.ds-nav a:focus-visible,.ds-word:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}"
+    },
+    {
+      "name": "Change Review Row",
       "kind": "custom",
-      "refersTo": "card-panel",
-      "description": "First-class refusal/pending/verified state: tone chip, title, mono reason, a link forward. No side rail.",
-      "html": "<section class=\"ds-state\"><span class=\"ds-chip ds-chip-refused\">Refused</span><h3>Sign-in is unavailable</h3><code>IDENTITY_PLANE_NOT_WIRED</code><a href=\"/\">Back to the overview</a></section>",
-      "css": ".ds-state { display: grid; gap: 12px; padding: 24px; border-radius: 9px; border: 1px solid #3A2126; background: var(--bg-panel, #0D0F12); color: var(--fg, #EDEFF2); font: 400 16px/1.6 'Archivo', system-ui, sans-serif; } .ds-state h3 { margin: 0; font-size: 17px; font-weight: 600; } .ds-state code { font: 400 13px/1.5 'JetBrains Mono', ui-monospace, monospace; color: var(--fg-2, #8A929C); } .ds-chip-refused { color: #FF4D5E; background: #1A1113; border: 1px solid #3A2126; } .ds-state a { color: var(--accent, #FF6B2C); }"
+      "refersTo": "review-row",
+      "description": "Signature: status plate first, then WHERE route / BEFORE struck in stale / AFTER marked in pending, then consequence and actions.",
+      "html": "<section class=\"ds-cr\" style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\" aria-labelledby=\"ds-cr-h\"><h3 id=\"ds-cr-h\" tabindex=\"-1\"><span class=\"ds-plate ds-plate--pending\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/></svg>Pending review · unwritten</span></h3><ol class=\"ds-rows\" aria-label=\"Proposed edits, before and after\"><li class=\"ds-row\"><span class=\"ds-k\">Where</span><span class=\"ds-v\">scene.json <span class=\"ds-route\"><span>nodes</span><span>3</span><span>transform</span><span>position</span><b>1</b></span></span><span class=\"ds-k\">Before</span><s class=\"ds-v ds-before\">0.5</s><span class=\"ds-k\">After</span><mark class=\"ds-v ds-after\">1.25</mark></li></ol><p class=\"ds-cons\">Accept writes 1 change to scene.json, all or nothing. If a document no longer matches its base digest, Accept refuses and writes nothing. Reject discards the proposal; nothing is written.</p><div class=\"ds-act\"><button class=\"ds-btn\" type=\"button\">Accept</button><button class=\"ds-btn ds-btn--quiet\" type=\"button\">Reject</button></div></section>",
+      "css": ".ds-ico{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ds-plate{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:2px;font:800 .9375rem/1.2 'Big Shoulders Display','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase}.ds-plate--pending{background:var(--commit, #F2C230);color:var(--on-commit, #1A2623);box-shadow:inset 0 0 0 1px var(--commit-edge, #F2C230)}.ds-plate--verified{background:var(--verified, #7BDDB0);color:var(--on-verified, #12241E)}.ds-plate--refused{background:var(--refused, #C4362C);color:var(--on-refused, #FFFFFF)}.ds-plate--stale{background:var(--stale, #A3A9A4);color:var(--on-stale, #1A2623)}@media (forced-colors:active){.ds-plate{border:1px solid CanvasText}}.ds-btn{--b-bg:var(--enamel, #F1EEE4);--b-ink:var(--on-enamel, #1A2623);--b-edge:var(--enamel, #F1EEE4);display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;font:700 1rem/1 'Atkinson Hyperlegible Next',system-ui,sans-serif;color:var(--b-ink);background:var(--b-bg);border:2px solid var(--b-edge);border-radius:2px;cursor:pointer;transition:background-color 90ms linear,transform 90ms linear}.ds-btn:hover{--b-bg:var(--enamel-hi, #FFFFFF);--b-edge:var(--enamel-hi, #FFFFFF);color:var(--b-ink)}.ds-btn:focus-visible{outline:3px solid var(--focus, #F1EEE4);outline-offset:3px}.ds-btn:active{transform:translateY(2px)}.ds-btn:disabled{--b-bg:var(--iron-raised, #263632);--b-ink:var(--disabled-ink, #BCD0C9);--b-edge:var(--edge, #86A39B);border-style:dashed;cursor:not-allowed;transform:none}@media (prefers-reduced-motion:reduce){.ds-btn{transition:none}}.ds-btn--quiet{--b-bg:transparent;--b-ink:var(--ink, #F1EEE4);--b-edge:var(--edge, #86A39B)}.ds-btn--quiet:hover{--b-bg:var(--iron, #1E2B28);--b-edge:var(--enamel, #F1EEE4)}.ds-cr h3{margin:0 0 12px}.ds-rows{list-style:none;margin:0;padding:0}.ds-row{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;padding:12px 16px;background:var(--iron, #1E2B28);border:1px solid var(--rule, #4E6B64);border-radius:2px}.ds-k{font:800 .9375rem/1.2 'Big Shoulders Display','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2, #BCD0C9)}.ds-v{font:400 1rem/1.4 'Atkinson Hyperlegible Mono',ui-monospace,monospace;overflow-wrap:anywhere}.ds-route{display:inline-flex;flex-wrap:wrap;gap:0 4px}.ds-route span::after{content:'/';color:var(--siding, #7F9A93);margin-left:4px}.ds-before{color:var(--stale, #A3A9A4);text-decoration-thickness:2px}.ds-after{justify-self:start;padding:0 6px;background:var(--pending, #F2C230);color:var(--on-pending, #1A2623);border-radius:2px}.ds-cons{margin:16px 0}.ds-act{display:flex;gap:12px;flex-wrap:wrap}@media (forced-colors:active){.ds-row{border-color:CanvasText}.ds-after{background:Mark;color:MarkText}}"
+    },
+    {
+      "name": "Compact Interlock",
+      "kind": "card",
+      "refersTo": "sx-interlock-compact",
+      "description": "Refusal in Operate compact: plate inline with a 16px title, code in mono, refused-lamp text only on iron.",
+      "html": "<div style=\"background:var(--panel, #2F4A44);color:var(--ink, #F1EEE4);padding:24px;font:400 1rem/1.55 'Atkinson Hyperlegible Next',system-ui,sans-serif\"><div class=\"ds-il\" role=\"alert\"><p class=\"ds-il-h\"><span class=\"ds-plate ds-plate--refused\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8.3 3h7.4L21 8.3v7.4L15.7 21H8.3L3 15.7V8.3z\"/><path d=\"M8 12h8\"/></svg>Refused</span><strong>Nothing was written</strong></p><p class=\"ds-il-r\">JSON Pointer path not found: &quot;/nodes/9&quot;</p><code class=\"ds-il-c\">path-not-found</code></div></div>",
+      "css": ".ds-ico{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.ds-plate{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:2px;font:800 .9375rem/1.2 'Big Shoulders Display','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase}.ds-plate--pending{background:var(--commit, #F2C230);color:var(--on-commit, #1A2623);box-shadow:inset 0 0 0 1px var(--commit-edge, #F2C230)}.ds-plate--verified{background:var(--verified, #7BDDB0);color:var(--on-verified, #12241E)}.ds-plate--refused{background:var(--refused, #C4362C);color:var(--on-refused, #FFFFFF)}.ds-plate--stale{background:var(--stale, #A3A9A4);color:var(--on-stale, #1A2623)}@media (forced-colors:active){.ds-plate{border:1px solid CanvasText}}.ds-il{padding:12px 14px;background:var(--iron, #1E2B28);color:var(--ink, #F1EEE4);border:1px solid var(--edge, #86A39B);border-radius:2px;font-size:.875rem;line-height:1.45}.ds-il p{margin:0 0 6px}.ds-il-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:1rem}.ds-il-r{color:var(--refused-lamp, #FF9A8C)}.ds-il-c{font:400 .8125rem/1.3 'Atkinson Hyperlegible Mono',ui-monospace,monospace;color:var(--ink-2, #BCD0C9)}"
+    },
+    {
+      "name": "Kids Play",
+      "kind": "button",
+      "refersTo": "kids-play",
+      "description": "Kids dialect: own blue, 76px, 14px corners; train loop only while playing.",
+      "html": "<div style=\"background:#D6ECF4;color:#13302A;padding:24px\"><button class=\"ds-play\" type=\"button\">Play</button></div>",
+      "css": ".ds-play{min-height:76px;min-width:160px;padding:0 32px;background:#1E4FBF;color:#FFFFFF;border:0;border-radius:14px;font:700 1.5rem/1 'Atkinson Hyperlegible Next',system-ui,sans-serif;cursor:pointer}.ds-play:hover{background:#173F9C}.ds-play:focus-visible{outline:3px solid #13302A;outline-offset:3px}.ds-play:disabled{background:#E9F3F6;color:#4A625C;border:2px dashed #4A625C;cursor:not-allowed}"
     }
   ],
   "narrative": {
-    "northStar": "The Review Bench",
-    "overview": "SceneAxi is a dark workbench under one good light. The bench itself recedes; the only bright things are the work waiting on you, what has been verified, and what was refused. Foundations v2 dresses the sites; Cinematic Pro dresses the Engine Desktop; Kids alone changes scale, radius and hue on its own origin.",
+    "northStar": "The Signal Box",
+    "overview": "SceneAxi is drawn as a railway signal-box lever frame. The page is a matte slate-green track-diagram panel. Containers are cast-iron frames, labels are cream enamel plates, and only the levers are saturated. Their four regulation paints are the four product laws: pending, verified, refused and stale. A change is a route being set: the JSON Pointer is the route, each segment a station, the leaf the terminal. Committing throws the lever. A refusal is an interlock: the lever will not travel and its plate names the reason. Route, lever and interlock are visual vocabulary only and never appear in UI copy.\n\nThe identity is structural, not chromatic. It survives forced colors, the CSP-locked web shell's system fonts, and the Kids hue change because it lives in WHERE / BEFORE / AFTER rows, label-plus-icon state plates, 2px cast corners, and a condensed plate face set over humanist prose. The field is mid-dark, matte and coloured: not near-black with a neon accent, and not cream editorial.\n\nOne family, three dialects, and density is chosen by placement, never inherited. **Persuade** (umbrella marketing, store home and item page) is monumental: 56→96px display, 72–112px bands, one detented lever throw in the hero. **Operate** is the frame as an instrument, in two densities: **comfortable** (account, login, pricing panels, errors, the store acquire block) and **compact** (web-shell inspector, umbrella editor dock and ledger, desktop chrome and docks), with no ambient motion; web shell and desktop follow the system light/dark scheme. **Kids** is the model-railway version of the same frame: its own sky and blue, targets of at least 44px (aim 56), round stations, 14px corners, calm motion.",
     "keyCharacteristics": [
-      "Near-black, tonally layered surfaces; depth from tone and hairlines, not shadow.",
-      "One accent per surface, spent only on pending work and the primary action.",
-      "Machine output always in mono with tabular figures.",
-      "Named states are first-class components, not fallbacks.",
-      "Small radii on sites (2-9px), softer on desktop (10-16px), 16px only on Kids."
+      "Matte slate-green panel, cast-iron frames, cream enamel; saturation reserved for the four state paints.",
+      "State is always label + icon + paint, never paint alone.",
+      "Change Review (propose → inspect rows → commit or refuse, with consequence and recovery named) is the signature on every surface; only density changes.",
+      "Three faces with one job each: condensed plate for headings and plates, humanist prose for everything read, mono for data only.",
+      "Material elevation on four levels over six planes (bed and well, panel, plate and iron, enamel), each step a lightness change plus an offset shadow; no glass, glow, gradient or blur.",
+      "Two accents with exclusive jobs: lunar marks what is under INSPECTION; caution yellow is the COMMIT signal.",
+      "One authored motion moment in three acts (propose → inspect → commit) that ends armed, never committed; everything else switches instantly; reduced motion is three labelled stills with identical meaning."
     ],
     "rules": [
-      { "name": "The Pending Rule", "body": "Accent means pending. If nothing is waiting on you, there is almost no orange on screen, which is how you find work.", "section": "colors" },
-      { "name": "The Bronze Rule", "body": "A diff never uses red for its old value. Being replaced is not an error.", "section": "colors" },
-      { "name": "The Measured Ink Rule", "body": "Every text colour is contrast-measured in the gate against every surface it can sit on; dimming is painted, never composited with opacity.", "section": "colors" },
-      { "name": "The Machine Voice Rule", "body": "Mono is for what a machine produced or will parse. Never prose, never a costume.", "section": "typography" },
-      { "name": "The Float-Only Rule", "body": "Shadows belong to things that float. A docked card, a button or a viewport frame never casts a drop shadow.", "section": "elevation" }
+      {
+        "name": "The Four Laws Rule",
+        "body": "Pending, verified, refused and stale are product law, not decoration. Their paints appear only on state plates, set route, AFTER marks and lamps, always beside a label and one of the authored state icons (clock, check, octagon-bar, rewind-slash, flask for TEST, empty square for Isolated).",
+        "section": "colors"
+      },
+      {
+        "name": "The On-Colour Rule",
+        "body": "Every fill is used with its declared on-colour and nothing else. A pair that is not in `SIGNAL_PAIRS` is not a sanctioned combination.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stop-Red Rule",
+        "body": "Stop red is a fill, never text on dark and never a bare UI shape on the panel (1.79:1); a refused station on the panel gets a 2px edge outline or sits on iron. The old value in a diff is never red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Edge-Not-Rule Rule",
+        "body": "A control or meaningful region is bounded by edge (≥ 3:1). Rule is a hairline that may appear only where edge or a fill difference already identifies the thing.",
+        "section": "colors"
+      },
+      {
+        "name": "The Steady Ink Rule",
+        "body": "Links never change ink: hover thickens the underline from 1px to 3px at zero specificity. Every button declares its own ink in every state through `--b-ink`. No `a:hover { color }` rule exists anywhere.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plate-Face Rule",
+        "body": "Big Shoulders is used at 15px or larger, for headings and plates only; never for values, prose, labels, buttons or anything read character by character.",
+        "section": "typography"
+      },
+      {
+        "name": "The Thirteen Floor Rule",
+        "body": "No text renders below 13px (`SIGNAL_TEXT_FLOOR_PX`, emitted as `--t-floor`). Enforced at load in design-tokens.ts for every --t-* step and density text size; <small> is pinned to max(var(--t-floor), 0.8em).",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono-Is-Data Rule",
+        "body": "Mono marks pointers, digests, values and codes. It is never a \"technical\" costume for labels or headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Placement Rule",
+        "body": "Density comes from where a component sits (`data-density` on that element), never from a global state class. An acquire block is comfortable inside a compact grid; a dock is compact on a Persuade page.",
+        "section": "layout"
+      },
+      {
+        "name": "The Status-First Rule",
+        "body": "The status plate is the first thing seen, focused and announced in every review.",
+        "section": "layout"
+      },
+      {
+        "name": "The Cast-Not-Glass Rule",
+        "body": "No glass, glow, gradient or blur anywhere, and no shadow outside --sink, --lift-1, --lift-2 and lever contact. Every shadow is offset. If something needs to stand forward, it moves up one level and takes that level's plane, shadow and boundary together.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Forced-Colors Rule",
+        "body": "Under `forced-colors: active`, plates, interlocks, rows and the decision block take `1px solid CanvasText`, buttons take `ButtonText` borders, the AFTER mark uses `Mark`/`MarkText`, track uses `CanvasText`, and icons stroke in `CanvasText`/`currentColor`, so label + icon survive.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hair-Bounds-Planes Rule",
+        "body": "A plane that meets another plane is bounded by --hair or --edge as SIGNAL_ELEVATION says, never by --rule alone.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Lunar-Inspects Rule",
+        "body": "Lunar marks only what is under inspection (difference ring, Differs tag, edited leaf station, diff mark, inspect phase bar). Never a CTA, link or decoration. On the dark raised plate it is 4.10:1: UI and large text only.",
+        "section": "colors"
+      }
     ],
     "dos": [
-      "Do read every colour from the token layer; sites declare no colour literal of their own.",
-      "Do show digests, pointers and refusal codes in mono with tabular figures.",
-      "Do keep wide evidence inside its own scroll region with a role and label.",
-      "Do dim inert controls by paint (INERT tokens), never by opacity.",
-      "Do keep every text pairing at or above 4.5:1 (3:1 for large text) and measure it."
+      "Do pair every state paint with its plate label and icon; check the page in grayscale and forced colors.",
+      "Do bound every control with edge (≥ 3:1) and measure contrast in default, hover, focus, active and disabled, in both schemes, in the browser.",
+      "Do set button ink through `--b-ink` in every state, and let links change only underline thickness (1px → 3px).",
+      "Do choose density by placement with `data-density`: comfortable for the store acquire block and account pages, compact for docks and the inspector, the Kids copy for the studio.",
+      "Do keep the status plate first in DOM, focus and announcement order, and keep one copy of the recovery sentence.",
+      "Do theme the browser surfaces: `::selection` pending on on-pending, the 3px focus ring offset 3px, `scrollbar-color` siding on iron, `text-underline-offset: 0.24em`, tabular numerals.",
+      "Do scope `[hidden] { display: none !important }` to each world root, not globally.",
+      "Do show a static, server-rendered Change Review as the hero; any later 3D must demonstrate the review at 60fps, keep LCP < 2.5s and ship this static hero as its fallback."
     ],
     "donts": [
-      "Don't use red for the old value in a diff; it is Stale Bronze.",
-      "Don't spend accent on decoration; accent means pending.",
+      "Don't reuse the v5 signal-orange bench or the Cinematic Pro cyan, their near-black fields, their soft 10–16px radii, or Archivo with mono labels over everything.",
+      "Don't build new UI on the legacy `foundationsCss()` sheet or its `--accent`, `--bg-*`, `--fg-*` properties; they are the v5 world awaiting removal, not part of this system.",
+      "Don't write an `a:hover` colour rule; it produced the v5 1.20:1 button-ink defect.",
+      "Don't use stop red as text on dark, or show the old value in red; this is not a git red/green diff.",
       "Don't put mint on a button.",
-      "Don't cast a shadow from a docked surface.",
-      "Don't set text below 11px or in --fg-4.",
-      "Don't link, name or theme the Kids origin from any other surface."
+      "Don't use rule as the only boundary of a control.",
+      "Don't use glass, glow, gradients, blur, hard offset shadows or coloured side rails over 1px.",
+      "Don't put an eyebrow or kicker above a heading, build pages from icon-heading-text card grids, or use hero-metric blocks.",
+      "Don't use mono as a technical costume, emoji as icons, or the plate face below 15px.",
+      "Don't fade a control to show it is disabled without the dashed edge border.",
+      "Don't add rivets, wood grain, rust or skeuomorphic levers in Operate; the lever is drawn only in the Persuade hero and the comfortable interlock.",
+      "Don't let \"lever\", \"route\" or \"interlock\" into UI copy.",
+      "Don't link, name or theme Kids from any other surface, or import SceneAxi packages into it."
     ]
   }
 }

@@ -120,22 +120,29 @@ export default function RootLayout({ children }: { readonly children: React.Reac
               SceneAxi
             </a>
 
-            <SiteNav items={NAV} />
+            {/* The primary lever sits beside the nameplate, so it is tab stop 3 by DOM
+                order at every width and the visual order matches the focus order. */}
+            <a className="button masthead-primary" href="/engine">
+              Download
+            </a>
 
-            <span className="masthead-spacer" />
+            {/* A no-script Menu (DIRECTION §13.1): narrow, the bench is wordmark,
+                Download, Menu; wide, the links show in place (globals.css `.menu`). */}
+            <details className="menu">
+              <summary className="menu-toggle">Menu</summary>
+              <SiteNav items={NAV} />
+            </details>
 
-            <div className="masthead-actions">
-              {catalogs.map((catalog) => (
-                <a className="store-link" key={catalog.label} href={catalog.href}>
-                  <span className="dot" style={{ background: catalog.tone }} aria-hidden="true" />
-                  {catalog.label}
-                </a>
-              ))}
-              {catalogs.length > 0 && <span className="masthead-divider" aria-hidden="true" />}
-              <a className="button button-lg" href="/engine">
-                Download
-              </a>
-            </div>
+            {catalogs.length > 0 && (
+              <div className="masthead-actions">
+                {catalogs.map((catalog) => (
+                  <a className="store-link" key={catalog.label} href={catalog.href}>
+                    <span className="dot" style={{ background: catalog.tone }} aria-hidden="true" />
+                    {catalog.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </header>
 

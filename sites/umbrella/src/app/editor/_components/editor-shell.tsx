@@ -51,6 +51,11 @@ type ModeId = EditorShellView["modes"][number]["id"];
  * the indicator appears in place. View state only: it reads the DOM the render
  * already produced and decides nothing.
  */
+/** Older engines ship Element without the Web Animations API. */
+function isCallable<Value>(value: Value): value is Value & CallableFunction {
+  return typeof value === "function";
+}
+
 function useIndicatorGlide(
   strip: RefObject<HTMLElement | null>,
   selector: string,
@@ -67,8 +72,11 @@ function useIndicatorGlide(
     previous.current = current;
 
     if (root == null || current === null || before === null) return;
+
     if (before === current || !before.isConnected) return;
-    if (typeof current.animate !== "function") return;
+
+    if (!isCallable(current.animate)) return;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const tokens = getComputedStyle(root);
@@ -889,9 +897,28 @@ export function EditorShell({
                 </div>
 
                 {/* ------------------------------------------- dock -------- */}
-                <div className="ed-dock">
+                {/* A named region, so Change Review is two Tab stops from the dock landmark;
+                    the tablist is one stop with arrow keys inside (APG tabs, RULINGS release). */}
+                <div className="ed-dock" role="region" aria-label="Dock">
                   <div className="ed-dock-strip">
-                    <div role="tablist" aria-label="Dock panels" className="ed-dock-tabs" ref={dockTabsRef}>
+                    <div
+                      role="tablist"
+                      aria-label="Dock panels"
+                      className="ed-dock-tabs"
+                      ref={dockTabsRef}
+                      onKeyDown={(event) => {
+                        const at = dockTabs.indexOf(shownDockTab);
+                        const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: dockTabs.length - 1 }[event.key];
+
+                        if (to === undefined || dockTabs.length === 0) return;
+                        event.preventDefault();
+                        const next = dockTabs[(to + dockTabs.length) % dockTabs.length];
+
+                        if (next === undefined) return;
+                        setDockTab(next);
+                        document.getElementById(`dock-${next}`)?.focus();
+                      }}
+                    >
                       {dockTabs.map((tab) => (
                         <button
                           key={tab}
@@ -900,6 +927,7 @@ export function EditorShell({
                           id={`dock-${tab}`}
                           aria-selected={shownDockTab === tab}
                           aria-controls={DOCK_PANEL_ID}
+                          tabIndex={shownDockTab === tab ? 0 : -1}
                           className="ed-dock-tab"
                           data-kind="view"
                           onClick={() => setDockTab(tab)}

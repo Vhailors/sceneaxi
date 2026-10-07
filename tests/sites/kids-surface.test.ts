@@ -17,20 +17,31 @@ const KIDS_STYLESHEET = readFileSync(new URL("sites/kids/src/app/globals.css", R
  * strong one, so its `--line` carries Foundations' `--line-strong` hex.
  */
 
-const KIDS_FOUNDATION_ALIGNMENT: readonly (readonly [
+// Pin updated for the v6 light Kids palette, owner-authorized 2026-10-07 (docs/redesign-v6/RULINGS.md).
+// The exact light Kids colour set (DIRECTION §5.5, concepts/a-rich/a.css kids dialect). The
+// Foundations violet is not in it and is asserted absent below.
+const KIDS_LIGHT_PALETTE: readonly (readonly [
     string,
     string
 ])[] = Object.freeze([
-    ["--bg-base", "--bg-base"],
-    ["--bg-panel", "--bg-panel"],
-    ["--bg-raised", "--bg-raised"],
-    ["--bg-control", "--bg-control"],
-    ["--line", "--line-strong"],
-    ["--fg", "--fg"],
-    ["--fg-2", "--fg-2"],
-    ["--focus", "--fg"],
-    ["--kids", "--kids"],
-    ["--danger", "--danger"],
+    ["--k-sky", "#D6ECF4"],
+    ["--k-table", "#EAF5F9"],
+    ["--k-tray", "#BFDDE8"],
+    ["--k-plate", "#FFFFFF"],
+    ["--k-plate-hi", "#EEF7FB"],
+    ["--k-picked", "#E6EEFC"],
+    ["--k-ink", "#13302A"],
+    ["--k-ink-2", "#2F4D46"],
+    ["--k-hair", "#3D6B7A"],
+    ["--k-play", "#1E4FBF"],
+    ["--k-play-hi", "#173F9C"],
+    ["--k-on-play", "#FFFFFF"],
+    ["--k-focus", "#1E4FBF"],
+    ["--k-off", "#E9F3F6"],
+    ["--k-off-ink", "#4A625C"],
+    ["--k-off-edge", "#5C7670"],
+    ["--k-refused", "#8F241C"],
+    ["--k-full", "#C4362C"],
 ]);
 /**
  * Every colour custom property the sheet ends up declaring, last one wins, the way the
@@ -281,35 +292,60 @@ describe("the isolated Kids site", () => {
         expect(stage).toContain('role="group"');
         expect(stage).toContain("aria-label=");
     });
+    // Pin updated for the v6 light Kids palette, owner-authorized 2026-10-07 (docs/redesign-v6/RULINGS.md).
     it("keeps its duplicated Foundations neutrals identical to the shared token layer", () => {
-        expect(Object.keys(kidsColorTokens()).sort()).toEqual(KIDS_FOUNDATION_ALIGNMENT.map(([kids]) => kids).sort());
+        // Exactly the light Kids set, no more and no fewer colour tokens, each at its hex.
+        expect(Object.keys(kidsColorTokens()).sort()).toEqual(KIDS_LIGHT_PALETTE.map(([kids]) => kids).sort());
 
-        for (const [kids, foundation] of KIDS_FOUNDATION_ALIGNMENT) {
-            expect(`${kids}=${kidsToken(kids)}`).toBe(`${kids}=${foundationHex(foundation)}`);
+        for (const [kids, hex] of KIDS_LIGHT_PALETTE) {
+            expect(`${kids}=${kidsToken(kids)}`).toBe(`${kids}=${hex}`);
         }
+
+        // The retired Foundations violet does not come back, as a token or as a literal.
+        expect(Object.values(kidsColorTokens())).not.toContain(foundationHex("--kids"));
+        expect(KIDS_STYLESHEET).not.toMatch(new RegExp(foundationHex("--kids"), "i"));
     });
     it("measures a 4.5:1 floor on every shipped Kids text pairing", () => {
-        const fg = kidsToken("--fg");
-        const fg2 = kidsToken("--fg-2");
+        const ink = kidsToken("--k-ink");
+        const ink2 = kidsToken("--k-ink-2");
+        const onPlay = kidsToken("--k-on-play");
+        const surfaces = ["--k-sky", "--k-table", "--k-tray", "--k-plate", "--k-plate-hi", "--k-picked"].map(kidsToken);
+        // The stage paints its hint in the real Kids ink, so the ink is what the world fills must carry.
+        expect(KIDS_STYLESHEET).toMatch(/\.stage-hint\s*\{[^}]*\bcolor:\s*var\(--k-ink\);/);
 
-        const pairings: readonly (readonly [
+        const text: readonly (readonly [
             string,
             string
         ])[] = [
-            [fg, kidsToken("--bg-base")],
-            [fg, kidsToken("--bg-panel")],
-            [fg, kidsToken("--bg-control")],
-            [fg2, kidsToken("--bg-base")],
-            [fg2, kidsToken("--bg-panel")],
-            // Badge, play button, and selected choice print the base neutral on the accent.
-            [kidsToken("--bg-base"), kidsToken("--kids")],
-            // The empty-stage hint is the one alpha text in the sheet: 78% of `--fg`.
-            ...site.KIDS_ACTIVITY_WORLDS.flatMap((world) => kidsWorldFills(world.id).map((fill) => [composite(fg, 0.78, fill), fill] as const)),
+            ...surfaces.map((surface) => [ink, surface] as const),
+            ...surfaces.map((surface) => [ink2, surface] as const),
+            // Play key, playing badge, step numbers and the Picked tag print white on Play blue.
+            [onPlay, kidsToken("--k-play")],
+            [onPlay, kidsToken("--k-play-hi")],
+            [kidsToken("--k-play"), kidsToken("--k-on-play")],
+            [kidsToken("--k-off-ink"), kidsToken("--k-off")],
+            [kidsToken("--k-refused"), kidsToken("--k-plate")],
+            // Every stop of every curated world board, raw and under the hint's 70% white wash.
+            ...site.KIDS_ACTIVITY_WORLDS.flatMap((world) => kidsWorldFills(world.id).flatMap((fill) => [[ink, fill], [ink, composite("#FFFFFF", 0.7, fill)]] as const)),
         ];
 
-        for (const [foreground, background] of pairings) {
-            const measured = contrastRatio(foreground, background);
-            expect(`${foreground} on ${background} measured ${measured.toFixed(2)}`).toBe(`${foreground} on ${background} measured ${Math.max(measured, 4.5).toFixed(2)}`);
+        // Focus ring, edges and the full meter: 3:1 against every plane they sit on.
+        const ui: readonly (readonly [
+            string,
+            string
+        ])[] = [
+            ...surfaces.slice(0, 4).map((surface) => [kidsToken("--k-focus"), surface] as const),
+            ...surfaces.slice(0, 4).map((surface) => [kidsToken("--k-hair"), surface] as const),
+            [kidsToken("--k-off-edge"), kidsToken("--k-tray")],
+            [kidsToken("--k-off-edge"), kidsToken("--k-off")],
+            [kidsToken("--k-full"), kidsToken("--k-tray")],
+        ];
+
+        for (const [floor, pairings] of [[4.5, text], [3, ui]] as const) {
+            for (const [foreground, background] of pairings) {
+                const measured = contrastRatio(foreground, background);
+                expect(`${foreground} on ${background} measured ${measured.toFixed(2)}`).toBe(`${foreground} on ${background} measured ${Math.max(measured, floor).toFixed(2)}`);
+            }
         }
     });
 });

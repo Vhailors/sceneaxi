@@ -19,6 +19,9 @@ export default defineConfig(
     // desktop sources are still linted; only packaging output is skipped.
     "desktop/*/release/",
     "desktop/*/dist-build/",
+    // Redesign v6 concept prototypes and their screenshot harnesses: throwaway
+    // evidence for the concept council, never shipped or imported.
+    "docs/redesign-v6/concepts/",
   ]),
   js.configs.recommended,
   tseslint.configs.strict,

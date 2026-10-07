@@ -70,7 +70,7 @@ export function titleBar(view: DesktopVisualView): string {
   </div>
   <div class="title-actions">
     ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="document-reload"`)}
-    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-command="project-save"`)}
+    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-command="project-save" aria-keyshortcuts="Control+S"`)}
     ${drawers}
     ${button(
       view.overlay.search,
