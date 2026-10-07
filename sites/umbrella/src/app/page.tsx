@@ -5,6 +5,7 @@ import {
   PROFILE_RELEASE_MATRIX,
 } from "../lib/launch-marketing.js";
 import { PROOF_MEDIA, RELEASE_MARKER } from "../lib/site-content.js";
+import { ChangeReviewHero } from "./_components/change-review-hero.js";
 import { DownloadCta } from "./_components/download-cta.js";
 import { HeroViewport } from "./_components/hero-viewport.js";
 import { ProofFigure } from "./_components/proof-figure.js";
@@ -28,7 +29,8 @@ const RELEASE_PATHS = Object.freeze([
  * The first public engine release overview (sceneaxi#203).
  *
  * The route sells one bounded proposition: local, reviewable scene authoring over a
- * shared engine core. Its hero visual is the committed public artifact, its proof gallery
+ * shared engine core. Its hero is one Change Review that stops armed, the committed public
+ * artifact is drawn live below the captures, its proof gallery
  * shows unretouched captures of the recorded Linux build beside their limits, its
  * comparison claims link to each product's own description, and its profile matrix
  * carries a structurally false shipping claim.
@@ -65,28 +67,7 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {heroScene.ok ? (
-            <HeroViewport
-              scene={heroScene.value}
-              label={`A committed SceneAxi Sculpt Artifact, composed into ${LIVE_OPEN_INSTANCE_COUNT} placed instances and drawn live`}
-            />
-          ) : (
-            <div className="hero-stage" data-frame="refused">
-              <StatePanel
-                tone="deny"
-                level={2}
-                title="The release artifact refused to open"
-                reason={heroScene.reason}
-                evidence={[{ term: "Surface", value: "release overview" }]}
-              >
-                <p>{heroScene.message}</p>
-                <p>
-                  This slot shows the same composed artifact as the public open path. A
-                  refusal stays visible instead of being replaced by invented marketing art.
-                </p>
-              </StatePanel>
-            </div>
-          )}
+          <ChangeReviewHero />
         </div>
 
         <div className="launch-proof-rail">
@@ -119,6 +100,40 @@ export default function OverviewPage() {
               sizes="(max-width: 620px) calc(100vw - 36px), (max-width: 1024px) 50vw, 389px"
             />
           ))}
+        </div>
+      </section>
+
+      <section className="band band-sunk" aria-labelledby="artifact-title">
+        <div className="band-inner release-section release-artifact">
+          <div className="release-heading">
+            <h2 id="artifact-title">The artifact, drawn live.</h2>
+            <p className="prose prose-wide">
+              The same committed Sculpt Artifact the public open path serves, composed into{" "}
+              {LIVE_OPEN_INSTANCE_COUNT} placed instances.
+            </p>
+          </div>
+          {heroScene.ok ? (
+            <HeroViewport
+              scene={heroScene.value}
+              label={`A committed SceneAxi Sculpt Artifact, composed into ${LIVE_OPEN_INSTANCE_COUNT} placed instances and drawn live`}
+            />
+          ) : (
+            <div className="hero-stage" data-frame="refused">
+              <StatePanel
+                tone="deny"
+                level={2}
+                title="The release artifact refused to open"
+                reason={heroScene.reason}
+                evidence={[{ term: "Surface", value: "release overview" }]}
+              >
+                <p>{heroScene.message}</p>
+                <p>
+                  This slot shows the same composed artifact as the public open path. A
+                  refusal stays visible instead of being replaced by invented marketing art.
+                </p>
+              </StatePanel>
+            </div>
+          )}
         </div>
       </section>
 

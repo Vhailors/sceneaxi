@@ -23,7 +23,7 @@ const CAPABILITY_COPY = {
 /** The published free-vs-paid matrix, rendered from the same data the gate asserts. */
 export function CapabilityTable() {
   return (
-    <div className="scroll-x">
+    <div className="scroll-x" role="region" tabIndex={0} aria-label="Capabilities by product, scrollable">
       <table>
         <thead>
           <tr>

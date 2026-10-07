@@ -1,3 +1,5 @@
+import { StatusIcon } from "./_components/signal-icon.js";
+
 /**
  * 404.
  *
@@ -6,15 +8,13 @@
  */
 export default function NotFound() {
   return (
-    <div className="page page-narrow page-state">
+    <div className="page page-narrow op" data-density="comfortable">
       <div className="page-head">
-        <div className="title-row">
-          <h1>There is no page at this address</h1>
-          <span className="chip chip-dormant state-chip">
-            <span className="dot" aria-hidden="true" />
-            Not found
-          </span>
-        </div>
+        <span className="sx-plate state-chip">
+          <StatusIcon status="dormant" />
+          Not found
+        </span>
+        <h1>There is no page at this address</h1>
         <p className="lede">
           The link may be mistyped or out of date. Everything the umbrella serves is reachable
           from the navigation above.

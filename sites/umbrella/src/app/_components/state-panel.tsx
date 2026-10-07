@@ -14,10 +14,27 @@
  * pricing, the free downloads) — that is a route, not a retry.
  */
 import { createStatePanelModel } from "@sceneaxi/site-kit/state-panel";
-import type { StatePanelEvidence, StatePanelTone } from "@sceneaxi/site-kit/state-panel";
+import type {
+  StatePanelDensity,
+  StatePanelEvidence,
+  StatePanelTone,
+} from "@sceneaxi/site-kit/state-panel";
 import { Fragment } from "react";
+import { StatusIcon } from "./signal-icon.js";
 
 export type StateTone = StatePanelTone;
+
+/**
+ * Plate paint per tone. `warn` stays the neutral enamel plate on purpose: on this site a
+ * warn panel is a notice ("Support status", "Checkout cancelled"), never a change waiting
+ * on a commit, and yellow means COMMIT only (RULINGS). The label and glyph still name it.
+ */
+const PLATE_STATE: Readonly<Record<StateTone, string | undefined>> = Object.freeze({
+  ok: "verified",
+  deny: "refused",
+  iso: "isolated",
+  warn: undefined,
+});
 
 export function StatePanel({
   tone,
@@ -25,10 +42,16 @@ export function StatePanel({
   level = 3,
   reason,
   evidence,
+  density,
   children,
 }: {
   readonly tone: StateTone;
   readonly title: string;
+  /**
+   * Operate density, chosen by placement (DIRECTION §3) and written on the panel itself.
+   * Omitted on Persuade routes, where the panel keeps the page's own measure.
+   */
+  readonly density?: StatePanelDensity;
   /**
    * Heading level for the state's name.
    *
@@ -52,15 +75,19 @@ export function StatePanel({
   // The model reads every optional field through `??` / `===`, so an explicit
   // undefined reason or evidence renders exactly like an omitted one.
   const input = { tone, title, reason, evidence, variant: "diagnostic" as const };
-  const model = createStatePanelModel(level === undefined ? input : { ...input, level });
+  const placed = density === undefined ? input : { ...input, density };
+  const model = createStatePanelModel(level === undefined ? placed : { ...placed, level });
 
   const Heading = model.headingTag;
 
   return (
-    <section className={model.sectionClassName}>
+    <section
+      className={model.sectionClassName}
+      {...(model.placed ? { "data-density": model.density } : {})}
+    >
       <div className="state-head">
-        <span className={`chip chip-${model.status.id}`}>
-          <span className="dot" aria-hidden="true" />
+        <span className="sx-plate" data-state={PLATE_STATE[model.tone]}>
+          <StatusIcon status={model.status.id} />
           {model.status.label}
         </span>
         <Heading>{model.title}</Heading>

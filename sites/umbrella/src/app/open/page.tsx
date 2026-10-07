@@ -8,6 +8,7 @@ import {
 } from "../../lib/live-open.js";
 import { StatePanel } from "../_components/state-panel.js";
 import { LiveViewport } from "./_components/live-viewport.js";
+import { StatusIcon } from "../_components/signal-icon.js";
 
 export const metadata: Metadata = {
   title: "Open a real artifact — SceneAxi",
@@ -33,7 +34,7 @@ export default function OpenPage() {
           <div className="title-row">
             <h1>{LIVE_OPEN_COPY.title}</h1>
             <span className="chip chip-dormant">
-              <span className="dot" aria-hidden="true" />
+              <StatusIcon status="dormant" />
               {LIVE_OPEN_COPY.eyebrow}
             </span>
           </div>
@@ -59,7 +60,7 @@ export default function OpenPage() {
         <div className="title-row">
           <h1>{LIVE_OPEN_COPY.title}</h1>
           <span className="chip chip-dormant">
-            <span className="dot" aria-hidden="true" />
+            <StatusIcon status="dormant" />
             {LIVE_OPEN_COPY.eyebrow}
           </span>
         </div>

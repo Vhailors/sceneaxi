@@ -29,6 +29,7 @@ import {
   foundationsCss,
   foundationsMotionCss,
   ok,
+  signalCss,
   type SiteResult,
 } from "@sceneaxi/site-kit";
 
@@ -122,14 +123,63 @@ export function umbrellaLocalVariablesCss(): string {
  * render failure, because a page whose token layer refused is not a page this site may
  * serve with its palette quietly missing.
  */
+/**
+ * The v6 layer the redesigned routes paint with (docs/redesign-v6/DIRECTION.md §2, §5, §8).
+ *
+ * Only the `tokens`, `components` and `utilities` layers are taken. The v6 `reset` and
+ * `base` layers restyle every element (`html` field, every link, every `img`/`svg` as a
+ * block), and routes still on the Foundations v2 vocabulary must not change underneath
+ * them. A redesigned route opts in by its own classes; the tokens are inert until read.
+ */
+export function umbrellaSignalLayersCss(): SiteResult<string> {
+  const sheet = signalCss({ scheme: "dark", surface: UMBRELLA_SURFACE });
+
+  if (!sheet.ok) return sheet;
+  const kept: string[] = [];
+
+  for (const layer of ["tokens", "components", "utilities"] as const) {
+    const block = cascadeLayerBlock(sheet.value, layer);
+
+    if (block === null) throw new Error(`site-kit signalCss() emitted no @layer ${layer} block`);
+    kept.push(block);
+  }
+
+  return ok(kept.join("\n"));
+}
+
+/** One `@layer name { ... }` block, matched by brace depth so nested rules stay whole. */
+function cascadeLayerBlock(css: string, layer: string): string | null {
+  const start = css.indexOf(`@layer ${layer} {`);
+
+  if (start === -1) return null;
+  let depth = 0;
+
+  for (let index = css.indexOf("{", start); index < css.length; index += 1) {
+    if (css[index] === "{") depth += 1;
+
+    if (css[index] === "}") {
+      depth -= 1;
+
+      if (depth === 0) return css.slice(start, index + 1);
+    }
+  }
+
+  return null;
+}
+
 export function umbrellaFoundationsCss(): SiteResult<string> {
   const shared = foundationsCss({ surface: UMBRELLA_SURFACE });
 
   if (!shared.ok) return shared;
+  const signal = umbrellaSignalLayersCss();
+
+  if (!signal.ok) return signal;
 
   return ok(
     [
       shared.value,
+      "/* v6 Interlocking layer (A-rich), from @sceneaxi/site-kit signalCss(): tokens, components, utilities. */",
+      signal.value,
       "/* Redesign motion system (DV-P1), from @sceneaxi/site-kit foundationsMotionCss(). */",
       foundationsMotionCss(),
       "/* Status vocabulary, projected from @sceneaxi/site-kit FOUNDATION_STATUSES. */",

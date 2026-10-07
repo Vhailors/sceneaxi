@@ -1,6 +1,7 @@
 import { SITE_CATALOG_POLICY_CITES } from "@sceneaxi/site-kit";
 import { docsRefusalCodes } from "../../lib/site-content.js";
 import { HELP_DOCS } from "../../lib/help-docs.js";
+import { StatusIcon } from "../_components/signal-icon.js";
 
 /**
  * Documentation index, in the accepted three-column docs shell.
@@ -164,7 +165,7 @@ export default function DocsPage() {
 
         <div className="rule-card">
           <span className="chip chip-experimental">
-            <span className="dot" aria-hidden="true" />
+            <StatusIcon status="experimental" />
             Rule
           </span>
           <p>
@@ -174,7 +175,7 @@ export default function DocsPage() {
         </div>
 
         <h2 id="governing">Governing documents</h2>
-        <div className="scroll-x">
+        <div className="scroll-x" role="region" tabIndex={0} aria-labelledby="governing">
           <table>
             <thead>
               <tr>
@@ -203,7 +204,7 @@ export default function DocsPage() {
           Model Provider Port injects adapters and per-profile filters, and refuses a
           missing policy, adapter, or capability rather than falling back to a default.
         </p>
-        <div className="scroll-x">
+        <div className="scroll-x" role="region" tabIndex={0} aria-label="Provider adapters, scrollable">
           <table>
             <thead>
               <tr>

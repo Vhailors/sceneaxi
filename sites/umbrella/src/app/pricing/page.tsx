@@ -17,6 +17,7 @@ import {
 import { buildCreditPackOffers } from "../../lib/credit-pack-offers.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
+import { StatusIcon } from "../_components/signal-icon.js";
 import { readLoginRefusalReason } from "../../lib/login-flow.js";
 
 /**
@@ -89,9 +90,7 @@ export default async function PricingPage({
                           <code>{offer.packId}</code>
                         </h3>
                         {featured && (
-                          <p className="tier-flag">
-                            <span className="chip chip-needs-review">Best rate per credit</span>
-                          </p>
+                          <p className="tier-flag">Best rate per credit</p>
                         )}
                       </div>
                       <p className="tier-price">
@@ -128,8 +127,9 @@ export default async function PricingPage({
                         <p className="note tier-status">
                           <span
                             className={`chip chip-${offer.purchase.enabled ? "validated" : "dormant"}`}
-                          >
-                            {offer.purchase.status}
+                            >
+                              <StatusIcon status={offer.purchase.enabled ? "validated" : "dormant"} />
+                              {offer.purchase.status}
                           </span>
                         </p>
                         {offer.purchase.enabled ? (

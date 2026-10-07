@@ -15,17 +15,24 @@ export default function RouteError({
   readonly error: Error & { readonly digest?: string };
 }) {
   return (
-    <div className="page page-narrow page-state">
+    <div className="page page-narrow op" data-density="comfortable">
       <div className="page-head">
-        <div className="title-row">
-          <h1>This page could not be rendered</h1>
-          <span className="chip chip-refused state-chip">
-            <span className="dot" aria-hidden="true" />
-            Something went wrong
-          </span>
-        </div>
+        <span className="sx-plate state-chip" data-state="refused">
+          {/* The refused glyph, inlined: a client boundary keeps its import graph to itself. */}
+          <svg className="sx-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z" />
+            <path d="M8 12h8" />
+          </svg>
+          Something went wrong
+        </span>
+        <h1>This page could not be rendered</h1>
         <p className="lede">Nothing was changed on your account.</p>
-        {error.digest ? <p className="mono field-well">Reference {error.digest}</p> : null}
+        {error.digest ? (
+          <p className="reason">
+            <span className="reason-label">Reference</span>
+            {error.digest}
+          </p>
+        ) : null}
       </div>
       <div className="actions">
         <a className="button" href="/">

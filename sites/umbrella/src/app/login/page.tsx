@@ -52,13 +52,14 @@ export default async function LoginPage({
 
   if (current.ok) {
     return (
-      <div className="page page-narrow page-state">
+      <div className="page page-narrow op" data-density="comfortable">
         <div className="page-head">
           <h1>You are already signed in</h1>
         </div>
         <StatePanel
           tone="ok"
           level={2}
+          density="comfortable"
           title="Signed in"
           evidence={[
             { term: "Email", value: current.value.user.email },
@@ -76,22 +77,22 @@ export default async function LoginPage({
               Open the editor
             </a>
           </p>
-          <form method="post" action="/api/logout" className="form-inline">
+          <form method="post" action="/api/logout">
             <button className="button button-quiet" type="submit">
               Sign out
             </button>
           </form>
         </StatePanel>
-        <section aria-labelledby="account-controls">
+        <section aria-labelledby="account-controls" className="op-section">
           <h2 id="account-controls">Account controls</h2>
           <p>Sign in again within five minutes and confirm your current password for each sensitive action.</p>
-          <form method="post" action="/api/auth/account/export" className="form-plain">
+          <form method="post" action="/api/auth/account/export" className="op-form">
             <label htmlFor="export-password">Current password for export</label>{" "}
             <input id="export-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />{" "}
             <button className="button button-quiet" type="submit">Download identity and billing records</button>
           </form>
           <p>This bounded export contains identity, credit account, ledger and checkout records, not a complete legal privacy export.</p>
-          <form method="post" action="/api/auth/account/disable" className="form-plain">
+          <form method="post" action="/api/auth/account/disable" className="op-form">
             <label htmlFor="disable-password">Current password to disable access</label>{" "}
             <input id="disable-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />
             <p><label><input name="confirm" type="checkbox" value="disable-access" required /> I understand this disables access and revokes all my sessions. It does not erase identity or financial records.</label></p>
@@ -105,13 +106,14 @@ export default async function LoginPage({
 
   if (!plane.wired.login) {
     return (
-      <div className="page page-narrow page-state">
+      <div className="page page-narrow op" data-density="comfortable">
         <div className="page-head">
           <h1>Sign-in is not activated on this deployment</h1>
         </div>
         <StatePanel
           tone="deny"
           level={2}
+          density="comfortable"
           title="Sign-in is unavailable"
           reason="IDENTITY_PLANE_NOT_WIRED"
         >
@@ -135,8 +137,8 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="page page-narrow page-state">
-      <div className="auth-layout">
+    <div className="page page-narrow op" data-density="comfortable">
+      <div className="stack">
       <div className="page-head">
         <h1>Sign in to SceneAxi</h1>
         <p className="lede">
@@ -148,12 +150,12 @@ export default async function LoginPage({
 
         <div className="stack">
           {refusal !== null && (
-            <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
+            <StatePanel tone="deny" level={2} density="comfortable" title={refusal.title} reason={refusal.reason}>
               <p>{refusal.body}</p>
             </StatePanel>
           )}
 
-          <form className="auth-card form-card" method="post" action="/api/login">
+          <form className="op-form" method="post" action="/api/login" aria-label="Sign in">
             {next !== LOGIN_DEFAULT_DESTINATION && (
               <input type="hidden" name="next" value={next} />
             )}

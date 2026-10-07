@@ -3,6 +3,7 @@ import { LIVE_OPEN_PRESENTATION } from "../../lib/live-open.js";
 import { ENGINE_NOTES, PIPELINE, PROOF_MEDIA, RELEASE_MARKER } from "../../lib/site-content.js";
 import { ProofFigure } from "../_components/proof-figure.js";
 import { StatePanel } from "../_components/state-panel.js";
+import { SignalIcon, StatusIcon } from "../_components/signal-icon.js";
 
 /**
  * The engine surface: what the engine is, and the artifacts this repository stands
@@ -47,7 +48,7 @@ export default function EnginePage() {
         <div className="title-row">
           <h1>Get the engine.</h1>
           <span className="chip chip-needs-review">
-            <span className="dot" aria-hidden="true" />
+            <StatusIcon status="needs-review" />
             {RELEASE_MARKER}
           </span>
         </div>
@@ -86,7 +87,7 @@ export default function EnginePage() {
           <article className="panel panel-roomy">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="chip chip-dormant">This build</span>
+              <span className="chip chip-dormant"><StatusIcon status="dormant" />This build</span>
             </div>
             <h2 className="card-title">{sdk.fileName}</h2>
             <p className="meta">
@@ -101,8 +102,11 @@ export default function EnginePage() {
             <p className="sha">sha256 {sdk.sha256}</p>
           </article>
 
-          <article className="panel panel-roomy">
-            <h2 className="card-title">Verify what you downloaded</h2>
+          <article className="panel panel-roomy" data-role="inspect">
+            <h2 className="card-title">
+              <SignalIcon name="inspect" />
+              Verify what you downloaded
+            </h2>
             <p className="body-copy">
               The build is deterministic, so an independent rebuild from the same sources
               produces this same digest. Run this next to the archive and the checksum
@@ -151,7 +155,7 @@ export default function EnginePage() {
             <div className="title-row">
               <h2>{desktopApp.productName} for Linux.</h2>
               <span className="chip chip-validated">
-                <span className="dot" aria-hidden="true" />
+                <StatusIcon status="validated" />
                 {desktopApp.platform}
               </span>
             </div>
@@ -176,7 +180,7 @@ export default function EnginePage() {
           <article className="panel panel-roomy">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="chip chip-validated">Recorded Linux build</span>
+              <span className="chip chip-validated"><StatusIcon status="validated" />Recorded Linux build</span>
             </div>
             <h3 className="card-title">Inspect the recorded Linux workflow artifact</h3>
             <p className="body-copy">
@@ -206,7 +210,7 @@ export default function EnginePage() {
               <article className="panel panel-roomy" key={artifact.kind}>
                 <div className="panel-head">
                   <span className="family-mark" aria-hidden="true" />
-                  <span className="chip chip-dormant">{artifact.kind}</span>
+                  <span className="chip chip-dormant"><StatusIcon status="dormant" />{artifact.kind}</span>
                 </div>
                 <h3 className="card-title">{artifact.kind}</h3>
                 <dl className="dl">
@@ -230,7 +234,10 @@ export default function EnginePage() {
                     <code>{artifact.sha256}</code>
                   </dd>
                 </dl>
-                <p className="command-label">Copy and verify this file</p>
+                <p className="command-label">
+                <SignalIcon name="inspect" />
+                Copy and verify this file
+              </p>
                 <p className="command">
                   <code>{artifact.verifyCommand}</code>
                 </p>
@@ -238,8 +245,11 @@ export default function EnginePage() {
             ))}
           </div>
 
-          <article className="panel panel-roomy">
-            <h3 className="card-title">Verify the whole download</h3>
+          <article className="panel panel-roomy" data-role="inspect">
+            <h3 className="card-title">
+              <SignalIcon name="inspect" />
+              Verify the whole download
+            </h3>
             <p className="body-copy">
               Extract <code>{desktopApp.ciArtifactName}.zip</code>, enter that directory,
               then check both files against the checksum list shipped beside them.

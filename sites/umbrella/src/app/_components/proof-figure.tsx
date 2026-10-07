@@ -1,4 +1,5 @@
 import type { ProofMedia } from "../../lib/site-content.js";
+import { SignalIcon, StatusIcon } from "./signal-icon.js";
 
 /**
  * The runnable-surfaces level a capture evidences, as a status chip. Startable is a
@@ -52,14 +53,18 @@ export function ProofFigure({
       <figcaption className="proof-caption">
         <p className="proof-history">Historical capture · 2026-09-28 · Not current runtime proof</p>
         {level !== null && (
-          <span className={`chip chip-${level.tone} proof-level`}>{level.label}</span>
+          <span className={`chip chip-${level.tone} proof-level`}>
+              <StatusIcon status={level.tone} />
+              {level.label}
+            </span>
         )}
         <h3 className="proof-title">{media.title}</h3>
         <p className="proof-claim">{media.claim}</p>
         <ul className="proof-limits" aria-label="Limits of this image">
           {media.limitation.map((limit) => (
             <li className="chip chip-dormant" key={limit}>
-              {limit}
+                <SignalIcon name="limit" />
+                {limit}
             </li>
           ))}
         </ul>

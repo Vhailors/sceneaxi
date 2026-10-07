@@ -1,6 +1,5 @@
-import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
+import { umbrellaConstructionDiagnostics, umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { serverLog } from "../../../lib/server-logger.js";
-import { umbrellaConstructionDiagnostics } from "../../../lib/identity-plane.js";
 
 export const dynamic = "force-dynamic";
 
