@@ -1,961 +1,377 @@
-/* SAFETY: isolated presentation only. Foundations neutrals remain local copies;
- * no package import, storage, network, activity action or reducer changes.
- * Spacing and motion values are local copies of the Foundations tokens (DIRECTION.md
- * §4, §6.1); the Kids site may not import them. Colour tokens stay exactly the pinned
- * ten (tests/sites/kids-surface.test.ts). */
+/* SceneAxi Kids: the light Kids dialect of the v6 family (A-rich, DIRECTION 5.5).
+ * Kids imports no package. Its colour set is pinned exactly by
+ * tests/sites/kids-surface.test.ts (owner-authorized light palette, 2026-10-07). */
+
+@font-face {
+  font-family: "Big Shoulders Display";
+  src: url("/fonts/big-shoulders-display.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
-  color-scheme: dark;
-  --bg-base: #07080a;
-  --bg-panel: #0d0f12;
-  --bg-raised: #12151a;
-  --bg-control: #191d23;
-  --line: #2c323b;
-  --fg: #edeff2;
-  --fg-2: #8a929c;
-  --kids: #a78bfa;
-  --danger: #ff4d5e;
-  --radius: 16px;
-  --focus: #edeff2;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-11: 44px;
-  --space-18: 72px;
-
-  --motion-duration-press: 120ms;
-  --motion-duration-micro: 160ms;
-  --motion-duration-state: 200ms;
-  --motion-duration-panel: 280ms;
-  --motion-duration-panel-exit: 200ms;
-  --motion-duration-route: 320ms;
-  --motion-duration-loop: 1200ms;
-  --motion-delay-loading: 300ms;
-  --motion-ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --motion-ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --motion-stagger-step: 40ms;
-  --motion-stagger-max: 200ms;
-  --motion-distance-sm: 4px;
-  --motion-distance-md: 8px;
-  --motion-distance-lg: 16px;
-  --motion-scale-press: 0.97;
-  --motion-scale-enter: 0.98;
-
-  /* DV-K1: the unloaded Inter is gone; no webfont may load under the Kids CSP. */
-  font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --k-sky: #d6ecf4;
+  --k-table: #eaf5f9;
+  --k-tray: #bfdde8;
+  --k-plate: #ffffff;
+  --k-plate-hi: #eef7fb;
+  --k-picked: #e6eefc;
+  --k-ink: #13302a;
+  --k-ink-2: #2f4d46;
+  --k-hair: #3d6b7a;
+  --k-play: #1e4fbf;
+  --k-play-hi: #173f9c;
+  --k-on-play: #ffffff;
+  --k-focus: #1e4fbf;
+  --k-off: #e9f3f6;
+  --k-off-ink: #4a625c;
+  --k-off-edge: #5c7670;
+  --k-refused: #8f241c;
+  --k-full: #c4362c;
+  --k-sink: inset 0 3px 0 #13302a2e;
+  --k-lift: 0 2px 0 #fff inset, 0 24px 40px -22px #13302a99;
+  --k-key: 0 4px 0 -1px #13302a33, 0 6px 12px -6px #13302a55;
+  --k-font-plate: "Big Shoulders Display", "Arial Narrow", system-ui, sans-serif;
+  --k-font-prose: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --k-r-control: 14px;
+  --k-r-tray: 18px;
+  --k-r-plate: 22px;
+  --k-target: 56px;
+  --k-pad: clamp(16px, 4vw, 48px);
+  --k-calm: 420ms;
+  --k-quick: 160ms;
+  --k-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
 }
 
-* {
-  box-sizing: border-box;
-}
+*,
+*::before,
+*::after { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--k-sky); color: var(--k-ink); font: 400 1.125rem / 1.5 var(--k-font-prose); }
+::selection { background: var(--k-play); color: var(--k-on-play); }
+:focus-visible { outline: 4px solid var(--k-focus); outline-offset: 4px; }
+main { max-width: 1320px; margin: 0 auto; padding: var(--k-pad); }
 
-html {
-  min-width: 320px;
-  background: var(--bg-base);
-  scrollbar-color: var(--line) var(--bg-base);
-  -webkit-text-size-adjust: 100%;
-}
+.intro { display: grid; gap: 8px; margin-bottom: 28px; }
+.wordmark { display: inline-flex; align-items: center; gap: 10px; margin: 0; font-weight: 700; }
+.wordmark-mark { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+h1 { margin: 0; font: 800 clamp(2.75rem, 1.8rem + 3.2vw, 4.5rem) / 0.95 var(--k-font-plate); text-wrap: balance; }
+.lede { margin: 0; max-width: 34ch; color: var(--k-ink-2); font-size: 1.25rem; }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  color: var(--fg);
-  background:
-    radial-gradient(circle at 12% 0%, rgb(167 139 250 / 14%), transparent 32rem),
-    var(--bg-base);
-  -webkit-font-smoothing: antialiased;
-}
+.studio { display: grid; gap: 28px; align-items: start; }
 
-::selection {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--kids) 42%, transparent);
-}
-
-button,
-summary {
-  font: inherit;
-}
-
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
-}
-
-/* ---------- Controls: rest, hover, focus-visible, active, disabled ----------
- * Loading: n/a. Every Kids action is a synchronous local reducer call; nothing waits.
- * Hover and press are a violet state layer (::before) under the label, so no colour
- * token is added. Colour and border changes are instant; only opacity and transform move. */
-button {
-  position: relative;
-  isolation: isolate;
-  min-height: 54px;
-  color: var(--fg);
-  background: var(--bg-control);
-  border: 2px solid transparent;
-  border-radius: var(--radius);
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
-}
-
-button::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: calc(var(--radius) - 2px);
-  background: color-mix(in srgb, var(--kids) 18%, transparent);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--motion-duration-micro) var(--motion-ease-out-quart);
-}
-
-@media (hover: hover) {
-  button:hover:not(:disabled) {
-    border-color: var(--kids);
-  }
-
-  button:hover:not(:disabled)::before {
-    opacity: 1;
-  }
-}
-
-button:focus-visible:not(:disabled)::before {
-  opacity: 1;
-  transition-duration: var(--motion-duration-press);
-}
-
-button:active:not(:disabled) {
-  transform: scale(var(--motion-scale-press));
-  transition-duration: var(--motion-duration-press);
-}
-
-button:active:not(:disabled)::before {
-  opacity: 1;
-  background: color-mix(in srgb, var(--kids) 30%, transparent);
-  transition-duration: var(--motion-duration-press);
-}
-
-/* Disabled is painted, never faded: dashed line, quiet label, no motion. */
-button:disabled {
-  cursor: not-allowed;
-  color: var(--fg-2);
-  background: var(--bg-panel);
-  border: 2px dashed var(--line);
-}
-
-button:disabled::before {
-  opacity: 0;
-}
-
-/* ---------- Page ---------- */
-main {
-  width: min(1180px, calc(100% - var(--space-8)));
-  margin: 0 auto;
-  padding: var(--space-11) 0 var(--space-18);
-}
-
-.intro {
-  max-width: 760px;
-  margin-bottom: var(--space-8);
-}
-
-.wordmark {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-6);
-  color: var(--fg);
-  font-size: 1.125rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.wordmark-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  color: var(--bg-base);
-  background: var(--kids);
-  border-radius: 12px;
-  font-size: 1.25rem;
-  line-height: 1;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2.5rem, 1.6rem + 3.8vw, 4.5rem);
-  font-weight: 850;
-  line-height: 1.04;
-  letter-spacing: -0.035em;
-  text-wrap: balance;
-}
-
-.lede {
-  max-width: 52ch;
-  margin: var(--space-4) 0 0;
-  color: var(--fg-2);
-  font-size: 1.25rem;
-  line-height: 1.55;
-  text-wrap: pretty;
-}
-
-/* ---------- Studio: stage left, choices right from 1024px ---------- */
-.studio {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-6);
-}
-
-.stage-wrap,
-.builder {
-  min-width: 0;
-}
-
-.stage-wrap {
-  display: flex;
-  flex-direction: column;
+/* The table: the raised plate the board stands on. */
+.table {
+  padding: 14px 14px 18px;
+  background: var(--k-table);
+  border: 2px solid var(--k-hair);
+  border-radius: var(--k-r-plate);
+  box-shadow: var(--k-lift);
 }
 
 .stage {
   position: relative;
-  flex: 1 1 auto;
-  min-height: 440px;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
   isolation: isolate;
+  border: 2px solid var(--k-hair);
+  border-radius: var(--k-r-control);
+  box-shadow: var(--k-sink);
 }
 
-.world-meadow {
-  background: linear-gradient(#315869 0 62%, #274635 62%);
-}
+/* Light boards: the Kids ink keeps >= 4.5:1 on every stop (pinned). */
+.world-meadow { background: linear-gradient(#c4e4f0 0 62%, #9fd07f 62%); }
+.world-moon { background: linear-gradient(#b3bbd9 0 62%, #d9d2bf 62%); }
+.world-ocean { background: linear-gradient(#bce6f2 0 62%, #86c9df 62%); }
+.stage.is-playing { border-color: var(--k-play); }
 
-.world-moon {
-  background: linear-gradient(#22234c 0 62%, #202b3c 62%);
-}
+/* The world just left; shown only while motion may fade it out. */
+.world-departure { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; }
+.sky-picture { position: absolute; z-index: 1; top: 9%; right: 9%; width: clamp(64px, 13%, 120px); aspect-ratio: 1; }
+.horizon { position: absolute; z-index: 1; inset: 62% 0 auto; height: 3px; background: #13302a40; }
+.pic { display: block; width: 100%; height: 100%; }
 
-.world-ocean {
-  background: linear-gradient(#1c5b76 0 62%, #123b55 62%);
-}
-
-.stage.is-playing {
-  border-color: var(--kids);
-}
-
-/* The world the child just left, faded out over the new one (row 20 crossfade). */
-.world-departure {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sky-symbol {
-  position: absolute;
-  top: var(--space-8);
-  right: var(--space-8);
-  font-size: 4rem;
-  line-height: 1;
-  filter: drop-shadow(0 4px 4px rgb(0 0 0 / 22%));
-}
-
-.horizon {
-  position: absolute;
-  left: -5%;
-  right: -5%;
-  top: 58%;
-  height: 54px;
-  background: rgb(237 239 242 / 10%);
-  border-radius: 50%;
-}
+.placed-piece, .leaving-piece { position: absolute; z-index: 2; width: clamp(56px, 15%, 108px); aspect-ratio: 1; transform-origin: 50% 100%; }
+.leaving-piece { z-index: 1; opacity: 0; pointer-events: none; }
+.piece-one { left: 8%; bottom: 10%; }
+.piece-two { left: 33%; bottom: 4%; }
+.piece-three { right: 8%; bottom: 10%; }
+.piece-four { left: 18%; bottom: 28%; }
+.piece-five { right: 27%; bottom: 25%; }
+.piece-six { left: 50%; bottom: 14%; }
 
 .stage-hint {
   position: absolute;
-  top: 42%;
-  left: var(--space-6);
-  right: var(--space-6);
+  z-index: 2;
+  inset: 42% 16px auto;
   width: fit-content;
   margin: 0 auto;
-  padding: var(--space-3) var(--space-6);
-  color: var(--fg);
-  background: var(--bg-panel);
-  border: 2px dashed var(--fg-2);
-  border-radius: var(--radius);
-  font-size: 1.125rem;
-  font-weight: 750;
+  padding: 10px 22px;
+  color: var(--k-ink);
+  background: #ffffffb3;
+  border: 2px dashed var(--k-ink);
+  border-radius: var(--k-r-control);
+  font-size: 1.25rem;
+  font-weight: 700;
   text-align: center;
 }
 
 .mode-badge {
   position: absolute;
-  top: var(--space-4);
-  left: var(--space-4);
-  padding: var(--space-2) var(--space-3);
-  color: var(--bg-base);
-  background: var(--kids);
-  border-radius: 999px;
-  font-size: 1.125rem;
-  font-weight: 850;
-  line-height: 1.2;
-}
-
-.placed-piece,
-.leaving-piece {
-  position: absolute;
-  z-index: 2;
-  font-size: clamp(3.25rem, 2.4rem + 3.2vw, 5.25rem);
-  line-height: 1;
-  transform-origin: 50% 100%;
-}
-
-.leaving-piece {
-  z-index: 1;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.piece-one { left: 10%; bottom: 17%; }
-.piece-two { left: 35%; bottom: 9%; }
-.piece-three { right: 10%; bottom: 18%; }
-.piece-four { left: 20%; bottom: 34%; }
-.piece-five { right: 30%; bottom: 31%; }
-.piece-six { left: 50%; bottom: 20%; }
-
-/* Row 20, the Kids moment: a piece lands. Replaces the old 160ms arrive keyframe. */
-.placed-piece {
-  animation: piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-}
-
-/* DV-K2 (ruling R-3): play-float is product content motion, kept at its timing.
- * Only under .is-playing, transform only, sine-like ease-in-out, static under reduce.
- * piece-land stays first in the list so starting or stopping play never replays it. */
-.is-playing .placed-piece:nth-child(odd) {
-  animation:
-    piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards,
-    play-float 1.8s ease-in-out infinite alternate;
-}
-
-.is-playing .placed-piece:nth-child(even) {
-  animation:
-    piece-land var(--motion-duration-panel) var(--motion-ease-out-expo) backwards,
-    play-float 1.55s ease-in-out 120ms infinite alternate-reverse;
-}
-
-@keyframes play-float {
-  from { transform: translateY(0) rotate(-2deg); }
-  to { transform: translateY(-16px) rotate(3deg); }
-}
-
-@keyframes piece-land {
-  from {
-    opacity: 0;
-    transform: scale(var(--motion-scale-enter)) translateY(var(--motion-distance-md));
-  }
-}
-
-/* ---------- Play row ---------- */
-.play-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-4);
+  z-index: 3;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
   align-items: center;
-  margin-top: var(--space-4);
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  background: var(--k-plate);
+  border: 2px solid var(--k-ink);
+  border-radius: 999px;
+  font-weight: 700;
+}
+.mode-badge.is-playing { background: var(--k-play); color: var(--k-on-play); border-color: var(--k-play-hi); }
+
+.icon {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.play-button {
+.play-row { display: grid; gap: 12px; margin-top: 14px; }
+
+button, summary { font: inherit; color: inherit; cursor: pointer; }
+
+button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  min-width: 208px;
-  min-height: 60px;
-  padding: 0 var(--space-6);
-  color: var(--bg-base);
-  background: var(--kids);
-  border-color: var(--kids);
-  font-size: 1.25rem;
-  font-weight: 850;
+  gap: 10px;
+  min-height: var(--k-target);
+  margin: 0;
+  padding: 0 22px;
+  background: var(--k-plate);
+  border: 2px solid var(--k-ink);
+  border-radius: var(--k-r-control);
+  box-shadow: var(--k-key);
+  font-weight: 700;
+}
+button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 -1px #13302a33; }
+button:disabled { cursor: not-allowed; background: var(--k-off); color: var(--k-off-ink); border: 2px dashed var(--k-off-edge); box-shadow: none; }
+
+.play-button {
+  min-height: 72px;
+  padding: 0 32px 0 12px;
+  gap: 14px;
+  background: var(--k-play);
+  color: var(--k-on-play);
+  border-color: var(--k-play-hi);
+  border-radius: 999px;
+  font: 800 1.875rem / 1 var(--k-font-plate);
 }
 
-.play-button::before,
-.choice.is-selected::before {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-}
-
-.play-button:active::before,
-.choice.is-selected:active::before {
-  background: color-mix(in srgb, currentColor 20%, transparent);
-}
-
-@media (hover: hover) {
-  .play-button:hover:not(:disabled) {
-    border-color: var(--fg);
-  }
-}
-
-.play-glyph {
-  display: inline-grid;
+.play-station {
+  display: grid;
   place-items: center;
-  width: 1.25rem;
-  font-size: 1rem;
-  line-height: 1;
+  width: 48px;
+  height: 48px;
+  background: var(--k-on-play);
+  color: var(--k-play);
+  border-radius: 50%;
 }
+.play-station .icon { width: 24px; height: 24px; }
 
 .activity-message {
   display: flex;
   align-items: center;
-  min-height: 3lh;
+  min-height: 72px;
   margin: 0;
-  color: var(--fg-2);
-  font-size: 1.125rem;
-  line-height: 1.45;
+  padding: 12px 18px;
+  background: var(--k-plate);
+  border: 2px solid var(--k-hair);
+  border-radius: var(--k-r-control);
+  box-shadow: var(--k-sink);
+  font-weight: 700;
 }
+.message-text { display: inline-flex; align-items: center; gap: 10px; }
+.activity-message.is-refused { color: var(--k-refused); border-color: var(--k-refused); }
 
-.activity-message.is-refused {
-  color: var(--fg);
-}
+/* Builder: inset trays */
 
-/* Row 10: the new line arrives and its tone underline draws once.
- * Violet when the world changed, red (the refusal law) when the play space said no. */
-.message-text {
-  position: relative;
-  display: block;
-  width: fit-content;
-  max-width: 100%;
-  padding-bottom: var(--space-2);
-  overflow-wrap: anywhere;
-}
+.builder { display: grid; gap: 20px; }
+.tray { min-width: 0; margin: 0; padding: 16px; background: var(--k-tray); border: 0; border-radius: var(--k-r-tray); box-shadow: var(--k-sink); }
 
-.message-text::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--kids);
-}
-
-.is-refused .message-text::after {
-  background: var(--danger);
-}
-
-/* ---------- Builder ---------- */
-.builder {
-  display: grid;
-  align-content: start;
-  gap: var(--space-6);
-  padding: var(--space-6);
-  background: var(--bg-panel);
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
-}
-
-fieldset {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-legend {
-  margin-bottom: var(--space-3);
-  padding: 0;
-  font-size: 1.25rem;
-  font-weight: 850;
-  letter-spacing: -0.01em;
-}
-
-.choice-row {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.world-choices {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.piece-choices {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.choice {
+.tray legend {
+  float: left;
   display: flex;
-  min-width: 0;
-  min-height: 98px;
-  padding: var(--space-3) var(--space-1);
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  font-size: 1.125rem;
-  font-weight: 750;
-  line-height: 1.2;
-  text-align: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 0;
+  font: 800 1.75rem / 1 var(--k-font-plate);
 }
+.tray legend + * { clear: both; }
 
-.choice-label {
-  max-width: 100%;
-  overflow-wrap: break-word;
-  hyphens: none;
-}
-
-.choice-symbol {
+.step {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: none;
-  font-size: 2.25rem;
-  line-height: 1;
-  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
-}
-
-@media (hover: hover) {
-  .choice:hover:not(:disabled) .choice-symbol {
-    transform: translateY(calc(-1 * var(--motion-distance-sm)));
-  }
-}
-
-.choice:disabled .choice-symbol {
-  filter: grayscale(1) brightness(0.8);
-}
-
-.choice.is-selected {
-  color: var(--bg-base);
-  background: var(--kids);
-  border-color: var(--kids);
-}
-
-/* Selected is also a shape, not only a colour: a dot draws in the corner. */
-.choice.is-selected::after {
-  content: "";
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 12px;
-  height: 12px;
+  width: 40px;
+  height: 40px;
+  background: var(--k-play);
+  color: var(--k-on-play);
   border-radius: 50%;
-  background: var(--bg-base);
-  clip-path: circle(50% at 50% 50%);
+  font-size: 1.375rem;
 }
+.choice-row { display: grid; gap: 12px; }
+.world-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.choice-cell { display: grid; min-width: 0; }
+.choice-cell > * { grid-area: 1 / 1; }
+.world-choices .choice { padding-bottom: 44px; }
+.piece-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.choice { flex-direction: column; min-width: 0; min-height: 124px; padding: 12px 6px; gap: 8px; text-align: center; line-height: 1.2; }
 
-/* ---------- Step progress ---------- */
-.piece-progress {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+.station {
+  display: grid;
+  place-items: center;
+  width: clamp(48px, 4.5vw, 64px);
+  aspect-ratio: 1;
+  padding: 8px;
+  background: var(--k-plate);
+  border: 2px solid var(--k-hair);
+  border-radius: 50%;
 }
+.choice.is-selected, .choice.is-selected:hover { background: var(--k-picked); border-color: var(--k-play); box-shadow: inset 0 0 0 2px var(--k-play), var(--k-key); }
 
-.piece-meter {
+.chosen-tag {
   display: inline-flex;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 6px;
+  background: var(--k-play);
+  color: var(--k-on-play);
+  border-radius: 999px;
+  font-size: 1rem;
+  align-self: end;
+  justify-self: center;
+  margin-bottom: 12px;
+  pointer-events: none;
 }
-
-.meter-dot {
-  position: relative;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--fg-2);
-  border-radius: 50%;
-}
-
-.meter-dot::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: var(--kids);
-  clip-path: circle(0% at 50% 50%);
-  transition: clip-path var(--motion-duration-state) var(--motion-ease-out-quint);
-}
-
-.meter-dot.is-filled::before {
-  clip-path: circle(50% at 50% 50%);
-}
-
-.piece-count {
-  margin: 0;
-  color: var(--fg-2);
-  font-size: 1.125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---------- Undo / start over ---------- */
-.edit-actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.edit-actions button {
-  flex: 1 1 140px;
-  padding: 0 var(--space-4);
-  font-size: 1.125rem;
-  font-weight: 750;
-}
-
-/* ---------- Grown-ups disclosure (outside the child's main flow) ---------- */
-.grownups {
-  padding-top: var(--space-6);
-  color: var(--fg-2);
-  border-top: 1px solid var(--line);
-}
+.chosen-tag .icon { width: 1rem; height: 1rem; stroke-width: 3; }
+.choice:disabled .station { background: transparent; border-style: dashed; filter: grayscale(1); }
+.piece-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.piece-meter { display: inline-flex; gap: 8px; }
+.meter-dot { width: 18px; height: 18px; border: 2px solid var(--k-hair); border-radius: 50%; }
+.meter-dot.is-filled { background: var(--k-ink); border-color: var(--k-ink); }
+.is-full .meter-dot.is-filled { background: var(--k-full); border-color: var(--k-refused); }
+.piece-count { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--k-ink-2); font-weight: 700; }
+.piece-progress.is-full .piece-count { color: var(--k-ink); }
+.edit-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.grownups { background: var(--k-plate); border: 2px solid var(--k-hair); border-radius: var(--k-r-control); }
 
 .grownups summary {
-  position: relative;
-  isolation: isolate;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: var(--space-2) var(--space-4);
-  color: var(--fg);
-  border: 2px solid var(--line);
+  gap: 12px;
+  min-height: var(--k-target);
+  padding: 0 20px;
   border-radius: 12px;
-  cursor: pointer;
-  font-size: 1.125rem;
-  font-weight: 750;
+  font-weight: 700;
   list-style: none;
-  transition: transform var(--motion-duration-micro) var(--motion-ease-out-quart);
 }
-
-.grownups summary::-webkit-details-marker {
-  display: none;
-}
+.grownups summary::-webkit-details-marker { display: none; }
 
 .grownups summary::before {
   content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--kids) 18%, transparent);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--motion-duration-micro) var(--motion-ease-out-quart);
+  width: 10px;
+  height: 10px;
+  border: solid currentColor;
+  border-width: 0 3px 3px 0;
+  transform: rotate(-45deg);
 }
+.grownups[open] summary::before { transform: rotate(45deg); }
+.grownups p { margin: 0; padding: 0 20px 20px; color: var(--k-ink-2); }
 
-.grownups summary::after {
-  content: "";
-  width: 8px;
-  height: 8px;
-  margin-top: -4px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg);
-  transition: transform var(--motion-duration-state) var(--motion-ease-out-quint);
-}
-
-.grownups[open] summary::after {
-  margin-top: 4px;
-  transform: rotate(-135deg);
-}
-
-@media (hover: hover) {
-  .grownups summary:hover {
-    border-color: var(--fg-2);
-  }
-
-  .grownups summary:hover::before {
-    opacity: 1;
-  }
-}
-
-.grownups summary:focus-visible::before,
-.grownups summary:active::before {
-  opacity: 1;
-  transition-duration: var(--motion-duration-press);
-}
-
-.grownups summary:active {
-  transform: scale(var(--motion-scale-press));
-  transition-duration: var(--motion-duration-press);
-}
-
-.grownups[open] summary {
-  border-color: var(--fg-2);
-}
-
-.grownups p {
-  max-width: 52ch;
-  margin: var(--space-3) 0 0;
-  font-size: 1.125rem;
-  line-height: 1.55;
-  text-wrap: pretty;
-}
-
-/* ---------- Loading fallback (row 18) ---------- */
-.loading-intro {
-  width: min(1180px, calc(100% - var(--space-8)));
-  max-width: none;
-  margin: 0 auto;
-  padding: var(--space-11) 0 var(--space-18);
-}
-
-.loading-intro .lede {
-  max-width: 52ch;
-}
+/* Loading fallback */
 
 .loading-bar {
   position: relative;
   display: block;
   width: min(320px, 100%);
-  height: 2px;
-  margin-top: var(--space-6);
+  height: 8px;
+  margin-top: 24px;
   overflow: hidden;
-  background: var(--line);
-  border-radius: 2px;
+  background: var(--k-tray);
+  border: 2px solid var(--k-hair);
+  border-radius: 999px;
+}
+.loading-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: var(--k-ink); border-radius: 999px; }
+
+/* Hover */
+
+@media (hover: hover) {
+  button:hover:not(:disabled), .grownups summary:hover { background: var(--k-plate-hi); }
+  .play-button:hover:not(:disabled) { background: var(--k-play-hi); }
 }
 
-.loading-bar::after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 40%;
-  background: var(--kids);
-  border-radius: 2px;
-}
-
-/* ---------- Layout ---------- */
 @media (min-width: 1024px) {
-  .studio {
-    grid-template-columns: minmax(0, 1.25fr) minmax(400px, 0.75fr);
-    gap: var(--space-8);
-    align-items: stretch;
-  }
-
-  .stage {
-    min-height: 520px;
-  }
+  .studio { grid-template-columns: minmax(0, 1.2fr) minmax(400px, 1fr); }
+  .stage { aspect-ratio: 16 / 11; }
+  .play-row { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
 }
 
-@media (max-width: 560px) {
-  main {
-    width: min(100% - var(--space-8), 1180px);
-    padding: var(--space-8) 0 var(--space-11);
-  }
-
-  .loading-intro {
-    width: min(100% - var(--space-8), 1180px);
-    padding: var(--space-8) 0 var(--space-11);
-  }
-
-  .wordmark {
-    margin-bottom: var(--space-4);
-  }
-
-  .lede {
-    font-size: 1.125rem;
-  }
-
-  .stage {
-    min-height: 340px;
-  }
-
-  .sky-symbol {
-    top: var(--space-6);
-    right: var(--space-6);
-    font-size: 3.25rem;
-  }
-
-  .builder {
-    padding: var(--space-4);
-  }
-
-  .world-choices .choice-label {
-    font-size: 1.0625rem;
-  }
-
-  .piece-choices {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .play-row {
-    grid-template-columns: 1fr;
-  }
-
-  .play-button {
-    width: 100%;
-  }
+@media (max-width: 480px) {
+  .tray { padding: 12px; }
+  .choice-row { gap: 8px; }
+  .play-button { width: 100%; }
 }
 
-/* ---------- Motion (DIRECTION.md §6.3 rows 1, 2, 3, 10, 18, 20) ---------- */
+/* Calm play motion, only when motion is allowed */
+
 @media (prefers-reduced-motion: no-preference) {
-  /* Gentle first-paint entrance; content is visible by default, never gated. */
-  main > .intro > *,
-  .studio > * {
-    animation: rise-in var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
-  }
+  button { transition: background-color var(--k-quick), border-color var(--k-quick), transform var(--k-quick), box-shadow var(--k-quick); }
+  .grownups summary::before { transition: transform var(--k-quick) var(--k-ease); }
+  .sky-picture { animation: k-fade var(--k-calm) var(--k-ease) both; }
+  .world-departure { animation: k-fade-out var(--k-calm) var(--k-ease) both; }
+  .placed-piece { animation: k-place var(--k-calm) var(--k-ease) both; }
+  .leaving-piece { animation: k-leave 280ms var(--k-ease) both; }
 
-  main > .intro > :nth-child(2) {
-    animation-delay: var(--motion-stagger-step);
-  }
-
-  main > .intro > :nth-child(3),
-  .studio > :first-child {
-    animation-delay: calc(2 * var(--motion-stagger-step));
-  }
-
-  .studio > :last-child {
-    animation-delay: calc(3 * var(--motion-stagger-step));
-  }
-
-  /* World change: the old world fades away over the new one; the sky settles in. */
-  .world-departure {
-    animation: fade-away var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  .sky-symbol {
-    animation: settle-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  /* Undo and start over: the piece fades and shrinks back. */
-  .leaving-piece {
-    animation: piece-leave var(--motion-duration-panel-exit) var(--motion-ease-out-quart) backwards;
-  }
-
-  /* Play pressed: the stage brightens once and settles. */
-  .stage.is-playing {
-    animation: stage-light var(--motion-duration-route) var(--motion-ease-out-expo);
-  }
-
-  .mode-badge,
-  .stage-hint {
-    animation: settle-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-
-  .message-text {
-    animation: settle-in var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-
-  .message-text::after {
-    animation: tone-draw var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-
-  /* Selection: the picked symbol settles and the corner dot draws. */
-  .choice.is-selected .choice-symbol {
-    animation: pick-settle var(--motion-duration-panel) var(--motion-ease-out-expo);
-  }
-
-  .choice.is-selected::after {
-    animation: dot-draw var(--motion-duration-state) var(--motion-ease-out-quint) backwards;
-  }
-
-  /* Six of six: the meter brightens once, left to right. */
-  .piece-meter.is-full .meter-dot::before {
-    animation: meter-full var(--motion-duration-route) var(--motion-ease-out-expo) backwards;
-  }
-
-  .piece-meter.is-full .meter-dot:nth-child(2)::before { animation-delay: var(--motion-stagger-step); }
-  .piece-meter.is-full .meter-dot:nth-child(3)::before { animation-delay: calc(2 * var(--motion-stagger-step)); }
-  .piece-meter.is-full .meter-dot:nth-child(4)::before { animation-delay: calc(3 * var(--motion-stagger-step)); }
-  .piece-meter.is-full .meter-dot:nth-child(5)::before { animation-delay: calc(4 * var(--motion-stagger-step)); }
-  .piece-meter.is-full .meter-dot:nth-child(6)::before { animation-delay: var(--motion-stagger-max); }
-
-  .grownups[open] p {
-    animation: settle-in var(--motion-duration-panel) var(--motion-ease-out-expo) backwards;
-  }
-
-  /* Indeterminate loading bar (ruling R-1): starts after the loading delay. */
-  .loading-bar::after {
-    animation: loading-run var(--motion-duration-loop) var(--motion-ease-out-quart)
-      var(--motion-delay-loading) infinite backwards;
-  }
+  .message-text, .mode-badge { animation: k-rise 280ms var(--k-ease) both; }
+  .is-playing .placed-piece { animation: k-bob 2800ms ease-in-out infinite; }
+  .is-playing .placed-piece:nth-child(2n) { animation-delay: -1400ms; }
+  .is-playing .placed-piece:nth-child(3n) { animation-duration: 3400ms; }
+  .is-playing .sky-picture { animation: k-drift 6s ease-in-out infinite; }
+  .loading-bar::after { animation: k-run 1200ms var(--k-ease) 300ms infinite backwards; }
 }
 
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(var(--motion-distance-md));
-  }
-}
+@keyframes k-fade { from { opacity: 0; } }
 
-@keyframes settle-in {
-  from {
-    opacity: 0;
-    transform: translateY(var(--motion-distance-sm));
-  }
-}
+@keyframes k-fade-out { from { opacity: 1; } to { opacity: 0; } }
 
-@keyframes fade-away {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
+@keyframes k-place { from { opacity: 0; transform: translateY(12px) scale(0.9); } }
 
-@keyframes piece-leave {
-  from {
-    opacity: 1;
-    transform: none;
-  }
+@keyframes k-leave { from { opacity: 1; } to { opacity: 0; transform: scale(0.85); } }
 
-  to {
-    opacity: 0;
-    transform: translateY(var(--motion-distance-sm)) scale(var(--motion-scale-enter));
-  }
-}
+@keyframes k-rise { from { opacity: 0; transform: translateY(4px); } }
 
-@keyframes stage-light {
-  from { filter: brightness(1.12); }
-  to { filter: brightness(1); }
-}
+@keyframes k-bob { 50% { transform: translateY(-6px); } }
 
-@keyframes tone-draw {
-  from { clip-path: inset(0 100% 0 0); }
-  to { clip-path: inset(0); }
-}
+@keyframes k-drift { 50% { transform: translateY(4px) rotate(4deg); } }
 
-@keyframes pick-settle {
-  from { transform: translateY(var(--motion-distance-sm)) scale(var(--motion-scale-enter)); }
-}
+@keyframes k-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 
-@keyframes dot-draw {
-  from { clip-path: circle(0% at 50% 50%); }
-  to { clip-path: circle(50% at 50% 50%); }
-}
+/* Forced colours */
 
-@keyframes meter-full {
-  from { filter: brightness(1.45); }
-  to { filter: brightness(1); }
-}
-
-@keyframes loading-run {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(250%); }
-}
-
-/* Reduced motion: distances and scales collapse to zero, and the blanket rule stops
- * every keyframe and transition (the production spec pins 0.001ms and one iteration).
- * Colour, state and the static 40% loading bar still show. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    animation-delay: 0ms !important;
-    transition-duration: 0.001ms !important;
-    transition-delay: 0ms !important;
-  }
-
-  :root {
-    --motion-distance-sm: 0px;
-    --motion-distance-md: 0px;
-    --motion-distance-lg: 0px;
-    --motion-scale-press: 1;
-    --motion-scale-enter: 1;
-    --motion-stagger-step: 0ms;
-  }
+@media (forced-colors: active) {
+  .table, .tray, .stage, .activity-message, .mode-badge, .chosen-tag, .step, .stage-hint { border: 2px solid CanvasText; }
+  .choice.is-selected { border: 4px solid Highlight; }
+  .meter-dot { border-color: CanvasText; }
+  .meter-dot.is-filled { forced-color-adjust: none; background: CanvasText; }
+  .pic { forced-color-adjust: none; }
+  :focus-visible { outline-color: Highlight; }
 }

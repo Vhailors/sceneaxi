@@ -9,6 +9,7 @@ import {
   createKidsActivityState,
   type KidsActivityRequest,
 } from "../../lib/kids-activity.js";
+import { Icon, Picture } from "./kids-art.js";
 
 const piecePositionClasses = [
   "piece-one",
@@ -33,7 +34,7 @@ type ActivityNote = {
 type StageDeparture = {
   readonly serial: number;
   readonly worldId: string | null;
-  readonly pieces: readonly { readonly symbol: string; readonly slot: number }[];
+  readonly pieces: readonly { readonly pieceId: string; readonly slot: number }[];
 };
 
 export function KidsStudio() {
@@ -52,10 +53,8 @@ export function KidsStudio() {
   if (world === undefined) throw new Error("The curated Kids world is missing.");
 
   const pieceCount = activity.pieceIds.length;
-
-  function symbolFor(pieceId: string) {
-    return KIDS_ACTIVITY_PIECES.find((candidate) => candidate.id === pieceId)?.symbol ?? "";
-  }
+  const isFull = pieceCount >= KIDS_ACTIVITY_PIECE_LIMIT;
+  const isPlaying = activity.mode === "play";
 
   function run(request: KidsActivityRequest) {
     const decision = applyKidsActivityAction(activity, request);
@@ -70,7 +69,7 @@ export function KidsStudio() {
         keptCount < activity.pieceIds.length
           ? activity.pieceIds
               .slice(keptCount)
-              .map((pieceId, offset) => ({ symbol: symbolFor(pieceId), slot: keptCount + offset }))
+              .map((pieceId, offset) => ({ pieceId, slot: keptCount + offset }))
           : [];
 
       const leavingWorld = next.worldId !== activity.worldId ? activity.worldId : null;
@@ -85,11 +84,11 @@ export function KidsStudio() {
 
   return (
     <section className="studio" aria-label="Tiny world maker">
-      <div className="stage-wrap">
+      <div className="table">
         <div
-          className={`stage world-${activity.worldId} ${activity.mode === "play" ? "is-playing" : ""}`}
+          className={`stage world-${activity.worldId}${isPlaying ? " is-playing" : ""}`}
           role="group"
-          aria-label={`${world.label}. ${activity.pieceIds.length} of ${KIDS_ACTIVITY_PIECE_LIMIT} pieces added.`}
+          aria-label={`${world.label}. ${pieceCount} of ${KIDS_ACTIVITY_PIECE_LIMIT} pieces added.`}
         >
           {departure?.worldId != null && (
             <div
@@ -98,38 +97,30 @@ export function KidsStudio() {
               aria-hidden="true"
             />
           )}
-          <div className="sky-symbol" key={`sky-${activity.worldId}`} aria-hidden="true">
-            {world.symbol}
+          <div className="sky-picture" key={`sky-${activity.worldId}`} aria-hidden="true">
+            <Picture id={activity.worldId} />
           </div>
           <div className="horizon" aria-hidden="true" />
           <div className="placed-pieces" aria-hidden="true">
-            {activity.pieceIds.map((pieceId, index) => {
-              const piece = KIDS_ACTIVITY_PIECES.find((candidate) => candidate.id === pieceId);
-
-              return (
-                <span className={`placed-piece ${piecePositionClasses[index]}`} key={`${pieceId}-${index}`}>
-                  {piece?.symbol}
-                </span>
-              );
-            })}
+            {activity.pieceIds.map((pieceId, index) => (
+              <span className={`placed-piece ${piecePositionClasses[index]}`} key={`${pieceId}-${index}`}>
+                <Picture id={pieceId} />
+              </span>
+            ))}
           </div>
           {departure !== null && departure.pieces.length > 0 && (
             <div className="leaving-pieces" key={`leaving-${departure.serial}`} aria-hidden="true">
               {departure.pieces.map((piece) => (
-                <span
-                  className={`leaving-piece ${piecePositionClasses[piece.slot]}`}
-                  key={piece.slot}
-                >
-                  {piece.symbol}
+                <span className={`leaving-piece ${piecePositionClasses[piece.slot]}`} key={piece.slot}>
+                  <Picture id={piece.pieceId} />
                 </span>
               ))}
             </div>
           )}
-          {activity.pieceIds.length === 0 && (
-            <p className="stage-hint">Add your first piece</p>
-          )}
-          <span className="mode-badge" key={activity.mode}>
-            {activity.mode === "play" ? "Playing" : "Building"}
+          {pieceCount === 0 && <p className="stage-hint">Add your first piece</p>}
+          <span className={isPlaying ? "mode-badge is-playing" : "mode-badge"} key={activity.mode}>
+            <Icon name={isPlaying ? "play" : "build"} />
+            {isPlaying ? "Playing" : "Building"}
           </span>
         </div>
 
@@ -137,79 +128,89 @@ export function KidsStudio() {
           <button
             className="play-button"
             type="button"
-            aria-pressed={activity.mode === "play"}
-            onClick={() =>
-              run({ action: activity.mode === "play" ? "play.stop" : "play.start" })
-            }
+            aria-pressed={isPlaying}
+            onClick={() => run({ action: isPlaying ? "play.stop" : "play.start" })}
           >
-            <span className="play-glyph" aria-hidden="true">
-              {activity.mode === "play" ? "■" : "▶"}
+            <span className="play-station" aria-hidden="true">
+              <Icon name={isPlaying ? "stop" : "play"} />
             </span>
-            {activity.mode === "play" ? "Stop" : "Play my world"}
+            {isPlaying ? "Stop" : "Play my world"}
           </button>
-          <p
-            className={note.refused ? "activity-message is-refused" : "activity-message"}
-            aria-live="polite"
-          >
+          <p className={note.refused ? "activity-message is-refused" : "activity-message"} aria-live="polite">
             <span className="message-text" key={note.serial}>
-              {note.text}
+              <Icon name={note.refused ? "info" : "note"} />
+              <span>{note.text}</span>
             </span>
           </p>
         </div>
       </div>
 
       <div className="builder">
-        <fieldset disabled={activity.mode === "play"}>
-          <legend>1. Pick a place</legend>
+        <fieldset className="tray" disabled={isPlaying}>
+          <legend>
+            <span className="step" aria-hidden="true">1</span>Pick a place
+          </legend>
           <div className="choice-row world-choices">
-            {KIDS_ACTIVITY_WORLDS.map((choice) => (
-              <button
-                className={activity.worldId === choice.id ? "choice is-selected" : "choice"}
-                key={choice.id}
-                type="button"
-                aria-pressed={activity.worldId === choice.id}
-                onClick={() => run({ action: "world.choose", worldId: choice.id })}
-              >
-                <span className="choice-symbol" aria-hidden="true">
-                  {choice.symbol}
-                </span>
-                <span className="choice-label">{choice.label}</span>
-              </button>
-            ))}
+            {KIDS_ACTIVITY_WORLDS.map((choice) => {
+              const chosen = activity.worldId === choice.id;
+
+              // The "Picked" tag sits beside the button, not inside it: the button's
+                // name stays its visible label (WCAG 2.5.3), aria-pressed carries the
+                // state, and the tag is plain text that screen readers still read.
+                return (
+                  <div className="choice-cell" key={choice.id}>
+                  <button
+                      className={chosen ? "choice is-selected" : "choice"}
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={() => run({ action: "world.choose", worldId: choice.id })}
+                  >
+                    <span className="station" aria-hidden="true">
+                        <Picture id={choice.id} />
+                      </span>
+                      <span className="choice-label">{choice.label}</span>
+                    </button>
+                    {chosen && (
+                      <span className="chosen-tag">
+                        <Icon name="chosen" />
+                        Picked
+                      </span>
+                    )}
+                </div>
+              );
+            })}
           </div>
         </fieldset>
 
-        <fieldset disabled={activity.mode === "play"}>
-          <legend>2. Add something</legend>
+        <fieldset className="tray" disabled={isPlaying}>
+          <legend>
+            <span className="step" aria-hidden="true">2</span>Add something
+          </legend>
           <div className="choice-row piece-choices">
             {KIDS_ACTIVITY_PIECES.map((piece) => (
               <button
                 className="choice"
                 key={piece.id}
                 type="button"
-                disabled={activity.pieceIds.length >= KIDS_ACTIVITY_PIECE_LIMIT}
+                disabled={isFull}
                 onClick={() => run({ action: "piece.add", pieceId: piece.id })}
               >
-                <span className="choice-symbol" aria-hidden="true">
-                  {piece.symbol}
+                <span className="station" aria-hidden="true">
+                  <Picture id={piece.id} />
                 </span>
                 <span className="choice-label">{piece.label}</span>
               </button>
             ))}
           </div>
-          <div className="piece-progress">
-            <span
-              className={
-                pieceCount >= KIDS_ACTIVITY_PIECE_LIMIT ? "piece-meter is-full" : "piece-meter"
-              }
-              aria-hidden="true"
-            >
+          <div className={isFull ? "piece-progress is-full" : "piece-progress"}>
+            <span className="piece-meter" aria-hidden="true">
               {Array.from({ length: KIDS_ACTIVITY_PIECE_LIMIT }, (_, slot) => (
                 <span className={slot < pieceCount ? "meter-dot is-filled" : "meter-dot"} key={slot} />
               ))}
             </span>
             <p className="piece-count">
-              {activity.pieceIds.length} of {KIDS_ACTIVITY_PIECE_LIMIT} pieces
+              {isFull && <Icon name="full" />}
+              {pieceCount} of {KIDS_ACTIVITY_PIECE_LIMIT} pieces
             </p>
           </div>
         </fieldset>
@@ -217,16 +218,14 @@ export function KidsStudio() {
         <div className="edit-actions">
           <button
             type="button"
-            disabled={activity.mode === "play" || activity.pieceIds.length === 0}
+            disabled={isPlaying || pieceCount === 0}
             onClick={() => run({ action: "piece.undo" })}
           >
+            <Icon name="undo" />
             Undo last
           </button>
-          <button
-            type="button"
-            disabled={activity.mode === "play"}
-            onClick={() => run({ action: "scene.reset" })}
-          >
+          <button type="button" disabled={isPlaying} onClick={() => run({ action: "scene.reset" })}>
+            <Icon name="restart" />
             Start over
           </button>
         </div>
