@@ -114,7 +114,7 @@ function mountAudioControls(
   if (clips.length === 0) return () => undefined;
   const controls = host.ownerDocument.createElement("div");
   controls.dataset.audioPlayback = "true";
-  controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;pointer-events:auto";
+  controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1,4px);padding:var(--space-1,4px);border:1px solid var(--line-control);border-radius:var(--r-control);background:var(--overlay);accent-color:var(--accent);pointer-events:auto";
   controls.setAttribute("aria-label", "Play session audio");
   const volume = host.ownerDocument.createElement("input");
   volume.type = "range";
@@ -137,6 +137,7 @@ function mountAudioControls(
   for (const clip of clips) {
     const button = host.ownerDocument.createElement("button");
     button.type = "button";
+    button.className = "ui-control";
     button.textContent = `Play ${clip.assetId}`;
     button.addEventListener("click", () => {
       try {

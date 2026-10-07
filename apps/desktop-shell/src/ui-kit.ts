@@ -1,8 +1,13 @@
 /** Shared string builders only; region owners bind events and enforce data-kind. */
 import { escapeHtml } from "./chrome.js";
-import { icon, type IconId } from "./icons.js";
+import { icon, stateIcon, type IconId } from "./icons.js";
 import type { DesktopControl } from "./visual-model.js";
-import { ACCENT, AXIS_TEXT, DENSITY, INERT, LINE, RADIUS, SPACE, SURFACE, TEXT, TYPE, TYPE_SCALE } from "./visual-tokens.js";
+import {
+  ACCENT, AXIS_TEXT, DENSITY, INERT, INTERLOCKING, INTERLOCKING_PENDING_PLATE, INTERLOCKING_TEXT_FLOOR_PX,
+  LINE, MOTION, RADIUS, SPACE, STATE_PLATES, SURFACE, TEXT, TYPE, TYPE_SCALE,
+} from "./visual-tokens.js";
+
+export type UiPlateState = keyof typeof STATE_PLATES;
 
 export type UiSegment = Readonly<{
   control: DesktopControl;
@@ -80,50 +85,81 @@ export function splitter(control: DesktopControl, state: UiSplitter): string {
   return `<div class="ui-splitter" role="separator" tabindex="0" ${attributes(control)} aria-orientation="${state.orientation}" aria-controls="${escapeHtml(state.panelId)}" aria-valuemin="${state.min}" aria-valuemax="${state.max}" aria-valuenow="${state.value}">${icon("drag-handle")}</div>${refusalHint(control)}`;
 }
 
+/**
+ * A state plate: drawn icon + visible word, never paint alone (DIRECTION §2.1). The long label
+ * rides in `title`; the word itself is the accessible text. Pending carries the fill+line pair.
+ */
+export function statePlate(state: UiPlateState): string {
+  const plate = STATE_PLATES[state];
+
+  return `<span class="ui-plate" data-state="${state}" title="${escapeHtml(plate.label)}">${stateIcon(plate.icon)}<span>${escapeHtml(plate.plate)}</span></span>`;
+}
+
 /** actionsHtml is trusted builder output, never user/provider text. */
 export function emptyState(control: DesktopControl, description: string, actionsHtml = ""): string {
   return `<section class="ui-empty" ${attributes(control)}><div class="ui-empty-title">${escapeHtml(control.label)}</div><div>${escapeHtml(description)}</div>${actionsHtml === "" ? "" : `<div class="ui-empty-actions">${actionsHtml}</div>`}</section>${refusalHint(control)}`;
 }
 
-/** Opt-in stylesheet. The chrome owner emits this and iconSprite() once per document. */
+/**
+ * Opt-in stylesheet (A-rich Operate dialect). The chrome owner emits this and iconSprite() once per
+ * document. Density is one attribute on the shell root; comfortable is the default. Text never
+ * drops below the 13px floor: compact's pinned 12px body is clamped up by `--ui-text`.
+ */
 export function uiKitStyles(): string {
+  const ink = INTERLOCKING.dark;
+  const floor = `${INTERLOCKING_TEXT_FLOOR_PX}px`;
+  const pending = INTERLOCKING_PENDING_PLATE;
+
+  // SAFETY: plate.paint / plate.on name INTERLOCKING colour keys (STATE_PLATES is built from them).
+  const plates = Object.entries(STATE_PLATES)
+    .filter(([state, plate]) => state !== "pending" && plate.paint !== null)
+    .map(([state, plate]) => `.ui-plate[data-state="${state}"]{background:${ink[plate.paint as keyof typeof ink]};color:${ink[plate.on as keyof typeof ink]}}`)
+    .join("\n");
+
   return `
-.shell{${Object.entries(SPACE).map(([name, value]) => `--space-${name}:${value}px;`).join("")}${Object.entries(RADIUS).map(([name, value]) => `--r-${name}:${value}px;`).join("")}--ui-row:${DENSITY.comfortable.row}px;--ui-control:${DENSITY.comfortable.control}px;--ui-icon:${DENSITY.comfortable.toolbarIcon}px;--ui-header:${DENSITY.comfortable.panelHeader}px;--ui-body:${DENSITY.comfortable.body}px}
+.shell{${Object.entries(SPACE).map(([name, value]) => `--space-${name}:${value}px;`).join("")}${Object.entries(RADIUS).map(([name, value]) => `--r-${name}:${value}px;`).join("")}--ui-row:${DENSITY.comfortable.row}px;--ui-control:${DENSITY.comfortable.control}px;--ui-icon:${DENSITY.comfortable.toolbarIcon}px;--ui-header:${DENSITY.comfortable.panelHeader}px;--ui-body:${DENSITY.comfortable.body}px;--ui-text:max(${floor},var(--ui-body))}
 .shell[data-density="compact"]{--ui-row:${DENSITY.compact.row}px;--ui-control:${DENSITY.compact.control}px;--ui-icon:${DENSITY.compact.toolbarIcon}px;--ui-header:${DENSITY.compact.panelHeader}px;--ui-body:${DENSITY.compact.body}px}
-.ui-control,.ui-splitter{box-sizing:border-box;min-width:24px;min-height:var(--ui-control);font-family:${TYPE.sans};font-size:var(--ui-body);line-height:${TYPE_SCALE.body.lineHeight}px;color:${TEXT.primary};background:${SURFACE.raised};border:1px solid ${LINE.control};border-radius:var(--r-sm);padding:var(--space-1) var(--space-2)}
+.ui-control,.ui-splitter{box-sizing:border-box;min-width:24px;min-height:var(--ui-control);font-family:${TYPE.sans};font-size:var(--ui-text);line-height:${TYPE_SCALE.body.lineHeight}px;color:${TEXT.primary};background:${SURFACE.raised};border:1px solid ${LINE.control};border-radius:var(--r-sm);padding:var(--space-1) var(--space-2);transition:background-color ${MOTION.fast}ms ${MOTION.in},border-color ${MOTION.fast}ms ${MOTION.in}}
 .ui-control{height:var(--ui-control);cursor:pointer}
 .ui-control:not([aria-disabled="true"]):hover{background:${SURFACE.hover};border-color:${LINE.hover}}
-.ui-control[aria-pressed="true"],.ui-tab[aria-selected="true"]{background:${ACCENT.surface};color:${ACCENT.base};border-color:${ACCENT.line}}
+.ui-control[aria-pressed="true"],.ui-tab[aria-selected="true"]{background:${ACCENT.surface};color:${ACCENT.base};border-color:${ACCENT.base}}
+.ui-tab[aria-selected="true"]{box-shadow:inset 0 -2px 0 ${ACCENT.base}}
 .ui-control:not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px ${LINE.hover}}
-.ui-control[aria-disabled="true"],.ui-splitter[aria-disabled="true"]{color:${INERT.text};border-style:dashed;cursor:not-allowed}
-.ui-control:focus-visible,.ui-splitter:focus-visible{outline:2px solid ${ACCENT.base};outline-offset:2px}
-.ui-input:not([readonly]):focus-visible{border-color:${ACCENT.base}}
+.ui-control[aria-disabled="true"],.ui-splitter[aria-disabled="true"]{color:${INERT.text};background:${SURFACE.well};border-style:dashed;cursor:not-allowed}
+.ui-control:focus-visible,.ui-splitter:focus-visible{outline:2px solid ${ink.focus};outline-offset:2px}
+.ui-input:not([readonly]):focus-visible{border-color:${ink.focus}}
 .ui-tab:focus-visible,.ui-segment .ui-control:focus-visible{outline-offset:-2px}
 .ui-icon-wrap{position:relative;display:inline-flex;vertical-align:middle}
 .ui-icon-button{display:inline-flex;align-items:center;justify-content:center;width:var(--ui-icon);height:var(--ui-icon);padding:var(--space-1)}
 .ui-control .icon,.ui-splitter .icon{flex-shrink:0}
-.ui-tooltip{display:none;position:absolute;z-index:1;inset-block-start:100%;inset-inline-start:0;max-width:240px;width:max-content;overflow-wrap:anywhere;padding:var(--space-1) var(--space-2);border:1px solid ${LINE.card};border-radius:var(--r-md);background:${SURFACE.overlay};color:${TEXT.primary};font:${TYPE_SCALE.small.size}px/${TYPE_SCALE.small.lineHeight}px ${TYPE.sans}}
+.ui-tooltip{display:none;position:absolute;z-index:1;inset-block-start:100%;inset-inline-start:0;max-width:240px;width:max-content;overflow-wrap:anywhere;padding:var(--space-1) var(--space-2);border:1px solid ${LINE.card};border-radius:var(--r-md);background:${SURFACE.overlay};color:${TEXT.primary};font:${floor}/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans}}
 .ui-icon-wrap:hover>.ui-tooltip,.ui-icon-wrap:focus-within>.ui-tooltip{display:block}
 .ui-segmented,.ui-tabs,.ui-empty-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1)}
 .ui-segment{display:inline-flex;min-width:0}
 .ui-chip{border-radius:var(--r-pill)}
-.ui-badge{display:inline-flex;align-items:center;padding:var(--space-1) var(--space-2);border-radius:var(--r-xs);background:${SURFACE.header};color:${TEXT.secondary};font:${TYPE_SCALE.caption.size}px/${TYPE_SCALE.caption.lineHeight}px ${TYPE.sans}}
+.ui-badge{display:inline-flex;align-items:center;padding:var(--space-1) var(--space-2);border:1px solid ${LINE.control};border-radius:var(--r-xs);background:${SURFACE.header};color:${TEXT.secondary};font:${floor}/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans};font-variant-numeric:tabular-nums}
+.ui-plate{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2);border:1px solid ${LINE.control};border-radius:var(--r-xs);color:${TEXT.primary};font:600 ${floor}/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans};white-space:nowrap}
+.ui-plate .icon{width:14px;height:14px;flex:none}
+.${pending.className},.ui-plate[data-state="pending"]{background:${ink[pending.fill]};color:${ink[pending.ink]};box-shadow:inset 0 0 0 ${pending.lineWidthPx}px ${ink[pending.line]}}
+${plates}
 .ui-card-header{display:flex;align-items:center;gap:var(--space-2);width:100%;min-height:var(--ui-header);text-align:start;font-weight:${TYPE_SCALE["body-strong"].weight};background:${SURFACE.header}}
-.ui-property-row{display:grid;grid-template-columns:minmax(64px,1fr) minmax(0,2fr);align-items:center;gap:var(--space-2);min-height:var(--ui-row);color:${TEXT.secondary};font:${TYPE_SCALE.body.weight} var(--ui-body)/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans}}
+.ui-property-row{display:grid;grid-template-columns:minmax(64px,1fr) minmax(0,2fr);align-items:center;gap:var(--space-2);min-height:var(--ui-row);color:${TEXT.secondary};font:${TYPE_SCALE.body.weight} var(--ui-text)/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans}}
 .ui-property-row>label,.ui-property-row>span{min-width:0;overflow-wrap:anywhere}
 .ui-field,.ui-axis-field{display:flex;align-items:center;gap:var(--space-1);min-width:0}
-.ui-input{width:100%;min-width:24px;height:var(--ui-control);padding:var(--space-1);background:${SURFACE.well};font-family:${TYPE.mono};font-size:${TYPE_SCALE.mono.size}px;font-variant-numeric:tabular-nums;cursor:text}
+.ui-input{width:100%;min-width:24px;height:var(--ui-control);padding:var(--space-1);background:${SURFACE.well};font-family:${TYPE.mono};font-size:${floor};font-variant-numeric:tabular-nums;cursor:text}
 .ui-vec3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:center;gap:var(--space-1);min-width:0}
-.ui-axis{font-size:${TYPE_SCALE.caption.size}px}
+.ui-axis{font-size:${floor};font-weight:600}
 .ui-axis-x{color:${AXIS_TEXT.x}}
 .ui-axis-y{color:${AXIS_TEXT.y}}
 .ui-axis-z{color:${AXIS_TEXT.z}}
-.ui-unit{color:${TEXT.faint};font-size:${TYPE_SCALE.caption.size}px;line-height:${TYPE_SCALE.caption.lineHeight}px}
+.ui-unit{color:${TEXT.faint};font-size:${floor};line-height:${TYPE_SCALE.body.lineHeight}px}
 .ui-splitter{display:flex;align-items:center;justify-content:center;touch-action:none;padding:var(--space-1)}
 .ui-splitter[aria-orientation="vertical"]{width:24px;min-height:24px;cursor:col-resize}
 .ui-splitter[aria-orientation="horizontal"]{height:24px;cursor:row-resize}
 .ui-splitter[aria-disabled="true"]{cursor:not-allowed}
-.ui-empty{display:grid;gap:var(--space-3);padding:var(--space-4);color:${TEXT.secondary};font:var(--ui-body)/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans};overflow-wrap:anywhere}
-.ui-empty-title{color:${TEXT.primary};font-size:${TYPE_SCALE.display.size}px;line-height:${TYPE_SCALE.display.lineHeight}px;font-weight:${TYPE_SCALE.display.weight}}
+.ui-empty{display:grid;gap:var(--space-3);padding:var(--space-4);border:1px dashed ${LINE.control};border-radius:var(--r-md);background:${SURFACE.well};color:${TEXT.secondary};font:var(--ui-text)/${TYPE_SCALE.body.lineHeight}px ${TYPE.sans};overflow-wrap:anywhere}
+.ui-empty-title{color:${TEXT.primary};font-size:${TYPE_SCALE.display.size}px;line-height:${TYPE_SCALE.display.lineHeight}px;font-weight:${TYPE_SCALE.display.weight};text-wrap:balance}
+@media (prefers-reduced-motion:reduce){.ui-control,.ui-splitter{transition:none}}
+@media (forced-colors:active){.ui-control:focus-visible,.ui-splitter:focus-visible{outline-color:Highlight}.ui-control[aria-pressed="true"],.ui-tab[aria-selected="true"]{border:2px solid Highlight}.ui-control[aria-disabled="true"]{color:GrayText;border-color:GrayText}.ui-plate,.${pending.className}{border:${pending.forcedColorsBorder}}}
 `;
 }

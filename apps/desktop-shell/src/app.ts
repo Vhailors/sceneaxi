@@ -15,7 +15,11 @@ import {
   openPathSurfaceNotes,
   resolveOpenPathSurfaceRequest,
 } from "@sceneaxi/schemas";
-import { renderDesktopChrome } from "./chrome.js";
+import {
+  DESKTOP_DENSITY_IDS,
+  renderDesktopChrome,
+  type DesktopDensityId,
+} from "./chrome.js";
 import { DESKTOP_COMMANDS } from "./commands.js";
 import {
   createDesktopSession,
@@ -76,6 +80,7 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
   "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
   "chrome flags: --mode <build|sculpt|compose|animate|run|ship|plugins> --profile <game|web|kids>",
+  "              --density <comfortable|compact>",
   "              --overlay <none|palette> --assistant-mode <ask|build|agent>",
   "              --sculpt <idle|running> --width <px> --height <px>",
 ]);
@@ -94,6 +99,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
       "--overlay",
       "--assistant-mode",
       "--sculpt",
+      "--density",
       "--width",
       "--height",
     ]),
@@ -405,6 +411,9 @@ function chromeResult(args: ParsedArgs): DesktopResult {
   const sculpt = pick<"idle" | "running">(args, "--sculpt", ["idle", "running"], "idle");
 
   if (!sculpt.ok) return refuse(command, DesktopExit.USAGE, sculpt.message);
+  const density = pick<DesktopDensityId>(args, "--density", DESKTOP_DENSITY_IDS, "comfortable");
+
+  if (!density.ok) return refuse(command, DesktopExit.USAGE, density.message);
   const width = pickSize(args, "--width", 1680);
 
   if (!width.ok) return refuse(command, DesktopExit.USAGE, width.message);
@@ -437,10 +446,11 @@ function chromeResult(args: ParsedArgs): DesktopResult {
     dockTab: view.state.dockTab,
     assistant: view.assistant.state,
     overlay: view.state.overlay ?? "none",
+    density: density.value,
     pixelsDrawn: view.viewport.pixelsDrawn,
   };
 
-  const html = renderDesktopChrome(view);
+  const html = renderDesktopChrome(view, { density: density.value });
 
   return ok(
     command,

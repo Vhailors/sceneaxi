@@ -111,14 +111,15 @@ describe("engine desktop visual tokens", () => {
 
   it("carries the archive's own non-text values, unrounded", () => {
     // A "nearly right" surface colour is drift, so these are asserted as digits.
-    expect(SURFACE.canvas).toBe("#0A0F1A");
-    expect(SURFACE.panel).toBe("#0F1624");
-    expect(SURFACE.header).toBe("#182236");
-    expect(LINE.strong).toBe("#243044");
-    expect(ACCENT.base).toBe("#46D8EC");
-    expect(ACCENT.hover).toBe("#74E3F2");
-    expect(SIGNAL.ok).toBe("#5FE3C0");
-    expect(SIGNAL.refuse).toBe("#FF4D5E");
+    // v6 Interlocking (docs/redesign-v6/DIRECTION.md §5.1–5.2), mirrored from site-kit.
+    expect(SURFACE.canvas).toBe("#182320");
+    expect(SURFACE.panel).toBe("#1E2B28");
+    expect(SURFACE.header).toBe("#263632");
+    expect(LINE.strong).toBe("#4E6B64");
+    expect(ACCENT.base).toBe("#F1EEE4");
+    expect(ACCENT.hover).toBe("#FFFFFF");
+    expect(SIGNAL.ok).toBe("#7BDDB0");
+    expect(SIGNAL.refuse).toBe("#FF9A8C");
     expect(SIGNAL.scene).toBe("#A78BFA");
   });
 
@@ -162,8 +163,9 @@ describe("engine desktop visual tokens", () => {
       }
     }
 
-    // Removed suggestion rows are red; the rejected 10% mix would fail this pairing.
-    expect(contrast(SIGNAL.refuse, tintColor(TINT.proposed.replace("8%", "10%")))).toBeLessThan(4.5);
+    // v6: refusal text is the lamp, never the stop-red paint, which fails as text here.
+    expect(contrast(SIGNAL.refusePaint, tintColor(TINT.proposed))).toBeLessThan(4.5);
+    expect(contrast(SIGNAL.onRefuse, SIGNAL.refusePaint)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("keeps non-text state and category tokens above 3:1 on every surface", () => {
@@ -178,7 +180,7 @@ describe("engine desktop visual tokens", () => {
   });
 
   it("carries the redesign colour roles exactly", () => {
-    expect(SIGNAL.warn).toBe("#F2C94C");
+    expect(SIGNAL.warn).toBe("#F2C230");
     expect(SELECTION).toEqual({ outline: "#FF9D3D", child: "#5B9CFF", hover: "#FFC58A" });
     expect(AXIS_STATE).toEqual({ hoverX: "#F29590", hoverY: "#A4DD97", hoverZ: "#8DBBFF", active: "#FFD84D" });
     expect(AXIS_TEXT).toEqual({ x: "#EE7A74", y: "#8AD47A", z: "#74AEFF" });
@@ -578,7 +580,8 @@ describe("foundations v2 alignment", () => {
     // The decision is about what ships, so assert the emitted surface, not tokens.
     expect(document).toContain(ACCENT.base);
     expect(document).toContain(SURFACE.canvas);
-    expect(document).not.toContain(FOUNDATIONS_V2_COLORS["--accent"]);
+    // v6 shares enamel with the sites; what must never ship is the v5 orange.
+    expect(document).not.toContain("#FF6B2C");
     expect(document).not.toContain(FOUNDATIONS_V2_FAMILIES.sans);
   });
 });

@@ -10,7 +10,8 @@ import {
   DESKTOP_VISUAL_REFUSALS,
   type DesktopVisualView,
 } from "./visual-model.js";
-import { VISUAL_SOURCE } from "./visual-tokens.js";
+import { DENSITY, VISUAL_SOURCE } from "./visual-tokens.js";
+import { uiKitStyles } from "./ui-kit.js";
 import { escapeHtml, profileRefusal } from "./chrome/core/markup.js";
 import { styles } from "./chrome/core/styles.js";
 import { script } from "./chrome/core/script.js";
@@ -24,9 +25,19 @@ import { overlays } from "./chrome/palette/markup.js";
 
 export { escapeHtml } from "./chrome/core/markup.js";
 
+/** The two Operate densities the chrome stylesheet carries (`DENSITY` in visual-tokens). */
+export const DESKTOP_DENSITY_IDS = Object.freeze(
+  // SAFETY: DENSITY is a frozen literal, so its own keys are exactly its key type.
+  Object.keys(DENSITY) as Array<keyof typeof DENSITY>,
+);
+
+export type DesktopDensityId = keyof typeof DENSITY;
+
 export type DesktopChromeOptions = Readonly<{
   /** Document title. Defaults to the surface name. */
   title?: string;
+  /** Shell density. Defaults to `comfortable`; the document bytes are unchanged at the default. */
+  density?: DesktopDensityId;
 }>;
 
 /**
@@ -42,6 +53,7 @@ export function renderDesktopChrome(
   options: DesktopChromeOptions = {},
 ): string {
   const title = options.title ?? "SceneAxi — Engine Desktop";
+  const density: DesktopDensityId = options.density ?? "comfortable";
 
   // The block is emitted in every document but `view.refusal` is non-null only
   // in the below-minimum render, so the fallback is what a browser actually
@@ -63,7 +75,7 @@ export function renderDesktopChrome(
 <meta name="sceneaxi-visual-source" content="${escapeHtml(`${VISUAL_SOURCE.member} · sha256 ${VISUAL_SOURCE.sha256}`)}">
 <meta name="sceneaxi-pixels-drawn" content="false">
 <title>${escapeHtml(title)}</title>
-<style>${styles(view)}</style>
+<style>${styles(view)}${uiKitStyles()}</style>
 </head>
 <body>
 <div class="window-refusal" role="alert">
@@ -71,7 +83,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-assistant-runtime="${escapeHtml(view.state.assistantRuntime)}" data-assistant-runtime-event="${escapeHtml(DESKTOP_ASSISTANT_RUNTIME_EVENT)}" data-assistant-busy="false" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-details-open="${view.state.detailsOpen ? "true" : "false"}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
+<div class="shell" data-density="${escapeHtml(density)}" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-assistant-runtime="${escapeHtml(view.state.assistantRuntime)}" data-assistant-runtime-event="${escapeHtml(DESKTOP_ASSISTANT_RUNTIME_EVENT)}" data-assistant-busy="false" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-details-open="${view.state.detailsOpen ? "true" : "false"}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}
